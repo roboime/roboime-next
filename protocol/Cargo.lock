@@ -1,0 +1,12 @@
+[root]
+name = "roboime-next-protocol"
+version = "0.1.0"
+dependencies = [
+ "protobuf 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "protobuf"
+version = "1.0.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
