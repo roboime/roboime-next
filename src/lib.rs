@@ -15,8 +15,10 @@ use net2::UdpSocketExt;
 use time::{Duration, SteadyTime};
 
 pub use self::error::{Result, Error, ErrorKind};
+pub use subproc::{CommandExt, ChildExt};
 
 mod error;
+mod subproc;
 
 /// - One thread will bind to 0.0.0.0 and join the multicast to receive and dispatch vision packets
 ///   in a loop;

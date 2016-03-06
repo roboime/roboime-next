@@ -1,6 +1,7 @@
 use std::error;
 use std::result;
 use std::fmt;
+use std::io;
 
 /// A specialized `Result` type for this crate.
 ///
@@ -24,6 +25,8 @@ pub struct Error {
 pub enum ErrorKind {
     /// Usually an `io::Error`.
     Io,
+    /// An API yielded a result different than expected.
+    Inconsistent,
     /// Any other error category.
     Other,
     /// Reserved for future kinds.
@@ -78,6 +81,12 @@ impl error::Error for Error {
 
     fn cause(&self) -> Option<&error::Error> {
         self.error.cause()
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Self {
+        Error::new(ErrorKind::Io, err)
     }
 }
 
