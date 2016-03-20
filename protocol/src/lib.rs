@@ -22,3 +22,4 @@ pub mod messages_robocup_ssl_wrapper;
 pub mod referee;
 
 pub use protobuf::parse_from_bytes;
+pub use protobuf::core::Message;

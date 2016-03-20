@@ -9,10 +9,12 @@ extern crate time;
 use std::net::{UdpSocket, Ipv4Addr, SocketAddrV4};
 use std::sync::mpsc::channel;
 use std::thread::spawn;
-use protocol::parse_from_bytes;
+use protocol::{parse_from_bytes, Message};
 use protocol::messages_robocup_ssl_wrapper::SSL_WrapperPacket;
+use protocol::grSim_Packet::grSim_Packet;
+use protocol::grSim_Commands::grSim_Robot_Command;
 use net2::UdpSocketExt;
-use time::{Duration, SteadyTime};
+use time::{Duration, SteadyTime, precise_time_s};
 
 pub use self::error::{Result, Error, ErrorKind};
 pub use subproc::{CommandExt, ChildExt};
@@ -33,6 +35,7 @@ pub fn demo() {
 
         let iface = Ipv4Addr::new(0, 0, 0, 0);
         let addr = SocketAddrV4::new(iface, 10002);
+        //let socket = match UdpSocket::bind("0.0.0.0:10005") {
         let socket = match UdpSocket::bind(addr) {
             Ok(s) => s,
             Err(e) => panic!("couldn't bind socket: {}", e),
@@ -47,11 +50,12 @@ pub fn demo() {
         println!("joined multicast {}", mcast_addr);
 
         // 1KB buffer
-        let mut buf = &mut [0u8; 1024];
+        let buf = &mut [0u8; 1024];
         loop {
             match socket.recv_from(buf) {
                 Ok((size, _)) => {
-                    match parse_from_bytes::<SSL_WrapperPacket>(&buf[0..size]) {
+                    //match parse_from_bytes::<SSL_WrapperPacket>(&buf[0..size]) {
+                    match parse_from_bytes(&buf[0..size]) {
                         Ok(packet) => match tx.send(packet) {
                             Ok(()) => {}
                             Err(e) => {
@@ -70,6 +74,7 @@ pub fn demo() {
         }
     });
 
+    let (tx2, rx2) = channel();
     let work_thread = spawn(move || {
         println!("work thread started");
 
@@ -77,11 +82,86 @@ pub fn demo() {
         let mut last_time = SteadyTime::now();
         loop {
             packets.push(rx.recv().unwrap());
+
+            let mut packet = grSim_Packet::new();
+            {
+                let commands = packet.mut_commands();
+                let timestamp = precise_time_s();
+                commands.set_timestamp(timestamp);
+                commands.set_isteamyellow(false);
+                let robot_commands = commands.mut_robot_commands();
+
+                let mut robot_command = grSim_Robot_Command::new();
+                robot_command.set_id(0);
+                robot_command.set_kickspeedx(0.0);
+                robot_command.set_kickspeedz(0.0);
+                robot_command.set_veltangent((2.0 * (timestamp * 3.0).cos()) as f32);
+                robot_command.set_velnormal(0.0);
+                robot_command.set_velangular(0.0);
+                robot_command.set_spinner(false);
+                robot_command.set_wheelsspeed(false);
+
+                robot_commands.push(robot_command);
+            }
+
+            match packet.write_to_bytes() {
+                Ok(bytes) => {
+                    match tx2.send(bytes) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            println!("error sending to send_thread: {}", e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("error writing protobuf packet to byes: {}", e);
+                }
+            }
+
             let next_time = SteadyTime::now();
             let delta = next_time - last_time;
             if delta >= Duration::seconds(1) {
-                println!("packets: {}, delta: {}", packets.len(), delta);
+                println!("recv packets: {}, delta: {}", packets.len(), delta);
                 packets.clear();
+                last_time = next_time;
+            }
+        }
+    });
+
+    let send_thread = spawn(move || {
+        let iface = Ipv4Addr::new(0, 0, 0, 0);
+        let addr = SocketAddrV4::new(iface, 0);
+        let socket = match UdpSocket::bind(addr) {
+            Ok(s) => s,
+            Err(e) => panic!("couldn't bind socket: {}", e),
+        };
+        println!("send socket bound to {}", addr);
+
+        let grsim_ip = Ipv4Addr::new(192, 168, 91, 92);
+        let grsim_addr = SocketAddrV4::new(grsim_ip, 20011);
+
+        let mut last_time = SteadyTime::now();
+        let mut counter = 0;
+
+        loop {
+            match rx2.recv() {
+                Ok(ref bytes) => {
+                    match socket.send_to(bytes, grsim_addr) {
+                        //Ok(size) => { println!("{} bytes sent", size); }
+                        Ok(_) => { counter += 1; },
+                        Err(e) => { println!("error sending bytes to grSim: {}", e); }
+                    }
+                }
+                Err(e) => {
+                    println!("error receiving from work_thread: {}", e);
+                }
+            }
+
+            let next_time = SteadyTime::now();
+            let delta = next_time - last_time;
+            if delta >= Duration::seconds(1) {
+                println!("sent packets: {}, delta: {}", counter, delta);
+                counter = 0;
                 last_time = next_time;
             }
         }
@@ -89,4 +169,5 @@ pub fn demo() {
 
     recv_thread.join().unwrap();
     work_thread.join().unwrap();
+    send_thread.join().unwrap();
 }
