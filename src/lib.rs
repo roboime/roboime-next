@@ -13,7 +13,7 @@ use protocol::{parse_from_bytes, Message};
 use protocol::messages_robocup_ssl_wrapper::SSL_WrapperPacket;
 use protocol::grSim_Packet::grSim_Packet;
 use protocol::grSim_Commands::grSim_Robot_Command;
-use net2::UdpSocketExt;
+use net2::{UdpBuilder, UdpSocketExt};
 //use time::{Duration, SteadyTime, precise_time_s};
 use time::{Duration, SteadyTime};
 
@@ -37,7 +37,7 @@ pub fn demo() {
         let iface = Ipv4Addr::new(0, 0, 0, 0);
         let addr = SocketAddrV4::new(iface, 10002);
         //let socket = match UdpSocket::bind("0.0.0.0:10005") {
-        let socket = match UdpSocket::bind(addr) {
+        let socket = match UdpBuilder::new_v4().unwrap().reuse_address(true).unwrap().bind(addr) {
             Ok(s) => s,
             Err(e) => panic!("couldn't bind socket: {}", e),
         };
