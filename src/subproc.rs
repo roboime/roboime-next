@@ -17,15 +17,15 @@ impl CommandExt for Command {
 
 pub trait ChildExt {
     fn map_all_pipes<U, F>(&mut self, op: F) -> Result<U>
-        where F: FnOnce(&mut ChildStdin, &mut ChildStdout, &mut ChildStderr) -> U;
+        where F: FnOnce(&mut ChildStdin, &mut ChildStdout, &mut ChildStderr) -> Result<U>;
 }
 
 impl ChildExt for Child {
     fn map_all_pipes<U, F>(&mut self, op: F) -> Result<U>
-        where F: FnOnce(&mut ChildStdin, &mut ChildStdout, &mut ChildStderr) -> U
+        where F: FnOnce(&mut ChildStdin, &mut ChildStdout, &mut ChildStderr) -> Result<U>
     {
         if let Child { stdin: Some(ref mut child_in), stdout: Some(ref mut child_out), stderr: Some(ref mut child_err), .. } = *self {
-            Ok(op(child_in, child_out, child_err))
+            op(child_in, child_out, child_err)
         } else {
             Err(Error::new(ErrorKind::Inconsistent, "some pipes were missing from the child process"))
         }

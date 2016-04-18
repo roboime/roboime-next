@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+from math import sin, cos
+
+while True:
+    # STATE:
+    x, y, w = 0, 0, 0
+    tx, ty, tw = 0, 0, 0
+
+    # INPUT:
+    timestamp = float(input())
+    our_score, opponent_score = map(int, input().split())
+    ref_state, ref_time_left = input().split()
+    ball_x, ball_y, ball_vx, ball_vy = map(float, input().split())
+    goalkeeper_id = int(input())
+    num_robots = int(input())
+    opponent_num_robots = int(input())
+    for _ in range(num_robots):
+        robot_id, robot_x, robot_y, robot_w, robot_vx, robot_vy, robot_vw = map(float, input().split())
+        robot_id = int(robot_id)
+        if robot_id == 0:
+            x, y, w = robot_x, robot_y, robot_w
+    for _ in range(opponent_num_robots):
+        robot_id, robot_x, robot_y, robot_w, robot_vx, robot_vy, robot_vw = map(float, input().split())
+        robot_id = int(robot_id)
+
+    tx, ty, tw = ball_x, ball_y, 0
+
+    # OUTPUT:
+    print('command # {}'.format(timestamp))
+    for i in range(num_robots):
+        if i == 0:
+            p1 = 0.0004
+            p2 = 0.8000
+            v_tan  = p1 * ((tx - x) * cos(w) + (ty - y) * sin(w))
+            v_norm = p1 * ((ty - y) * cos(w) - (tx - x) * sin(w))
+            v_ang = p2 * (tw - w)
+            kick_x = 4.0
+            kick_z = 0.0
+            spin = True
+            print('{} {} {} {} {} {}'.format(v_tan, v_norm, v_ang, kick_x, kick_z, int(spin)))
+        else:
+            v_tan = 0.0
+            v_norm = 0.0
+            v_ang = 0.0
+            kick_x = 0.0
+            kick_z = 0.0
+            spin = True
+            print('{} {} {} {} {} {}'.format(v_tan, v_norm, v_ang, kick_x, kick_z, int(spin)))

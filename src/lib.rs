@@ -7,14 +7,15 @@ extern crate net2;
 extern crate time;
 
 use std::net::{UdpSocket, Ipv4Addr, SocketAddrV4};
-use std::sync::mpsc::channel;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::spawn;
 use protocol::{parse_from_bytes, Message};
 use protocol::messages_robocup_ssl_wrapper::SSL_WrapperPacket;
 use protocol::grSim_Packet::grSim_Packet;
 use protocol::grSim_Commands::grSim_Robot_Command;
 use net2::UdpSocketExt;
-use time::{Duration, SteadyTime, precise_time_s};
+//use time::{Duration, SteadyTime, precise_time_s};
+use time::{Duration, SteadyTime};
 
 pub use self::error::{Result, Error, ErrorKind};
 pub use subproc::{CommandExt, ChildExt};
@@ -60,6 +61,7 @@ pub fn demo() {
                             Ok(()) => {}
                             Err(e) => {
                                 println!("couldn't send datagram to other thread: {}", e);
+                                break;
                             }
                         },
                         Err(e) => {
@@ -76,54 +78,10 @@ pub fn demo() {
 
     let (tx2, rx2) = channel();
     let work_thread = spawn(move || {
-        println!("work thread started");
-
-        let mut packets: Vec<SSL_WrapperPacket> = Vec::new();
-        let mut last_time = SteadyTime::now();
-        loop {
-            packets.push(rx.recv().unwrap());
-
-            let mut packet = grSim_Packet::new();
-            {
-                let commands = packet.mut_commands();
-                let timestamp = precise_time_s();
-                commands.set_timestamp(timestamp);
-                commands.set_isteamyellow(false);
-                let robot_commands = commands.mut_robot_commands();
-
-                let mut robot_command = grSim_Robot_Command::new();
-                robot_command.set_id(0);
-                robot_command.set_kickspeedx(0.0);
-                robot_command.set_kickspeedz(0.0);
-                robot_command.set_veltangent((2.0 * (timestamp * 3.0).cos()) as f32);
-                robot_command.set_velnormal(0.0);
-                robot_command.set_velangular(0.0);
-                robot_command.set_spinner(false);
-                robot_command.set_wheelsspeed(false);
-
-                robot_commands.push(robot_command);
-            }
-
-            match packet.write_to_bytes() {
-                Ok(bytes) => {
-                    match tx2.send(bytes) {
-                        Ok(_) => (),
-                        Err(e) => {
-                            println!("error sending to send_thread: {}", e);
-                        }
-                    }
-                }
-                Err(e) => {
-                    println!("error writing protobuf packet to byes: {}", e);
-                }
-            }
-
-            let next_time = SteadyTime::now();
-            let delta = next_time - last_time;
-            if delta >= Duration::seconds(1) {
-                println!("recv packets: {}, delta: {}", packets.len(), delta);
-                packets.clear();
-                last_time = next_time;
+        match child_proc(rx, tx2) {
+            Ok(()) => {}
+            Err(e) => {
+                println!("child subproc errored: {}", e);
             }
         }
     });
@@ -154,6 +112,7 @@ pub fn demo() {
                 }
                 Err(e) => {
                     println!("error receiving from work_thread: {}", e);
+                    break;
                 }
             }
 
@@ -170,4 +129,161 @@ pub fn demo() {
     recv_thread.join().unwrap();
     work_thread.join().unwrap();
     send_thread.join().unwrap();
+}
+
+fn child_proc(rx: Receiver<SSL_WrapperPacket>, tx: Sender<Vec<u8>>) -> Result<()> {
+    use std::process::Command;
+    use std::io::prelude::*;
+    use std::io::BufReader;
+
+    println!("work thread started");
+
+    let mut child = try!(Command::new("./demo-ai").piped_spawn());
+    println!("running subproc");
+
+    try!(child.map_all_pipes(|child_in, child_out, child_err| {
+        let mut lines = BufReader::new(child_out).lines();
+        //TODO: setup phase
+
+        //writeln!(child_in, "bar").unwrap();
+        //println!("got: {:?}", lines.next());
+
+        //writeln!(child_in, "enough").unwrap();
+        //println!("got: {:?}", lines.next());
+
+        //for line in BufReader::new(child_err).lines() {
+        //    println!("got: {:?}", line);
+        //}
+
+        loop {
+            let packet = rx.recv().unwrap();
+            if !packet.has_detection() {
+                println!("geometry packet");
+                continue;
+            }
+            let detection = packet.get_detection();
+
+            //let timestamp = precise_time_s();
+            let timestamp = detection.get_t_capture();
+
+            // TIMESTAMP
+            try!(writeln!(child_in, "{}", timestamp));
+
+            // OUR_SCORE OPPONENT_SCORE
+            try!(writeln!(child_in, "0 0"));
+
+            // REF_STATE <REF_TIME_LEFT|-1>
+            try!(writeln!(child_in, "N -1"));
+
+            let balls = detection.get_balls();
+            let ball = &balls[0]; // TODO: get best ball
+
+            // BALL_X BALL_Y BALL_VX BALL_VY
+            try!(writeln!(child_in, "{} {} 0 0", ball.get_x(), ball.get_y()));
+
+            // GOALKEEPER_ID
+            try!(writeln!(child_in, "0"));
+
+            let robots_yellow = detection.get_robots_yellow();
+            let robots_blue = detection.get_robots_blue();
+
+            // NUM_ROBOTS
+            try!(writeln!(child_in, "{}", robots_yellow.len()));
+
+            // OPPONENT_NUM_ROBOTS
+            try!(writeln!(child_in, "{}", robots_blue.len()));
+
+            for robot in robots_yellow {
+                // [ROBOT_ID ROBOT_X ROBOT_Y ROBOT_W ROBOT_VX ROBOT_VY ROBOT_VW] x NUM_ROBOTS
+                try!(writeln!(child_in,
+                         "{} {} {} {} 0 0 0",
+                         robot.get_robot_id(),
+                         robot.get_x(),
+                         robot.get_y(),
+                         robot.get_orientation()
+                        ));
+            }
+
+            for robot in robots_blue {
+                // [ROBOT_ID ROBOT_X ROBOT_Y ROBOT_W ROBOT_VX ROBOT_VY ROBOT_VW] x OPPONENT_NUM_ROBOTS
+                try!(writeln!(child_in,
+                         "{} {} {} {} 0 0 0",
+                         robot.get_robot_id(),
+                         robot.get_x(),
+                         robot.get_y(),
+                         robot.get_orientation()
+                        ));
+            }
+
+            {
+                let line = try!(match lines.next() {
+                    Some(thing) => thing,
+                    None => { break; }
+                });
+                assert!(line.starts_with("command"));
+            }
+
+            let mut packet = grSim_Packet::new();
+            {
+                let commands = packet.mut_commands();
+                commands.set_timestamp(timestamp);
+                commands.set_isteamyellow(true);
+                let robot_commands = commands.mut_robot_commands();
+
+                for robot in robots_yellow {
+                    let mut robot_command = grSim_Robot_Command::new();
+                    let robot_id = robot.get_robot_id();
+
+                    let line = try!(match lines.next() {
+                        Some(thing) => thing,
+                        None => { break; }
+                    });
+
+                    let vars: Vec<_> = line.split(' ').collect();
+                    assert_eq!(vars.len(), 6);
+
+                    let v_tan:  f32 = try!(vars[0].parse());
+                    let v_norm: f32 = try!(vars[1].parse());
+                    let v_ang:  f32 = try!(vars[2].parse());
+                    let kick_x: f32 = try!(vars[3].parse());
+                    let kick_z: f32 = try!(vars[4].parse());
+                    let spin = try!(vars[5].parse::<i32>()) == 1;
+
+                    robot_command.set_id(robot_id);
+                    robot_command.set_kickspeedx(kick_x);
+                    robot_command.set_kickspeedz(kick_z);
+                    robot_command.set_veltangent(v_tan);
+                    robot_command.set_velnormal(v_norm);
+                    robot_command.set_velangular(v_ang);
+                    robot_command.set_spinner(spin);
+                    robot_command.set_wheelsspeed(false);
+                    robot_commands.push(robot_command);
+                }
+            }
+
+            match packet.write_to_bytes() {
+                Ok(bytes) => {
+                    match tx.send(bytes) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            println!("error sending to send_thread: {}", e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("error writing protobuf packet to byes: {}", e);
+                }
+            }
+        }
+
+        for line in BufReader::new(child_err).lines() {
+            println!("{}", try!(line));
+        }
+
+        Ok(())
+    }));
+
+    // unreachable:
+    //Ok(try!(child.wait()))
+    Ok(())
 }
