@@ -2,6 +2,8 @@ use std::error;
 use std::result;
 use std::fmt;
 use std::io;
+use std::num::{ParseIntError, ParseFloatError};
+use std::str::ParseBoolError;
 
 /// A specialized `Result` type for this crate.
 ///
@@ -25,6 +27,8 @@ pub struct Error {
 pub enum ErrorKind {
     /// Usually an `io::Error`.
     Io,
+    /// Usually an `num::Parse*Error`.
+    Parse,
     /// An API yielded a result different than expected.
     Inconsistent,
     /// Any other error category.
@@ -87,6 +91,24 @@ impl error::Error for Error {
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Self {
         Error::new(ErrorKind::Io, err)
+    }
+}
+
+impl From<ParseFloatError> for Error {
+    fn from(err: ParseFloatError) -> Self {
+        Error::new(ErrorKind::Parse, err)
+    }
+}
+
+impl From<ParseIntError> for Error {
+    fn from(err: ParseIntError) -> Self {
+        Error::new(ErrorKind::Parse, err)
+    }
+}
+
+impl From<ParseBoolError> for Error {
+    fn from(err: ParseBoolError) -> Self {
+        Error::new(ErrorKind::Parse, err)
     }
 }
 
