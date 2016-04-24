@@ -29,6 +29,8 @@ pub enum ErrorKind {
     Io,
     /// Usually an `num::Parse*Error`.
     Parse,
+    /// A protocol error communicating with a subprocess AI
+    AiProtocol,
     /// An API yielded a result different than expected.
     Inconsistent,
     /// Any other error category.

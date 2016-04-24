@@ -1,5 +1,22 @@
 #!/usr/bin/env python3
+import sys
 from math import sin, cos
+
+# INITIAL INPUT:
+magic, version = input().split()
+if int(version) == 1:
+    print('COMPATIBLE 1')
+else:
+    print('NOT_COMPATIBLE 1')
+field_with = float(input())
+field_height = float(input())
+goal_width = float(input())
+center_circle_radius = float(input())
+defense_radius = float(input())
+defense_stretch = float(input())
+free_kick_from_defense_dist = float(input())
+penalty_spot_from_field_line_dist = float(input())
+penalty_line_from_spot_dist = float(input())
 
 while True:
     # STATE:
@@ -7,6 +24,7 @@ while True:
     tx, ty, tw = 0, 0, 0
 
     # INPUT:
+    counter = int(input())
     timestamp = float(input())
     our_score, opponent_score = map(int, input().split())
     ref_state, ref_time_left = input().split()
@@ -26,7 +44,7 @@ while True:
     tx, ty, tw = ball_x, ball_y, 0
 
     # OUTPUT:
-    print('command # {}'.format(timestamp))
+    print('C {}'.format(counter))
     for i in range(num_robots):
         if i == 0:
             p1 = 0.0004

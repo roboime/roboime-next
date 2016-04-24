@@ -9,6 +9,7 @@ extern crate time;
 use std::net::{UdpSocket, Ipv4Addr, SocketAddrV4};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::spawn;
+use std::process::ExitStatus;
 use protocol::{parse_from_bytes, Message};
 use protocol::messages_robocup_ssl_wrapper_legacy::SSL_WrapperPacket;
 use protocol::grSim_Packet::grSim_Packet;
@@ -79,7 +80,9 @@ pub fn demo() {
     let (tx2, rx2) = channel();
     let work_thread = spawn(move || {
         match child_proc(rx, tx2) {
-            Ok(()) => {}
+            Ok(s) => {
+                println!("child subproc exited with: {}", s);
+            }
             Err(e) => {
                 println!("child subproc errored: {}", e);
             }
@@ -131,7 +134,7 @@ pub fn demo() {
     send_thread.join().unwrap();
 }
 
-fn child_proc(rx: Receiver<SSL_WrapperPacket>, tx: Sender<Vec<u8>>) -> Result<()> {
+fn child_proc(rx: Receiver<SSL_WrapperPacket>, tx: Sender<Vec<u8>>) -> Result<ExitStatus> {
     use std::process::Command;
     use std::io::prelude::*;
     use std::io::BufReader;
@@ -141,20 +144,61 @@ fn child_proc(rx: Receiver<SSL_WrapperPacket>, tx: Sender<Vec<u8>>) -> Result<()
     let mut child = try!(Command::new("./demo-ai").piped_spawn());
     println!("running subproc");
 
+    fn new_err(msg: &str) -> error::Error {
+        error::Error::new(error::ErrorKind::AiProtocol, msg.to_string())
+    }
+
     try!(child.map_all_pipes(|child_in, child_out, child_err| {
         let mut lines = BufReader::new(child_out).lines();
-        //TODO: setup phase
 
-        //writeln!(child_in, "bar").unwrap();
-        //println!("got: {:?}", lines.next());
+        try!(writeln!(child_in, "ROBOIME_INTEL_PROTOCOL_VERSION 1"));
+        {
+            let line = try!(match lines.next() {
+                Some(thing) => thing,
+                None => {
+                    return Err(new_err("no output"));
+                }
+            });
+            match line.as_ref() {
+                "COMPATIBLE 1" => {
+                    println!("AI is compatible");
+                },
+                s if s.starts_with("NOT_COMPATIBLE") => {
+                    println!("AI is not compatible");
+                    return Ok(());
+                },
+                _ => {
+                    return Err(new_err("invalid version confirmation"));
+                }
+            }
+        }
 
-        //writeln!(child_in, "enough").unwrap();
-        //println!("got: {:?}", lines.next());
+        // TODO: get these from the geometry, or better, from a game state
+
+        // FIELD_WIDTH
+        try!(writeln!(child_in, "4.000"));
+        // FIELD_HEIGHT
+        try!(writeln!(child_in, "6.000"));
+        // GOAL_WIDTH
+        try!(writeln!(child_in, "0.700"));
+        // CENTER_CIRCLE_RADIUS
+        try!(writeln!(child_in, "0.500"));
+        // DEFENSE_RADIUS
+        try!(writeln!(child_in, "0.500"));
+        // DEFENSE_STRETCH
+        try!(writeln!(child_in, "0.350"));
+        // FREE_KICK_FROM_DEFENSE_DIST
+        try!(writeln!(child_in, "0.700"));
+        // PENALTY_SPOT_FROM_FIELD_LINE_DIST
+        try!(writeln!(child_in, "0.450"));
+        // PENALTY_LINE_FROM_SPOT_DIST
+        try!(writeln!(child_in, "0.350"));
 
         //for line in BufReader::new(child_err).lines() {
         //    println!("got: {:?}", line);
         //}
 
+        let mut counter: u64 = 0;
         loop {
             let packet = rx.recv().unwrap();
             if !packet.has_detection() {
@@ -165,6 +209,10 @@ fn child_proc(rx: Receiver<SSL_WrapperPacket>, tx: Sender<Vec<u8>>) -> Result<()
 
             //let timestamp = precise_time_s();
             let timestamp = detection.get_t_capture();
+
+            // COUNTER
+            try!(writeln!(child_in, "{}", counter));
+            counter += 1;
 
             // TIMESTAMP
             try!(writeln!(child_in, "{}", timestamp));
@@ -220,7 +268,7 @@ fn child_proc(rx: Receiver<SSL_WrapperPacket>, tx: Sender<Vec<u8>>) -> Result<()
                     Some(thing) => thing,
                     None => { break; }
                 });
-                assert!(line.starts_with("command"));
+                assert_eq!(line, format!("C {}", counter));
             }
 
             let mut packet = grSim_Packet::new();
@@ -283,7 +331,5 @@ fn child_proc(rx: Receiver<SSL_WrapperPacket>, tx: Sender<Vec<u8>>) -> Result<()
         Ok(())
     }));
 
-    // unreachable:
-    //Ok(try!(child.wait()))
-    Ok(())
+    Ok(try!(child.wait()))
 }
