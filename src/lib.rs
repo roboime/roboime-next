@@ -10,7 +10,7 @@ use std::net::{UdpSocket, Ipv4Addr, SocketAddrV4};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::spawn;
 use protocol::{parse_from_bytes, Message};
-use protocol::messages_robocup_ssl_wrapper::SSL_WrapperPacket;
+use protocol::messages_robocup_ssl_wrapper_legacy::SSL_WrapperPacket;
 use protocol::grSim_Packet::grSim_Packet;
 use protocol::grSim_Commands::grSim_Robot_Command;
 use net2::{UdpBuilder, UdpSocketExt};

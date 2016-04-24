@@ -17,8 +17,10 @@ pub mod grSim_Packet;
 pub mod grSim_Replacement;
 pub mod messages_robocup_ssl_detection;
 pub mod messages_robocup_ssl_geometry;
+pub mod messages_robocup_ssl_geometry_legacy;
 pub mod messages_robocup_ssl_refbox_log;
 pub mod messages_robocup_ssl_wrapper;
+pub mod messages_robocup_ssl_wrapper_legacy;
 pub mod referee;
 
 pub use protobuf::parse_from_bytes;
