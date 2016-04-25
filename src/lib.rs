@@ -212,7 +212,6 @@ fn child_proc(rx: Receiver<SSL_WrapperPacket>, tx: Sender<Vec<u8>>) -> Result<Ex
 
             // COUNTER
             try!(writeln!(child_in, "{}", counter));
-            counter += 1;
 
             // TIMESTAMP
             try!(writeln!(child_in, "{}", timestamp));
@@ -268,7 +267,9 @@ fn child_proc(rx: Receiver<SSL_WrapperPacket>, tx: Sender<Vec<u8>>) -> Result<Ex
                     Some(thing) => thing,
                     None => { break; }
                 });
-                assert_eq!(line, format!("C {}", counter));
+                if line != format!("C {}", counter) {
+                    return Err(new_err(format!("wrong command counter, expected 'C {}' got {}", counter, line).as_ref()));
+                }
             }
 
             let mut packet = grSim_Packet::new();
@@ -308,6 +309,9 @@ fn child_proc(rx: Receiver<SSL_WrapperPacket>, tx: Sender<Vec<u8>>) -> Result<Ex
                     robot_commands.push(robot_command);
                 }
             }
+
+            // update the counter after receiving a command
+            counter += 1;
 
             match packet.write_to_bytes() {
                 Ok(bytes) => {
