@@ -98,7 +98,7 @@ pub fn demo() {
         };
         println!("send socket bound to {}", addr);
 
-        let grsim_ip = Ipv4Addr::new(192, 168, 91, 92);
+        let grsim_ip = Ipv4Addr::new(127, 0, 0, 1);
         let grsim_addr = SocketAddrV4::new(grsim_ip, 20011);
 
         let mut last_time = SteadyTime::now();
