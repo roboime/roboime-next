@@ -6,23 +6,22 @@ extern crate roboime_next_protocol as protocol;
 extern crate net2;
 extern crate time;
 
-use std::net::{UdpSocket, Ipv4Addr, SocketAddrV4};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::spawn;
 use std::process::ExitStatus;
-use protocol::{parse_from_bytes, Message};
+use protocol::{Message};
 use protocol::messages_robocup_ssl_wrapper_legacy::SSL_WrapperPacket;
 use protocol::grSim_Packet::grSim_Packet;
 use protocol::grSim_Commands::grSim_Robot_Command;
-use net2::{UdpBuilder, UdpSocketExt};
 //use time::{Duration, SteadyTime, precise_time_s};
-use time::{Duration, SteadyTime};
 
 pub use self::error::{Result, Error, ErrorKind};
 pub use subproc::{CommandExt, ChildExt};
 
 mod error;
 mod subproc;
+pub mod interface;
+use interface::Interface;
 
 /// - One thread will bind to 0.0.0.0 and join the multicast to receive and dispatch vision packets
 ///   in a loop;
@@ -33,48 +32,8 @@ mod subproc;
 pub fn demo() {
     let (tx, rx) = channel();
     let recv_thread = spawn(move || {
-        println!("recv thread started");
-
-        let iface = Ipv4Addr::new(0, 0, 0, 0);
-        let addr = SocketAddrV4::new(iface, 10002);
-        //let socket = match UdpSocket::bind("0.0.0.0:10005") {
-        let socket = match UdpBuilder::new_v4().unwrap().reuse_address(true).unwrap().bind(addr) {
-            Ok(s) => s,
-            Err(e) => panic!("couldn't bind socket: {}", e),
-        };
-        println!("bound to {}", addr);
-
-        let mcast_addr = Ipv4Addr::new(224, 5, 23, 2);
-        match socket.join_multicast_v4(&mcast_addr, &iface) {
-            Ok(()) => (),
-            Err(e) => panic!("couldn't join multicast: {}", e),
-        }
-        println!("joined multicast {}", mcast_addr);
-
-        // 1KB buffer
-        let buf = &mut [0u8; 1024];
-        loop {
-            match socket.recv_from(buf) {
-                Ok((size, _)) => {
-                    //match parse_from_bytes::<SSL_WrapperPacket>(&buf[0..size]) {
-                    match parse_from_bytes(&buf[0..size]) {
-                        Ok(packet) => match tx.send(packet) {
-                            Ok(()) => {}
-                            Err(e) => {
-                                println!("couldn't send datagram to other thread: {}", e);
-                                break;
-                            }
-                        },
-                        Err(e) => {
-                            println!("couldn't parse datagram: {}", e);
-                        }
-                    }
-                },
-                Err(e) => {
-                    println!("couldn't receive datagram: {}", e);
-                }
-            }
-        }
+        let mut interface: Interface = Interface::gr_sim_receiver();
+        interface.receive_from_gr_sim(tx);
     });
 
     let (tx2, rx2) = channel();
@@ -90,43 +49,8 @@ pub fn demo() {
     });
 
     let send_thread = spawn(move || {
-        let iface = Ipv4Addr::new(0, 0, 0, 0);
-        let addr = SocketAddrV4::new(iface, 0);
-        let socket = match UdpSocket::bind(addr) {
-            Ok(s) => s,
-            Err(e) => panic!("couldn't bind socket: {}", e),
-        };
-        println!("send socket bound to {}", addr);
-
-        let grsim_ip = Ipv4Addr::new(127, 0, 0, 1);
-        let grsim_addr = SocketAddrV4::new(grsim_ip, 20011);
-
-        let mut last_time = SteadyTime::now();
-        let mut counter = 0;
-
-        loop {
-            match rx2.recv() {
-                Ok(ref bytes) => {
-                    match socket.send_to(bytes, grsim_addr) {
-                        //Ok(size) => { println!("{} bytes sent", size); }
-                        Ok(_) => { counter += 1; },
-                        Err(e) => { println!("error sending bytes to grSim: {}", e); }
-                    }
-                }
-                Err(e) => {
-                    println!("error receiving from work_thread: {}", e);
-                    break;
-                }
-            }
-
-            let next_time = SteadyTime::now();
-            let delta = next_time - last_time;
-            if delta >= Duration::seconds(1) {
-                println!("sent packets: {}, delta: {}", counter, delta);
-                counter = 0;
-                last_time = next_time;
-            }
-        }
+        let mut interface: Interface = Interface::gr_sim_sender();
+        interface.send_to_gr_sim(rx2);
     });
 
     recv_thread.join().unwrap();
