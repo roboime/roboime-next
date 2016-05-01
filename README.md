@@ -23,6 +23,44 @@ This will resolve, download and compile dependencies, and compile the project in
 
     cargo run --release
 
+Game I/O
+--------
+
+### Initialization input
+
+__Line 1__ version data:
+
+- `"ROBOIME_INTEL_PROTOCOL_VERSION"`: literal string;
+- `VERSION_NUMBER`: an integer, currently __1__.
+
+__Line 2__ field data:
+
+...
+
+### Initialization output
+
+Currently the following line is expected:
+
+- `COMPATIBLE 1`.
+
+In the future, the following may be used to state explicit incompatibility:
+
+- `NOT_COMPATIBLE 1`, given that `1` is the highest compatible version.
+
+### Input for one game turn
+
+...
+
+### Output for one game turn
+
+...
+
+### Constraints
+
+- `0 <= COUNTER < 1000000`;
+- `0 <= OUR_SCORE, OPPONENT_SCORE, <= 10`;
+- ...
+
 License
 -------
 
