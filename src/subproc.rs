@@ -1,6 +1,9 @@
 use std::process::{Stdio, Command, Child, ChildStdin, ChildStdout, ChildStderr};
 use ::{Result, Error, ErrorKind};
 
+/// Extension methods for the standard [`Command` type][link] in `std::process`.
+///
+/// [link]: https://doc.rust-lang.org/std/process/struct.Command.html
 pub trait CommandExt {
     fn piped_spawn(&mut self) -> Result<Child>;
 }
@@ -15,6 +18,9 @@ impl CommandExt for Command {
     }
 }
 
+/// Extension methods for the standard [`Child` type][link] in `std::process`.
+///
+/// [link]: https://doc.rust-lang.org/std/process/struct.Child.html
 pub trait ChildExt {
     fn map_all_pipes<U, F>(&mut self, op: F) -> Result<U>
         where F: FnOnce(&mut ChildStdin, &mut ChildStdout, &mut ChildStderr) -> Result<U>;

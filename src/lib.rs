@@ -7,6 +7,7 @@ extern crate net2;
 extern crate time;
 
 use std::net::{UdpSocket, Ipv4Addr, SocketAddrV4};
+use std::sync::{Arc, RwLock};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::spawn;
 use std::process::ExitStatus;
@@ -15,15 +16,18 @@ use protocol::messages_robocup_ssl_wrapper_legacy::SSL_WrapperPacket;
 use protocol::grSim_Packet::grSim_Packet;
 use protocol::grSim_Commands::grSim_Robot_Command;
 use net2::{UdpBuilder, UdpSocketExt};
-//use time::{Duration, SteadyTime, precise_time_s};
 use time::{Duration, SteadyTime};
 
 pub use self::error::{Result, Error, ErrorKind};
 pub use subproc::{CommandExt, ChildExt};
+pub use state::{GameState, RobotState, BallState, Position, Pose};
 
 mod error;
 mod subproc;
+mod state;
 
+/// Simple demonstration of the core capabilities.
+///
 /// - One thread will bind to 0.0.0.0 and join the multicast to receive and dispatch vision packets
 ///   in a loop;
 /// - Another thread will buffer the dispatched packets and if more than 1s passes after the last
@@ -31,8 +35,11 @@ mod subproc;
 /// - Wait for both looping threads to join.
 ///
 pub fn demo() {
+    let game_state = Arc::new(RwLock::new(state::GameState::new()));
     let (tx, rx) = channel();
+    let recv_thread_game_state = game_state.clone();
     let recv_thread = spawn(move || {
+        let game_state = recv_thread_game_state;
         println!("recv thread started");
 
         let iface = Ipv4Addr::new(0, 0, 0, 0);
@@ -56,13 +63,63 @@ pub fn demo() {
         loop {
             match socket.recv_from(buf) {
                 Ok((size, _)) => {
-                    //match parse_from_bytes::<SSL_WrapperPacket>(&buf[0..size]) {
-                    match parse_from_bytes(&buf[0..size]) {
-                        Ok(packet) => match tx.send(packet) {
-                            Ok(()) => {}
-                            Err(e) => {
-                                println!("couldn't send datagram to other thread: {}", e);
-                                break;
+                    match parse_from_bytes::<SSL_WrapperPacket>(&buf[0..size]) {
+                    //match parse_from_bytes(&buf[0..size]) {
+                        Ok(packet) => {
+                            {
+                                let mut game_state = game_state.write().unwrap();
+                                if packet.has_detection() {
+                                    let detection = packet.get_detection();
+                                    let timestamp = detection.get_t_capture();
+                                    let dt = timestamp - game_state.get_timestamp();
+                                    game_state.inc_counter();
+                                    game_state.set_timestamp(timestamp);
+
+                                    // TODO: select ball
+                                    for ball in detection.get_balls() {
+                                        let ball_state = game_state.get_ball_mut();
+                                        ball_state.update_position(
+                                            ball.get_x(),
+                                            ball.get_y(),
+                                            dt,
+                                        );
+                                    }
+
+                                    // TODO: remove missing robots
+                                    {
+                                        let blue_robots = game_state.get_robots_blue_mut();
+                                        for robot in detection.get_robots_blue() {
+                                            let id = robot.get_robot_id() as u8;
+                                            let robot_state = blue_robots.entry(id).or_insert_with(|| RobotState::new(id));
+                                            robot_state.update_pose(
+                                                robot.get_x(),
+                                                robot.get_y(),
+                                                robot.get_orientation(),
+                                                dt,
+                                                );
+                                        }
+                                    }
+                                    {
+                                        let yellow_robots = game_state.get_robots_yellow_mut();
+                                        for robot in detection.get_robots_yellow() {
+                                            let id = robot.get_robot_id() as u8;
+                                            let robot_state = yellow_robots.entry(id).or_insert_with(|| RobotState::new(id));
+                                            robot_state.update_pose(
+                                                robot.get_x(),
+                                                robot.get_y(),
+                                                robot.get_orientation(),
+                                                dt,
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                            match tx.send(packet) {
+                                Ok(()) => {}
+                                Err(e) => {
+                                    println!("couldn't send datagram to other thread: {}", e);
+                                    break;
+                                }
                             }
                         },
                         Err(e) => {
@@ -89,7 +146,9 @@ pub fn demo() {
         }
     });
 
+    //let send_thread_game_state = game_state.clone();
     let send_thread = spawn(move || {
+        //let game_state = send_thread_game_state;
         let iface = Ipv4Addr::new(0, 0, 0, 0);
         let addr = SocketAddrV4::new(iface, 0);
         let socket = match UdpSocket::bind(addr) {
