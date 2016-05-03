@@ -2,8 +2,11 @@ use std::error;
 use std::result;
 use std::fmt;
 use std::io;
+use std::any::Any;
 use std::num::{ParseIntError, ParseFloatError};
 use std::str::ParseBoolError;
+use std::sync::PoisonError;
+use std::sync::mpsc::{RecvError, SendError};
 
 /// A specialized `Result` type for this crate.
 ///
@@ -31,8 +34,8 @@ pub enum ErrorKind {
     Parse,
     /// A protocol error communicating with a subprocess AI
     AiProtocol,
-    /// An API yielded a result different than expected.
-    Inconsistent,
+    /// An OS Synchronization error, like `std::sync::PoisonError` or `std::sync::mpsc::RecvError`
+    Sync,
     /// Any other error category.
     Other,
     /// Reserved for future kinds.
@@ -111,6 +114,24 @@ impl From<ParseIntError> for Error {
 impl From<ParseBoolError> for Error {
     fn from(err: ParseBoolError) -> Self {
         Error::new(ErrorKind::Parse, err)
+    }
+}
+
+impl<T: Send + Sync + Any> From<PoisonError<T>> for Error {
+    fn from(err: PoisonError<T>) -> Self {
+        Error::new(ErrorKind::Sync, err)
+    }
+}
+
+impl From<RecvError> for Error {
+    fn from(err: RecvError) -> Self {
+        Error::new(ErrorKind::Sync, err)
+    }
+}
+
+impl<T: Send + Sync + Any> From<SendError<T>> for Error {
+    fn from(err: SendError<T>) -> Self {
+        Error::new(ErrorKind::Sync, err)
     }
 }
 

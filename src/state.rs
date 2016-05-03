@@ -3,6 +3,7 @@
 //!
 
 use std::collections::BTreeMap;
+use std::sync::{Arc, RwLock};
 
 pub trait Position {
     fn get_x(&self) -> f32;
@@ -111,8 +112,8 @@ impl Pose for RobotState {
     fn set_vw(&mut self, vw: f32) { self.vw = vw; }
 }
 
-pub struct FieldSpecs {
-}
+//pub struct FieldSpecs {
+//}
 
 /// Carries everything needed for a game step.
 #[derive(Debug)]
@@ -147,4 +148,12 @@ impl GameState {
     pub fn get_robots_yellow(&self) -> &BTreeMap<u8, RobotState> { &self.robots_yellow }
     pub fn get_robots_blue_mut(&mut self) -> &mut BTreeMap<u8, RobotState> { &mut self.robots_blue }
     pub fn get_robots_yellow_mut(&mut self) -> &mut BTreeMap<u8, RobotState> { &mut self.robots_yellow }
+}
+
+/// Type alias for a shared `GameState`.
+pub type SharedGameState = Arc<RwLock<GameState>>;
+
+/// Initialize and return a `SharedGameState`.
+pub fn new_shared_game_state() -> SharedGameState {
+    Arc::new(RwLock::new(GameState::new()))
 }
