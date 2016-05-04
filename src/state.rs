@@ -114,9 +114,23 @@ impl Pose for RobotState {
     fn set_vw(&mut self, vw: f32) { self.vw = vw; }
 }
 
-//#[derive(Debug, Clone)]
-//pub struct FieldSpecs {
-//}
+/// Specifications of the field geometry
+///
+/// This specifications intend to be minimal, some fields that we have from the vision are left
+/// out on purpose.
+///
+#[derive(Debug, Clone)]
+pub struct FieldGeom {
+    pub field_length: f32,
+    pub field_width: f32,
+    pub goal_width: f32,
+    pub center_circle_radius: f32,
+    pub defense_radius: f32,
+    pub defense_stretch: f32,
+    pub free_kick_from_defense_dist: f32,
+    pub penalty_spot_from_field_line_dist: f32,
+    pub penalty_line_from_spot_dist: f32,
+}
 
 /// Carries everything needed for a game step.
 #[derive(Debug, Clone)]
@@ -126,6 +140,7 @@ pub struct GameState {
     ball: BallState,
     robots_blue: BTreeMap<u8, RobotState>,
     robots_yellow: BTreeMap<u8, RobotState>,
+    field_geom: FieldGeom,
 }
 
 impl GameState {
@@ -139,6 +154,17 @@ impl GameState {
             },
             robots_blue: BTreeMap::new(),
             robots_yellow: BTreeMap::new(),
+            field_geom: FieldGeom {
+                field_length: 0.0,
+                field_width: 0.0,
+                goal_width: 0.0,
+                center_circle_radius: 0.0,
+                defense_radius: 0.0,
+                defense_stretch: 0.0,
+                free_kick_from_defense_dist: 0.0,
+                penalty_spot_from_field_line_dist: 0.0,
+                penalty_line_from_spot_dist: 0.0,
+            },
         }
     }
     pub fn get_counter(&self) -> u64 { self.counter }
@@ -151,6 +177,8 @@ impl GameState {
     pub fn get_robots_yellow(&self) -> &BTreeMap<u8, RobotState> { &self.robots_yellow }
     pub fn get_robots_blue_mut(&mut self) -> &mut BTreeMap<u8, RobotState> { &mut self.robots_blue }
     pub fn get_robots_yellow_mut(&mut self) -> &mut BTreeMap<u8, RobotState> { &mut self.robots_yellow }
+    pub fn get_field_geom(&self) -> &FieldGeom { &self.field_geom }
+    pub fn get_field_geom_mut(&mut self) -> &mut FieldGeom { &mut self.field_geom }
 }
 
 struct InnerSharedGameState {
@@ -201,6 +229,11 @@ impl SharedGameState {
         // XXX: should this be used?
         let _ = try!(self.inner.condvar.wait(mutex));
         Ok(())
+    }
+
+    /// Shortcut for `.wait()` followed by `.read()`
+    pub fn wait_and_read(&self) -> Result<RwLockReadGuard<GameState>> {
+        self.wait().and(self.read())
     }
 }
 

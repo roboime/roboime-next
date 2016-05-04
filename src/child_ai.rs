@@ -76,20 +76,25 @@ impl ChildAi {
         let thread_builder = thread::Builder::new().name("Child AI".to_string());
         let child_thread = try!(thread_builder.spawn(move || -> Result<ExitStatus> {
 
-            fn new_err(msg: &str) -> Error {
-                Error::new(ErrorKind::AiProtocol, msg.to_string())
+            macro_rules! throw_err {
+                ( $( $tt:tt )* ) => {{
+                    return Err(Error::new(ErrorKind::AiProtocol, format!($($tt)*)));
+                }}
             }
 
             try!(child.map_all_pipes(|child_in, child_out, child_err| {
                 let mut lines = BufReader::new(child_out).lines();
 
+                // TODO: capture child_err on another thread
+                //for line in BufReader::new(child_err).lines() {
+                //    println!("got: {:?}", line);
+                //}
+
                 try!(writeln!(child_in, "ROBOIME_INTEL_PROTOCOL_VERSION 1"));
                 {
                     let line = try!(match lines.next() {
                         Some(thing) => thing,
-                        None => {
-                            return Err(new_err("no output"));
-                        }
+                        None => throw_err!("no output"),
                     });
                     match line.as_ref() {
                         "COMPATIBLE 1" => {
@@ -99,41 +104,29 @@ impl ChildAi {
                             println!("child AI is not compatible, aborting...");
                             return Ok(());
                         },
-                        _ => {
-                            return Err(new_err("invalid version confirmation"));
-                        }
+                        _ => throw_err!("invalid version confirmation"),
                     }
                 }
 
-                // TODO: get these from the geometry, or better, from a game state
-
-                // FIELD_WIDTH
-                try!(writeln!(child_in, "4.000"));
-                // FIELD_HEIGHT
-                try!(writeln!(child_in, "6.000"));
-                // GOAL_WIDTH
-                try!(writeln!(child_in, "0.700"));
-                // CENTER_CIRCLE_RADIUS
-                try!(writeln!(child_in, "0.500"));
-                // DEFENSE_RADIUS
-                try!(writeln!(child_in, "0.500"));
-                // DEFENSE_STRETCH
-                try!(writeln!(child_in, "0.350"));
-                // FREE_KICK_FROM_DEFENSE_DIST
-                try!(writeln!(child_in, "0.700"));
-                // PENALTY_SPOT_FROM_FIELD_LINE_DIST
-                try!(writeln!(child_in, "0.450"));
-                // PENALTY_LINE_FROM_SPOT_DIST
-                try!(writeln!(child_in, "0.350"));
-
-                // TODO: capture child_err on another thread
-                //for line in BufReader::new(child_err).lines() {
-                //    println!("got: {:?}", line);
-                //}
+                {
+                    let state = try!(game_state.wait_and_read());
+                    let geom = state.get_field_geom();
+                    // FIELD_LENGTH FIELD_WIDTH GOAL_WIDTH CENTER_CIRCLE_RADIUS DEFENSE_RADIUS DEFENSE_STRETCH FREE_KICK_FROM_DEFENSE_DIST PENALTY_SPOT_FROM_FIELD_LINE_DIST PENALTY_LINE_FROM_SPOT_DIST
+                    try!(writeln!(child_in, "{:.03} {:.03} {:.03} {:.03} {:.03} {:.03} {:.03} {:.03} {:.03}",
+                        geom.field_length,
+                        geom.field_width,
+                        geom.goal_width,
+                        geom.center_circle_radius,
+                        geom.defense_radius,
+                        geom.defense_stretch,
+                        geom.free_kick_from_defense_dist,
+                        geom.penalty_spot_from_field_line_dist,
+                        geom.penalty_line_from_spot_dist,
+                    ));
+                }
 
                 loop {
-                    try!(game_state.wait());
-                    let state = try!(game_state.read());
+                    let state = try!(game_state.wait_and_read());
                     let timestamp = state.get_timestamp();
                     let counter = state.get_counter();
 
@@ -144,17 +137,25 @@ impl ChildAi {
                     try!(writeln!(child_in, "{}", timestamp));
 
                     // OUR_SCORE OPPONENT_SCORE
+                    // TODO
                     try!(writeln!(child_in, "0 0"));
 
                     // REF_STATE <REF_TIME_LEFT|-1>
+                    // TODO
                     try!(writeln!(child_in, "N -1"));
 
                     let ball = state.get_ball();
 
                     // BALL_X BALL_Y BALL_VX BALL_VY
-                    try!(writeln!(child_in, "{} {} 0 0", ball.get_x(), ball.get_y()));
+                    try!(writeln!(child_in, "{:.04} {:.04} {:.04} {:.04}",
+                        ball.get_x(),
+                        ball.get_y(),
+                        ball.get_vx(),
+                        ball.get_vy(),
+                    ));
 
                     // GOALKEEPER_ID
+                    // TODO
                     try!(writeln!(child_in, "0"));
 
                     let (robots_our, robots_opponent) = {
@@ -175,30 +176,28 @@ impl ChildAi {
 
                     for (robot_id, robot) in robots_our {
                         // [ROBOT_ID ROBOT_X ROBOT_Y ROBOT_W ROBOT_VX ROBOT_VY ROBOT_VW] x NUM_ROBOTS
-                        try!(writeln!(child_in,
-                                      "{} {} {} {} {} {} {}",
-                                      robot_id,
-                                      robot.get_x(),
-                                      robot.get_y(),
-                                      robot.get_w(),
-                                      robot.get_vx(),
-                                      robot.get_vy(),
-                                      robot.get_vw(),
-                                     ));
+                        try!(writeln!(child_in, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
+                            robot_id,
+                            robot.get_x(),
+                            robot.get_y(),
+                            robot.get_w(),
+                            robot.get_vx(),
+                            robot.get_vy(),
+                            robot.get_vw(),
+                        ));
                     }
 
                     for (robot_id, robot) in robots_opponent {
                         // [ROBOT_ID ROBOT_X ROBOT_Y ROBOT_W ROBOT_VX ROBOT_VY ROBOT_VW] x OPPONENT_NUM_ROBOTS
-                        try!(writeln!(child_in,
-                                      "{} {} {} {} {} {} {}",
-                                      robot_id,
-                                      robot.get_x(),
-                                      robot.get_y(),
-                                      robot.get_w(),
-                                      robot.get_vx(),
-                                      robot.get_vy(),
-                                      robot.get_vw(),
-                                     ));
+                        try!(writeln!(child_in, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
+                            robot_id,
+                            robot.get_x(),
+                            robot.get_y(),
+                            robot.get_w(),
+                            robot.get_vx(),
+                            robot.get_vy(),
+                            robot.get_vw(),
+                         ));
                     }
 
                     {
@@ -207,7 +206,7 @@ impl ChildAi {
                             None => { break; }
                         });
                         if line != format!("C {}", counter) {
-                            return Err(new_err(format!("wrong command counter, expected 'C {}' got {}", counter, line).as_ref()));
+                            throw_err!("wrong command counter, expected 'C {}' got {}", counter, line);
                         }
                     }
 
@@ -215,7 +214,7 @@ impl ChildAi {
                     {
                         let commands = packet.mut_commands();
                         commands.set_timestamp(timestamp);
-                        commands.set_isteamyellow(true);
+                        commands.set_isteamyellow(is_yellow);
                         let robot_commands = commands.mut_robot_commands();
 
                         for (robot_id, _) in robots_our {
@@ -227,7 +226,10 @@ impl ChildAi {
                             });
 
                             let vars: Vec<_> = line.split(' ').collect();
-                            assert_eq!(vars.len(), 6);
+                            let vars_len = vars.len();
+                            if vars_len != 6 {
+                                throw_err!("expected 6 values for robot command, got {}", vars_len);
+                            }
 
                             let v_tan:  f32 = try!(vars[0].parse());
                             let v_norm: f32 = try!(vars[1].parse());
