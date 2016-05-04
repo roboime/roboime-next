@@ -17,7 +17,10 @@ Developing
 
 This will resolve, download and compile dependencies, and compile the project in debug mode and run it. That's it. Really!
 
-> TODO: add guidelines about coding conventions, link to the project blueprints and whatnot
+### Editor/IDE
+
+Please, setup [EditorConfig](http://editorconfig.org/) on your editor/IDE. Also, when writing code, aim to respect the surrounding style
+conventions.  In the future code lints will be added to warn about style that deviates from our preference, for now that's not a priority.
 
 ### Optimized builds
 
@@ -150,7 +153,7 @@ __Next NUM_ROBOTS lines__, robots commands:
 
 - `V_TAN`, an float, robot tangencial velocity;
 - `V_NORM`, an float, robot normal velocity;
-- `V_ANG`, an float, robot angular velocity; 
+- `V_ANG`, an float, robot angular velocity;
 - `KICK_X`, an float, robot x kick velocity;
 - `KICK_Z`, an float, robot z kick velocity;
 - `SPIN`, a bool, true if the spin is to be turned or false else;
