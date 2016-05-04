@@ -135,7 +135,7 @@ mod froms {
         }
     }
 
-    impl<T: Send + Sync + Any> From<SendError<T>> for Error {
+    impl<T: Any + Send + Sync> From<SendError<T>> for Error {
         fn from(err: SendError<T>) -> Self {
             Error::new(ErrorKind::Sync, err)
         }
@@ -144,6 +144,18 @@ mod froms {
     impl From<ProtobufError> for Error {
         fn from(err: ProtobufError) -> Self {
             Error::new(ErrorKind::Parse, err)
+        }
+    }
+
+    impl<T: Any + Send + ?Sized> From<Box<T>> for Error {
+        fn from(_err: Box<T>) -> Self {
+            // FIXME: make use of the actual error, something like:
+            //use std::error::Error as ErrorError;
+            //match (*err).downcast_ref::<ErrorError>() {
+            //    Some(e) => Error::new(ErrorKind::Other, Box::new(e)),
+            //    None => Error::new(ErrorKind::Other, "unknown"),
+            //}
+            Error::new(ErrorKind::Other, "unknown")
         }
     }
 }

@@ -1,8 +1,8 @@
-use std::process::{Stdio, Command, Child, ChildStdin, ChildStdout, ChildStderr};
+use std::process::{Stdio, Command, Child, ChildStdin, ChildStdout, ChildStderr, ExitStatus};
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::thread::JoinHandle;
-use ::{Result, Error, ErrorKind, SharedGameState, Position, Pose};
+use ::{Result, Error, ErrorKind, SharedGameState, Position, Pose, InterfaceHandle};
 
 /// Extension methods for the standard [`Command` type][link] in `std::process`.
 ///
@@ -42,30 +42,28 @@ impl ChildExt for Child {
 }
 
 /// Builder for a subprocess (child) AI
-pub struct ChildAiBuilder {
-    thread_builder: thread::Builder,
+pub struct ChildAi {
     command: Command,
     is_yellow: bool,
 }
 
-impl ChildAiBuilder {
-    pub fn new(command: Command) -> ChildAiBuilder {
-        ChildAiBuilder {
-            thread_builder: thread::Builder::new().name("Child AI".to_string()),
+impl ChildAi {
+    pub fn new(command: Command) -> ChildAi {
+        ChildAi {
             command: command,
             is_yellow: true,
         }
     }
 
     /// Whether the AI will play with the yellow team, blue otherwise.
-    pub fn is_yellow(mut self, is_yellow: bool) -> ChildAiBuilder {
+    pub fn is_yellow(&mut self, is_yellow: bool) -> &mut ChildAi {
         self.is_yellow = is_yellow;
         self
     }
 
     /// Spawn a thread which spawns a child subprocess and feeds it the game_state at 60Hz and
     /// sends commands through tx.
-    pub fn spawn(mut self, game_state: SharedGameState, tx: Sender<Vec<u8>>) -> Result<JoinHandle<Result<()>>> {
+    pub fn spawn(&mut self, game_state: SharedGameState, tx: Sender<Vec<u8>>) -> Result<ChildAiHandle> {
         use std::io::prelude::*;
         use std::io::BufReader;
         use protocol::Message;
@@ -75,13 +73,14 @@ impl ChildAiBuilder {
         let is_yellow = self.is_yellow;
         let mut child = try!(self.command.piped_spawn());
 
-        Ok(try!(self.thread_builder.spawn(move || {
+        let thread_builder = thread::Builder::new().name("Child AI".to_string());
+        let child_thread = try!(thread_builder.spawn(move || -> Result<ExitStatus> {
 
             fn new_err(msg: &str) -> Error {
                 Error::new(ErrorKind::AiProtocol, msg.to_string())
             }
 
-            let exit_status = try!(child.map_all_pipes(|child_in, child_out, child_err| {
+            try!(child.map_all_pipes(|child_in, child_out, child_err| {
                 let mut lines = BufReader::new(child_out).lines();
 
                 try!(writeln!(child_in, "ROBOIME_INTEL_PROTOCOL_VERSION 1"));
@@ -94,10 +93,10 @@ impl ChildAiBuilder {
                     });
                     match line.as_ref() {
                         "COMPATIBLE 1" => {
-                            println!("Child AI started");
+                            println!("child AI started");
                         },
                         s if s.starts_with("NOT_COMPATIBLE") => {
-                            println!("Child AI is not compatible, aborting...");
+                            println!("child AI is not compatible, aborting...");
                             return Ok(());
                         },
                         _ => {
@@ -271,10 +270,26 @@ impl ChildAiBuilder {
                 Ok(())
             }));
 
-            // TODO: convert a non-success ExitStatus to an Error
-            let _exit_status = exit_status;
-            // TODO: also, clean up this mess
-            Ok(try!(child.wait())).and(Ok(()))
-        })))
+            Ok(try!(child.wait()))
+        }));
+
+        Ok(ChildAiHandle {
+            child_handle: child_thread
+        })
+    }
+}
+
+pub struct ChildAiHandle {
+    child_handle: JoinHandle<Result<ExitStatus>>,
+}
+
+impl InterfaceHandle for ChildAiHandle {
+    fn join(self) -> Result<()> {
+        let exit_status = try!(try!(self.child_handle.join()));
+        if exit_status.success() {
+            Ok(())
+        } else {
+            Err(Error::new(ErrorKind::Io, "child AI exited with failure"))
+        }
     }
 }

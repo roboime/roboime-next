@@ -1,25 +1,22 @@
 extern crate roboime_next;
 
-use std::net::Ipv4Addr;
 use std::sync::mpsc::channel;
 use std::process::Command;
 use std::error::Error;
-use roboime_next::{Result, SharedGameState, GrSimUpdaterBuilder, GrSimCommanderBuilder, ChildAiBuilder};
+use roboime_next::{Result, SharedGameState, ChildAi, GrSimInterface, InterfaceHandle};
 
 fn main_loop() -> Result<()> {
     let game_state = SharedGameState::new();
     let (tx, rx) = channel();
 
-    let grsim_updater = try!(GrSimUpdaterBuilder::new().port(10002).spawn(game_state.clone()));
-    let grsim_commander = try!(GrSimCommanderBuilder::new().grsim_addr(Ipv4Addr::new(127, 0, 0, 1)).spawn(rx));
-    let child_ai = try!(ChildAiBuilder::new(Command::new("./demo-ai")).is_yellow(true).spawn(game_state.clone(), tx));
+    let mut grsim_cfg = GrSimInterface::new();
+    try!(grsim_cfg.vision_addr("224.5.23.2:10002"));
+    try!(grsim_cfg.grsim_addr("127.0.0.1:20011"));
+    let grsim = try!(grsim_cfg.spawn(game_state.clone(), rx));
 
-    // FIXME: ignoring the any reason why a join may have failed
-    let _ = child_ai.join();
-    let _ = grsim_commander.join();
-    let _ = grsim_updater.join();
+    let child_ai = try!(ChildAi::new(Command::new("./demo-ai")).is_yellow(true).spawn(game_state.clone(), tx));
 
-    Ok(())
+    Ok(try!((child_ai, grsim).join()))
 }
 
 trait ResultExt {
