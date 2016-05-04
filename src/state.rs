@@ -2,8 +2,10 @@
 //! This module is mostly concerned with the game state.
 //!
 
+use std::ops::{Deref, DerefMut};
 use std::collections::BTreeMap;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard, Condvar, Mutex};
+use ::Result;
 
 pub trait Position {
     fn get_x(&self) -> f32;
@@ -47,14 +49,14 @@ pub trait Pose : Position {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Pos {
     x: f32,
     y: f32,
 }
 
 /// Carries mainly x, y, vx, vy
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BallState {
     p: Pos,
     v: Pos,
@@ -72,7 +74,7 @@ impl Position for BallState {
 }
 
 /// Carries mainly x, y, w, vx, vy, vw
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RobotState {
     i: u8,
     p: Pos,
@@ -112,11 +114,12 @@ impl Pose for RobotState {
     fn set_vw(&mut self, vw: f32) { self.vw = vw; }
 }
 
+//#[derive(Debug, Clone)]
 //pub struct FieldSpecs {
 //}
 
 /// Carries everything needed for a game step.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GameState {
     counter: u64,
     timestamp: f64,
@@ -150,10 +153,78 @@ impl GameState {
     pub fn get_robots_yellow_mut(&mut self) -> &mut BTreeMap<u8, RobotState> { &mut self.robots_yellow }
 }
 
-/// Type alias for a shared `GameState`.
-pub type SharedGameState = Arc<RwLock<GameState>>;
+struct InnerSharedGameState {
+    state: RwLock<GameState>,
+    condvar: Condvar,
+    mutex: Mutex<()>,
+}
 
-/// Initialize and return a `SharedGameState`.
-pub fn new_shared_game_state() -> SharedGameState {
-    Arc::new(RwLock::new(GameState::new()))
+/// A type for sharing a `GameState`, commiting, signaling and waiting for changes.
+// TODO: explain more, explain better
+#[derive(Clone)]
+pub struct SharedGameState {
+    inner: Arc<InnerSharedGameState>,
+}
+
+impl SharedGameState {
+    /// Initialize and return a `SharedGameState`.
+    pub fn new() -> SharedGameState {
+        SharedGameState {
+            inner: Arc::new(InnerSharedGameState {
+                state: RwLock::new(GameState::new()),
+                condvar: Condvar::new(),
+                mutex: Mutex::new(()),
+            })
+        }
+    }
+
+    /// Gives read access, only committed changes are visible
+    pub fn read(&self) -> Result<RwLockReadGuard<GameState>> {
+        Ok(try!(self.inner.state.read()))
+    }
+
+    /// Gives write access, will be commited when the returned `AutoCommitGameState` is dropped
+    pub fn write(&self) -> Result<AutoCommitGameState> {
+        Ok(AutoCommitGameState {
+            shared_game_state: self.clone(),
+            state: try!(self.inner.state.read()).clone(),
+        })
+    }
+
+    fn notify(&self) {
+        self.inner.condvar.notify_all();
+    }
+
+    /// Blocks the current thread until there's a commit
+    pub fn wait(&self) -> Result<()> {
+        let mutex = try!(self.inner.mutex.lock());
+        // XXX: should this be used?
+        let _ = try!(self.inner.condvar.wait(mutex));
+        Ok(())
+    }
+}
+
+/// Helper type that commits changes when dropped.
+#[derive(Clone)]
+pub struct AutoCommitGameState {
+    shared_game_state: SharedGameState,
+    state: GameState,
+}
+
+impl Drop for AutoCommitGameState {
+    fn drop(&mut self) {
+        let mut old_state = self.shared_game_state.inner.state.write().unwrap();
+        old_state.clone_from(&self.state);
+        self.shared_game_state.notify();
+    }
+}
+
+impl Deref for AutoCommitGameState {
+    type Target = GameState;
+
+    fn deref(&self) -> &GameState { &self.state }
+}
+
+impl DerefMut for AutoCommitGameState {
+    fn deref_mut(&mut self) -> &mut GameState { &mut self.state }
 }

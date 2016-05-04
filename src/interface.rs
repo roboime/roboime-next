@@ -8,7 +8,18 @@ use std::net::{UdpSocket, Ipv4Addr, SocketAddrV4};
 use net2::{UdpBuilder, UdpSocketExt};
 use protocol::parse_from_bytes;
 use protocol::messages_robocup_ssl_wrapper_legacy::SSL_WrapperPacket;
-use ::{Result, SharedGameState, RobotState, Position, Pose};
+use protocol::messages_robocup_ssl_detection::SSL_DetectionFrame;
+use protocol::messages_robocup_ssl_geometry_legacy::SSL_GeometryData;
+use ::{Result, GameState, SharedGameState, RobotState, Position, Pose};
+
+macro_rules! try_or {
+    ($x:expr, |$e:ident| $b:block) => {
+        match $x {
+            Ok(x) => x,
+            Err($e) => $b
+        }
+    }
+}
 
 // TODO: remove thread:Builder from all builders and use borrowed builder pattern
 
@@ -20,8 +31,54 @@ pub struct GrSimUpdaterBuilder {
     port: u16,
 }
 
-impl GrSimUpdaterBuilder {
+impl GameState {
+    fn update_from_ssl_geometry(&mut self, _geometry: &SSL_GeometryData) {
+        unimplemented!();
+    }
 
+    fn update_from_ssl_detection(&mut self, detection: &SSL_DetectionFrame) {
+        let timestamp = detection.get_t_capture();
+        let dt = timestamp - self.get_timestamp();
+        self.set_timestamp(timestamp);
+
+        // TODO: select ball
+        for ball in detection.get_balls() {
+            let ball_state = self.get_ball_mut();
+            ball_state.update_position(ball.get_x(), ball.get_y(), dt);
+        }
+
+        // TODO: remove missing robots
+        {
+            let blue_robots = self.get_robots_blue_mut();
+            for robot in detection.get_robots_blue() {
+                let id = robot.get_robot_id() as u8;
+                let robot_state = blue_robots.entry(id).or_insert_with(|| RobotState::new(id));
+                robot_state.update_pose(robot.get_x(), robot.get_y(), robot.get_orientation(), dt);
+            }
+        }
+        {
+            let yellow_robots = self.get_robots_yellow_mut();
+            for robot in detection.get_robots_yellow() {
+                let id = robot.get_robot_id() as u8;
+                let robot_state = yellow_robots.entry(id).or_insert_with(|| RobotState::new(id));
+                robot_state.update_pose(robot.get_x(), robot.get_y(), robot.get_orientation(), dt);
+            }
+        }
+    }
+}
+
+trait UdpSocketExt2 {
+    fn recv_ssl_packet(&self, buf: &mut [u8]) -> Result<SSL_WrapperPacket>;
+}
+
+impl UdpSocketExt2 for UdpSocket {
+    fn recv_ssl_packet(&self, buf: &mut [u8]) -> Result<SSL_WrapperPacket> {
+        let (size, _) = try!(self.recv_from(buf));
+        Ok(try!(parse_from_bytes::<SSL_WrapperPacket>(&buf[0..size])))
+    }
+}
+
+impl GrSimUpdaterBuilder {
     /// Instantiate with default values.
     pub fn new() -> GrSimUpdaterBuilder {
         GrSimUpdaterBuilder {
@@ -61,75 +118,21 @@ impl GrSimUpdaterBuilder {
             try!(socket.join_multicast_v4(&mcast_addr, &iface));
             println!("grSim updater started on {}", addr);
 
-            // 1KB buffer
+            // 1KB buffer, packets are usually not greater than ~200 bytes
             let buf = &mut [0u8; 1024];
+
             loop {
-                let packet = match socket.recv_from(buf) {
-                    Ok((size, _)) => {
-                        match parse_from_bytes::<SSL_WrapperPacket>(&buf[0..size]) {
-                            Ok(packet) => packet,
-                            Err(e) => {
-                                println!("couldn't parse datagram: {}, skipping packet", e);
-                                continue;
-                            }
-                        }
-                    },
-                    Err(e) => {
-                        println!("couldn't receive datagram: {}, skipping packet", e);
-                        continue;
-                    }
-                };
-                let mut game_state = match game_state.write() {
-                    Ok(s) => s,
-                    Err(e) => {
-                        println!("GameState read lock poisoned: {}", e);
-                        e.into_inner()
-                    }
-                };
+                let packet = try_or!(socket.recv_ssl_packet(buf), |err| {
+                    println!("error: {}; skipping packet...", err);
+                    continue;
+                });
+                let mut game_state = try!(game_state.write());
+                if packet.has_geometry() {
+                    game_state.update_from_ssl_geometry(packet.get_geometry());
+                }
                 if packet.has_detection() {
-                    let detection = packet.get_detection();
-                    let timestamp = detection.get_t_capture();
-                    let dt = timestamp - game_state.get_timestamp();
+                    game_state.update_from_ssl_detection(packet.get_detection());
                     game_state.inc_counter();
-                    game_state.set_timestamp(timestamp);
-
-                    // TODO: select ball
-                    for ball in detection.get_balls() {
-                        let ball_state = game_state.get_ball_mut();
-                        ball_state.update_position(
-                            ball.get_x(),
-                            ball.get_y(),
-                            dt,
-                            );
-                    }
-
-                    // TODO: remove missing robots
-                    {
-                        let blue_robots = game_state.get_robots_blue_mut();
-                        for robot in detection.get_robots_blue() {
-                            let id = robot.get_robot_id() as u8;
-                            let robot_state = blue_robots.entry(id).or_insert_with(|| RobotState::new(id));
-                            robot_state.update_pose(
-                                robot.get_x(),
-                                robot.get_y(),
-                                robot.get_orientation(),
-                                dt,
-                                );
-                        }
-                    }
-                    {
-                        let yellow_robots = game_state.get_robots_yellow_mut();
-                        for robot in detection.get_robots_yellow() {
-                            let id = robot.get_robot_id() as u8;
-                            let robot_state = yellow_robots.entry(id).or_insert_with(|| RobotState::new(id));
-                            robot_state.update_pose(
-                                robot.get_x(),
-                                robot.get_y(),
-                                robot.get_orientation(),
-                                dt,
-                                );
-                        }
-                    }
                 }
             }
         })))

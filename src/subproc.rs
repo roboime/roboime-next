@@ -66,10 +66,8 @@ impl ChildAiBuilder {
     /// Spawn a thread which spawns a child subprocess and feeds it the game_state at 60Hz and
     /// sends commands through tx.
     pub fn spawn(mut self, game_state: SharedGameState, tx: Sender<Vec<u8>>) -> Result<JoinHandle<Result<()>>> {
-        use std::sync::mpsc::channel;
         use std::io::prelude::*;
         use std::io::BufReader;
-        use std::time::Duration;
         use protocol::Message;
         use protocol::grSim_Packet::grSim_Packet;
         use protocol::grSim_Commands::grSim_Robot_Command;
@@ -78,18 +76,6 @@ impl ChildAiBuilder {
         let mut child = try!(self.command.piped_spawn());
 
         Ok(try!(self.thread_builder.spawn(move || {
-            println!("work thread started");
-
-            let (timer_tx, timer_rx) = channel();
-            try!(thread::Builder::new().name("Child AI timer thread".to_string()).spawn(move || -> Result<()> {
-                let period = Duration::new(0, 16666);
-                loop {
-                    thread::sleep(period);
-                    try!(timer_tx.send(()));
-                }
-            }));
-
-            println!("running subproc");
 
             fn new_err(msg: &str) -> Error {
                 Error::new(ErrorKind::AiProtocol, msg.to_string())
@@ -108,10 +94,10 @@ impl ChildAiBuilder {
                     });
                     match line.as_ref() {
                         "COMPATIBLE 1" => {
-                            println!("AI is compatible");
+                            println!("Child AI started");
                         },
                         s if s.starts_with("NOT_COMPATIBLE") => {
-                            println!("AI is not compatible");
+                            println!("Child AI is not compatible, aborting...");
                             return Ok(());
                         },
                         _ => {
@@ -141,23 +127,15 @@ impl ChildAiBuilder {
                 // PENALTY_LINE_FROM_SPOT_DIST
                 try!(writeln!(child_in, "0.350"));
 
+                // TODO: capture child_err on another thread
                 //for line in BufReader::new(child_err).lines() {
                 //    println!("got: {:?}", line);
                 //}
 
                 loop {
-                    try!(timer_rx.recv());
-
-                    let state = match game_state.read() {
-                        Ok(s) => s,
-                        Err(e) => {
-                            println!("GameState read lock poisoned: {}", e);
-                            e.into_inner()
-                        }
-                    };
-
+                    try!(game_state.wait());
+                    let state = try!(game_state.read());
                     let timestamp = state.get_timestamp();
-                    //timestamp = precise_time_s();
                     let counter = state.get_counter();
 
                     // COUNTER

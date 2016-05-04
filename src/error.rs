@@ -1,12 +1,6 @@
 use std::error;
 use std::result;
 use std::fmt;
-use std::io;
-use std::any::Any;
-use std::num::{ParseIntError, ParseFloatError};
-use std::str::ParseBoolError;
-use std::sync::PoisonError;
-use std::sync::mpsc::{RecvError, SendError};
 
 /// A specialized `Result` type for this crate.
 ///
@@ -93,45 +87,64 @@ impl error::Error for Error {
     }
 }
 
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Error::new(ErrorKind::Io, err)
-    }
-}
+mod froms {
+    use std::any::Any;
+    use std::io::Error as IoError;
+    use std::num::{ParseIntError, ParseFloatError};
+    use std::str::ParseBoolError;
+    use std::sync::PoisonError;
+    use std::sync::mpsc::{RecvError, SendError};
+    use protocol::ProtobufError;
+    use ::error::{Error, ErrorKind};
 
-impl From<ParseFloatError> for Error {
-    fn from(err: ParseFloatError) -> Self {
-        Error::new(ErrorKind::Parse, err)
+    impl From<IoError> for Error {
+        fn from(err: IoError) -> Self {
+            Error::new(ErrorKind::Io, err)
+        }
     }
-}
 
-impl From<ParseIntError> for Error {
-    fn from(err: ParseIntError) -> Self {
-        Error::new(ErrorKind::Parse, err)
+    impl From<ParseFloatError> for Error {
+        fn from(err: ParseFloatError) -> Self {
+            Error::new(ErrorKind::Parse, err)
+        }
     }
-}
 
-impl From<ParseBoolError> for Error {
-    fn from(err: ParseBoolError) -> Self {
-        Error::new(ErrorKind::Parse, err)
+    impl From<ParseIntError> for Error {
+        fn from(err: ParseIntError) -> Self {
+            Error::new(ErrorKind::Parse, err)
+        }
     }
-}
 
-impl<T: Send + Sync + Any> From<PoisonError<T>> for Error {
-    fn from(err: PoisonError<T>) -> Self {
-        Error::new(ErrorKind::Sync, err)
+    impl From<ParseBoolError> for Error {
+        fn from(err: ParseBoolError) -> Self {
+            Error::new(ErrorKind::Parse, err)
+        }
     }
-}
 
-impl From<RecvError> for Error {
-    fn from(err: RecvError) -> Self {
-        Error::new(ErrorKind::Sync, err)
+    impl<T> From<PoisonError<T>> for Error {
+        fn from(_err: PoisonError<T>) -> Self {
+            // XXX: the error here is not forwarded because it references to !Send !Sync data, more
+            // over it is only an error::Error if T: Reflect, which is limited for our usage
+            Error::new(ErrorKind::Sync, "lock poison error")
+        }
     }
-}
 
-impl<T: Send + Sync + Any> From<SendError<T>> for Error {
-    fn from(err: SendError<T>) -> Self {
-        Error::new(ErrorKind::Sync, err)
+    impl From<RecvError> for Error {
+        fn from(err: RecvError) -> Self {
+            Error::new(ErrorKind::Sync, err)
+        }
+    }
+
+    impl<T: Send + Sync + Any> From<SendError<T>> for Error {
+        fn from(err: SendError<T>) -> Self {
+            Error::new(ErrorKind::Sync, err)
+        }
+    }
+
+    impl From<ProtobufError> for Error {
+        fn from(err: ProtobufError) -> Self {
+            Error::new(ErrorKind::Parse, err)
+        }
     }
 }
 

@@ -4,10 +4,10 @@ use std::net::Ipv4Addr;
 use std::sync::mpsc::channel;
 use std::process::Command;
 use std::error::Error;
-use roboime_next::{Result, new_shared_game_state, GrSimUpdaterBuilder, GrSimCommanderBuilder, ChildAiBuilder};
+use roboime_next::{Result, SharedGameState, GrSimUpdaterBuilder, GrSimCommanderBuilder, ChildAiBuilder};
 
 fn main_loop() -> Result<()> {
-    let game_state = new_shared_game_state();
+    let game_state = SharedGameState::new();
     let (tx, rx) = channel();
 
     let grsim_updater = try!(GrSimUpdaterBuilder::new().port(10002).spawn(game_state.clone()));

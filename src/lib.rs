@@ -8,7 +8,7 @@ extern crate time;
 
 pub use self::error::{Result, Error, ErrorKind};
 pub use subproc::{CommandExt, ChildExt, ChildAiBuilder};
-pub use state::{GameState, RobotState, BallState, Position, Pose, SharedGameState, new_shared_game_state};
+pub use state::{GameState, RobotState, BallState, Position, Pose, SharedGameState};
 pub use interface::{GrSimUpdaterBuilder, GrSimCommanderBuilder};
 
 mod error;

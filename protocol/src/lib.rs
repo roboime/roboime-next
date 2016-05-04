@@ -25,3 +25,4 @@ pub mod referee;
 
 pub use protobuf::parse_from_bytes;
 pub use protobuf::core::Message;
+pub use protobuf::error::ProtobufError;
