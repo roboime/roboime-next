@@ -148,7 +148,7 @@ impl GrSimInterface {
             let socket = try!(UdpBuilder::new_v4().unwrap().reuse_address(true).unwrap().bind(vision_bind));
             try!(socket.join_multicast_v4(&vision_mcast, &any_addr));
 
-            println!("grSim interaface receiving from {}", vision_addr);
+            println!("grSim interface receiving from {}", vision_addr);
 
             // 1KB buffer, packets are usually not greater than ~200 bytes
             let buf = &mut [0u8; 1024];
