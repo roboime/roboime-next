@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 from math import sin, cos
+print('started', file=sys.stderr)
 
 # INITIAL INPUT:
 magic, version = input().split()
@@ -8,6 +9,7 @@ if int(version) == 1:
     print('COMPATIBLE 1')
 else:
     print('NOT_COMPATIBLE 1')
+print('compatible', file=sys.stderr)
 i = iter(input().split())
 field_with = float(next(i))
 field_height = float(next(i))
@@ -18,6 +20,7 @@ defense_stretch = float(next(i))
 free_kick_from_defense_dist = float(next(i))
 penalty_spot_from_field_line_dist = float(next(i))
 penalty_line_from_spot_dist = float(next(i))
+print('initialized', file=sys.stderr)
 
 while True:
     # STATE:
@@ -48,7 +51,7 @@ while True:
     tx, ty, tw = ball_x, ball_y, 0
 
     # OUTPUT:
-    print('{}'.format(counter))
+    print(counter)
     for i in range(num_robots):
         if i == 0:
             p1 = 0.0004
@@ -58,13 +61,13 @@ while True:
             v_ang = p2 * (tw - w)
             kick_x = 4.0
             kick_z = 0.0
-            spin = True
-            print('{} {} {} {} {} {}'.format(v_tan, v_norm, v_ang, kick_x, kick_z, int(spin)))
+            spin = 1
+            print(v_tan, v_norm, v_ang, kick_x, kick_z, spin)
         else:
             v_tan = 0.0
             v_norm = 0.0
             v_ang = 0.0
             kick_x = 0.0
             kick_z = 0.0
-            spin = True
-            print('{} {} {} {} {} {}'.format(v_tan, v_norm, v_ang, kick_x, kick_z, int(spin)))
+            spin = 0
+            print(v_tan, v_norm, v_ang, kick_x, kick_z, spin)
