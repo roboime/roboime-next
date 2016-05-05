@@ -10,6 +10,7 @@ Next iteration of [RoboIME][roboime]'s software stack, coded in [Rust][rust].
 
 [Documentation][docs]
 
+
 Developing
 ----------
 
@@ -26,8 +27,12 @@ conventions.  In the future code lints will be added to warn about style that de
 
     cargo run --release
 
+
 Game I/O
 --------
+
+__Notes:__ linear (`x`, `y`, field measures) units are in meters, angular (`w`) are in radians, linear velocities (`vx`, `vy`) are in
+meters per second, and angular velocity in radians per second.
 
 ### Initialization input
 
@@ -36,133 +41,103 @@ __Line 1__ version data:
 - `"ROBOIME_INTEL_PROTOCOL_VERSION"`: literal string;
 - `VERSION_NUMBER`: an integer, currently __1__.
 
+Before the next line, it will wait for the correct initialization output.
+
+__Line 2__ field data:
+
+- `FIELD_LENGTH`: a float.
+- `FIELD_WIDTH`: a float.
+- `GOAL_WIDTH`: a float.
+- `CENTER_CIRCLE_RADIUS`: a float.
+- `DEFENSE RADIUS`: a float.
+- `DEFENSE STRETCH`: a float.
+- `FREE_KICK_FROM_DEFENSE_DIST`: a float.
+- `PENALTY_SPOT_FROM_FIELD_LINE_DIST`: a float.
+- `PENALTY_LINE_FROM_SPOT_DIST`: a float.
+
 ### Initialization output
 
 Currently the following line is expected:
 
-- `COMPATIBLE 1`.
+- `COMPATIBLE 1`
 
 In the future, the following may be used to state explicit incompatibility:
 
-- `NOT_COMPATIBLE 1`, given that `1` is the highest compatible version.
-
-### Initialization input, just after the initialization output
-
-__Line 2__ field data:
-
-- `FIELD_WIDTH`: an float.
-
-__Line 3__ field data:
-
-- `FIELD_HIGH`: an float.
-
-__Line 4__ field data:
-
-- `GOAL_WIDTH`: an float.
-
-__Line 5__ field data:
-
-- `CENTER_CIRCLE_RADIUS`: an float.
-
-__Line 6__ field data:
-
-- `DEFENSE RADIUS`: an float.
-
-__Line 7__ field data:
-
-- `DEFENSE STRETCH`: an float.
-
-__Line 8__ field data:
-
-- `FREE_KICK_FROM_DEFENSE_DIST`: an float.
-
-__Line 9__ field data:
-
-- `PENALTY_SPOT_FROM_FIELD_LINE_DIST`: an float.
-
-__Line 10__ field data:
-
-- `PENALTY_LINE_FROM_SPOT_DIST`: an float.
+- `NOT_COMPATIBLE 1`, given that `1` is the highest compatible version
 
 ### Input for one game turn
 
-__Line 1__  general play data:
+__Line 1__ general play data:
 
-- `COUNTER`: an integrer, counter for the number of received packets.
+- `COUNTER`: an integrer, counter for the number of received packets
+- `TIMESTAMP`: a float, the time elapsed since the play started
+- `OUR SCORE`: an integrer, your team score - not implemented yet currently always `0`
+- `OPPONENT SCORE`: an integrer, your opponent team score - not implemented yet currently always `0`
+- `REFEREE_STATE`, a char, indicates the referee state in a list of possible states - not implemented yet currently always `'N'`
+- `REFEREE_TIME_LEFT`, a float, time left to finish the round - not implemented yet always `-1`
+- `GOALKEEPER ID`, an integrer, goalkeeper robot identifier
+- `NUM_ROBOTS`, an integrer, number of robots in your team
+- `OPPONENT_NUM_ROBOTS`, an integrer, number of robots in your opponent team
 
-__Line 2__ general play data:
+__Line 2__ ball status data:
 
-- `TIMESTAMP`: an float, the time elapsed since the play started.
+- `BALL_X`: a float, ball x position
+- `BALL_Y`: a float, ball y position
+- `BALL_VX`: a float, ball x velocity
+- `BALL_VY`: a float, ball y velocity
 
-__Line 3__ referee data:
+__Next `NUM_ROBOTS` lines__, robots data:
 
-- `OUR SCORE`: an integrer, your team score - not implemented yet currently always__0__;
-- `OPPONENT SCORE`: an integrer, your opponent team score - not implemented yet currently always __0__.
-
-__Line 4__ general play data:
-- `REFEREE_STATE`, a char, indicates the referee state in a list of possible states - not implemented yet currently always __N__;
-- `REFEREE_TIME_LEFT`, a float, time left to finish the round - not implemented yet always __-1__.
-
-__Line 5__ ball status data:
-
-- `BALL_X`: an float, ball x position;
-- `BALL_Y`: an float, ball y position;
-- `BALL_VX`: an float, ball x velocity - not implemented yet currently always __0__;
-- `BALL_VY`: an float, ball y velocity - not implemented yet currently always __0__;
-
-__Line 6__ robots status data:
-
-- `GOALKEEPER ID`, an integrer, goalkeeper robot identifier.
-
-__Line 7__ robots general data:
-
-- `NUM_ROBOTS`, an integrer, number of robots in your team.
-
-__Line 8__ robots general data:
-
-- `OPPONENT_NUM_ROBOTS`, an integrer, number of robots in your opponent team.
-
-__Next NUM_ROBOTS lines__, robots data:
-
-- `ROBOT_ID`, an integrer, robot identifier;
-- `ROBOT_X`, a float, robot x position;
-- `ROBOT_Y`, a float, robot y position;
-- `ROBOT_W`, a float, robot angular position;
-- `ROBOT_VX`, a float, robot x velocity - not implement yet currently always __0__;
-- `ROBOT_VY`, a float, robot y velocity - not implement yet currently always __0__;
-- `ROBOT_VW`, a float, robot angular velocity - not implement yet currently always __0__;
+- `ROBOT_ID`, an integrer, robot identifier
+- `ROBOT_X`, a float, robot x position
+- `ROBOT_Y`, a float, robot y position
+- `ROBOT_W`, a float, robot angular position
+- `ROBOT_VX`, a float, robot x velocity
+- `ROBOT_VY`, a float, robot y velocity
+- `ROBOT_VW`, a float, robot angular velocity
 
 __Next OPPONENT_NUM_ROBOTS lines__, robots data:
 
-- `ROBOT_ID`, an integrer, robot identifier;
-- `ROBOT_X`, a float, robot x position;
-- `ROBOT_Y`, a float, robot y position;
-- `ROBOT_W`, a float, robot angular position;
-- `ROBOT_VX`, a float, robot x velocity - not implement yet currently always __0__;
-- `ROBOT_VY`, a float, robot y velocity - not implement yet currently always __0__;
-- `ROBOT_VW`, a float, robot angular velocity - not implement yet currently always __0__;
+- `ROBOT_ID`, an integrer, robot identifier
+- `ROBOT_X`, a float, robot x position
+- `ROBOT_Y`, a float, robot y position
+- `ROBOT_W`, a float, robot angular position
+- `ROBOT_VX`, a float, robot x velocity
+- `ROBOT_VY`, a float, robot y velocity
+- `ROBOT_VW`, a float, robot angular velocity
 
 ### Output for one game turn
 
 __Line 1__, command counter:
 
-- `IDENTIFIER`, a char, expects the char __C__;
 - `COUNTER`, an integrer, of counter for the number of sent packages;
 
-__Next NUM_ROBOTS lines__, robots commands:
+__Next `NUM_ROBOTS` lines__, robots commands:
 
-- `V_TAN`, an float, robot tangencial velocity;
-- `V_NORM`, an float, robot normal velocity;
-- `V_ANG`, an float, robot angular velocity;
-- `KICK_X`, an float, robot x kick velocity;
-- `KICK_Z`, an float, robot z kick velocity;
-- `SPIN`, a bool, true if the spin is to be turned or false else;
+- `V_TAN`, a float, robot tangencial velocity
+- `V_NORM`, a float, robot normal velocity
+- `V_ANG`, a float, robot angular velocity
+- `KICK_X`, a float, robot x kick velocity
+- `KICK_Z`, a float, robot z kick velocity
+- `SPIN`, a bool, true (`1`) if the spin is to be turned or false (`0`) else
+
+These actions will be applied on the robots in the order they were given.
 
 ### Constraints
 
+The robot diameter is always `0.180`, will call it `ROBOT_DIAM` here.
+
+We'll call π `PI` here.
+
 - `0 <= COUNTER < 1000000`;
 - `0 <= OUR_SCORE, OPPONENT_SCORE, <= 10`;
-- ...
+- `0 <= ROBOT_ID <= 12`;
+- `|ROBOT_X|, |BALL_X| <= FIELD_LENGTH / 2 + ROBOT_DIAM`;
+- `|ROBOT_Y|, |BALL_Y| <= FIELD_WIDTH / 2 + ROBOT_DIAM`;
+- `|ROBOT_W| <= PI`;
+- `||ROBOT_VX, ROBOT_VY||, ||BALL_VX, BALL_VY|| <= 20.0`;
+- `|ROBOT_VW| <= 10.0 * PI`;
+
 
 License
 -------

@@ -8,15 +8,16 @@ if int(version) == 1:
     print('COMPATIBLE 1')
 else:
     print('NOT_COMPATIBLE 1')
-field_with = float(input())
-field_height = float(input())
-goal_width = float(input())
-center_circle_radius = float(input())
-defense_radius = float(input())
-defense_stretch = float(input())
-free_kick_from_defense_dist = float(input())
-penalty_spot_from_field_line_dist = float(input())
-penalty_line_from_spot_dist = float(input())
+i = iter(input().split())
+field_with = float(next(i))
+field_height = float(next(i))
+goal_width = float(next(i))
+center_circle_radius = float(next(i))
+defense_radius = float(next(i))
+defense_stretch = float(next(i))
+free_kick_from_defense_dist = float(next(i))
+penalty_spot_from_field_line_dist = float(next(i))
+penalty_line_from_spot_dist = float(next(i))
 
 while True:
     # STATE:
@@ -24,14 +25,17 @@ while True:
     tx, ty, tw = 0, 0, 0
 
     # INPUT:
-    counter = int(input())
-    timestamp = float(input())
-    our_score, opponent_score = map(int, input().split())
-    ref_state, ref_time_left = input().split()
+    i = iter(input().split())
+    counter = int(next(i))
+    timestamp = float(next(i))
+    our_score = int(next(i))
+    opponent_score = int(next(i))
+    ref_state = next(i)
+    ref_time_left = float(next(i))
+    goalkeeper_id = int(next(i))
+    num_robots = int(next(i))
+    opponent_num_robots = int(next(i))
     ball_x, ball_y, ball_vx, ball_vy = map(float, input().split())
-    goalkeeper_id = int(input())
-    num_robots = int(input())
-    opponent_num_robots = int(input())
     for _ in range(num_robots):
         robot_id, robot_x, robot_y, robot_w, robot_vx, robot_vy, robot_vw = map(float, input().split())
         robot_id = int(robot_id)
@@ -44,7 +48,7 @@ while True:
     tx, ty, tw = ball_x, ball_y, 0
 
     # OUTPUT:
-    print('C {}'.format(counter))
+    print('{}'.format(counter))
     for i in range(num_robots):
         if i == 0:
             p1 = 0.0004
