@@ -11,7 +11,7 @@ else:
     print('NOT_COMPATIBLE 1')
 print('compatible', file=sys.stderr)
 i = iter(input().split())
-field_with = float(next(i))
+field_width = float(next(i))
 field_height = float(next(i))
 goal_width = float(next(i))
 center_circle_radius = float(next(i))
@@ -24,6 +24,7 @@ print('initialized', file=sys.stderr)
 
 while True:
     # STATE:
+    ids = []
     x, y, w = 0, 0, 0
     tx, ty, tw = 0, 0, 0
 
@@ -31,30 +32,34 @@ while True:
     i = iter(input().split())
     counter = int(next(i))
     timestamp = float(next(i))
-    our_score = int(next(i))
-    opponent_score = int(next(i))
-    ref_state = next(i)
-    ref_time_left = float(next(i))
-    goalkeeper_id = int(next(i))
-    num_robots = int(next(i))
-    opponent_num_robots = int(next(i))
+    referee_state = next(i)
+    referee_time_left = float(next(i))
+    score_player = int(next(i))
+    score_opponent = int(next(i))
+    goalie_id_player = int(next(i))
+    goalie_id_opponent = int(next(i))
+    robot_count_player = int(next(i))
+    robot_count_opponent = int(next(i))
+
     ball_x, ball_y, ball_vx, ball_vy = map(float, input().split())
-    for _ in range(num_robots):
+
+    for _ in range(robot_count_player):
         robot_id, robot_x, robot_y, robot_w, robot_vx, robot_vy, robot_vw = map(float, input().split())
         robot_id = int(robot_id)
+        ids.append(robot_id)
         if robot_id == 0:
             x, y, w = robot_x, robot_y, robot_w
-    for _ in range(opponent_num_robots):
+
+    for _ in range(robot_count_opponent):
         robot_id, robot_x, robot_y, robot_w, robot_vx, robot_vy, robot_vw = map(float, input().split())
         robot_id = int(robot_id)
-    print('inputed', file=sys.stderr)
 
     tx, ty, tw = ball_x, ball_y, 0
 
     # OUTPUT:
     print(counter)
-    for i in range(num_robots):
-        if i == 0:
+    for robot_id in ids:
+        if robot_id == 0:
             p1 = 0.0004
             p2 = 0.8000
             v_tan  = p1 * ((tx - x) * cos(w) + (ty - y) * sin(w))
@@ -72,5 +77,3 @@ while True:
             kick_z = 0.0
             spin = 0
             print(v_tan, v_norm, v_ang, kick_x, kick_z, spin)
-
-    print('outputed', file=sys.stderr)

@@ -106,7 +106,7 @@ impl ChildAi {
                 let timestamp = state.get_timestamp();
                 let counter = state.get_counter();
 
-                let (robots_our, robots_opponent) = {
+                let (robots_player, robots_opponent) = {
                     let robots_yellow = state.get_robots_yellow();
                     let robots_blue = state.get_robots_blue();
                     if is_yellow {
@@ -116,22 +116,35 @@ impl ChildAi {
                     }
                 };
 
-                // COUNTER TIMESTAMP OUR_SCORE OPPONENT_SCORE REF_STATE <REF_TIME_LEFT|-1> GOALKEEPER_ID NUM_ROBOTS OPPONENT_NUM_ROBOTS
-                try!(writeln!(input, "{} {} {} {} {} {} {} {} {}",
+                // COUNTER
+                // TIMESTAMP
+                // REFEREE_STATE
+                // REFEREE_TIME_LEFT
+                // SCORE_PLAYER
+                // SCORE_OPPONENT
+                // GOALIE_ID_PLAYER
+                // GOALIE_ID_OPPONENT
+                // ROBOT_COUNT_PLAYER
+                // ROBOT_COUNT_OPPONENT
+                try!(writeln!(input, "{} {} {} {} {} {} {} {} {} {}",
                     counter,
                     timestamp,
-                    0, // TODO: OUR_SCORE
-                    0, // TODO: OPPONENT_SCORE
                     'N', // TODO: REFEREE_STATE
-                    -1, // TODO: REFEREE_TIME_LEFT
-                    0, // TODO: GOALKEEPER_ID
-                    robots_our.len(),
+                    -1, //  TODO: REFEREE_TIME_LEFT
+                    0, //   TODO: SCORE_PLAYER
+                    0, //   TODO: SCORE_OPPONENT
+                    0, //   TODO: GOALIE_ID_PLAYER
+                    0, //   TODO: GOALIE_ID_OPPONENT
+                    robots_player.len(),
                     robots_opponent.len(),
                 ));
 
                 let ball = state.get_ball();
 
-                // BALL_X BALL_Y BALL_VX BALL_VY
+                // BALL_X
+                // BALL_Y
+                // BALL_VX
+                // BALL_VY
                 try!(writeln!(input, "{:.04} {:.04} {:.04} {:.04}",
                     ball.get_x(),
                     ball.get_y(),
@@ -139,8 +152,15 @@ impl ChildAi {
                     ball.get_vy(),
                 ));
 
-                for (robot_id, robot) in robots_our {
-                    // [ROBOT_ID ROBOT_X ROBOT_Y ROBOT_W ROBOT_VX ROBOT_VY ROBOT_VW] x NUM_ROBOTS
+                // ROBOT_COUNT_PLAYER x
+                for (robot_id, robot) in robots_player {
+                    // ROBOT_ID
+                    // ROBOT_X
+                    // ROBOT_Y
+                    // ROBOT_W
+                    // ROBOT_VX
+                    // ROBOT_VY
+                    // ROBOT_VW
                     try!(writeln!(input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
                         robot_id,
                         robot.get_x(),
@@ -152,8 +172,15 @@ impl ChildAi {
                     ));
                 }
 
+                // ROBOT_COUNT_OPPONENT x
                 for (robot_id, robot) in robots_opponent {
-                    // [ROBOT_ID ROBOT_X ROBOT_Y ROBOT_W ROBOT_VX ROBOT_VY ROBOT_VW] x OPPONENT_NUM_ROBOTS
+                    // ROBOT_ID
+                    // ROBOT_X
+                    // ROBOT_Y
+                    // ROBOT_W
+                    // ROBOT_VX
+                    // ROBOT_VY
+                    // ROBOT_VW
                     try!(writeln!(input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
                         robot_id,
                         robot.get_x(),
@@ -173,6 +200,7 @@ impl ChildAi {
                         Some(thing) => thing,
                         None => throw_err!("expected a line"),
                     });
+                    // COUNTER
                     let ai_counter: u64 = try!(line.parse());
                     if ai_counter != counter {
                         throw_err!("wrong command counter, expected {} got {}", counter, ai_counter);
@@ -186,7 +214,8 @@ impl ChildAi {
                     commands.set_isteamyellow(is_yellow);
                     let robot_commands = commands.mut_robot_commands();
 
-                    for (robot_id, _) in robots_our {
+                    // ROBOT_COUNT_PLAYER x
+                    for (robot_id, _) in robots_player {
                         let mut robot_command = grSim_Robot_Command::new();
 
                         let line = try!(match output.next() {
@@ -200,6 +229,12 @@ impl ChildAi {
                             throw_err!("expected 6 values for robot command, got {}", vars_len);
                         }
 
+                        // V_TAN
+                        // V_NORM
+                        // V_ANG
+                        // KICK_X
+                        // KICK_Z
+                        // SPIN
                         let v_tan:  f32 = try!(vars[0].parse());
                         let v_norm: f32 = try!(vars[1].parse());
                         let v_ang:  f32 = try!(vars[2].parse());
