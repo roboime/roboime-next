@@ -1,0 +1,9 @@
+[package]
+name = "roboime-next-core"
+version = "0.1.0"
+authors = ["Jan Segre <jan@segre.in>"]
+
+[dependencies]
+net2 = "0.2"
+time = "0.1"
+roboime-next-protocol = { path = "../protocol" }

@@ -1,5 +1,4 @@
 [package]
-
 name = "roboime-next"
 version = "0.1.0"
 authors = ["Jan Segre <jan@segre.in>"]
@@ -23,7 +22,4 @@ default = []
 unstable = []
 
 [dependencies]
-net2 = "0.2"
-time = "0.1"
-roboime-next-protocol = { path = "protocol" }
-
+roboime-next-core = { path = "core" }

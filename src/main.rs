@@ -1,9 +1,9 @@
-extern crate roboime_next;
+extern crate roboime_next_core;
 
 use std::sync::mpsc::channel;
-use std::process::Command;
+use std::process::{exit, Command};
 use std::error::Error;
-use roboime_next::{Result, SharedGameState, ChildAi, GrSimInterface, InterfaceHandle};
+use roboime_next_core::{Result, SharedGameState, ChildAi, GrSimInterface, InterfaceHandle};
 
 fn main_loop() -> Result<()> {
     let game_state = SharedGameState::new();
@@ -16,24 +16,23 @@ fn main_loop() -> Result<()> {
 
     let child_ai = try!(ChildAi::new(Command::new("./demo-ai")).is_yellow(true).spawn(game_state.clone(), tx));
 
-    Ok(try!((child_ai, grsim).join()))
+    (child_ai, grsim).join()
 }
 
-trait ResultExt {
-    fn dump_error(&self);
-}
-
-impl ResultExt for Result<()> {
-    fn dump_error(&self) {
-        if let &Err(ref err) = self {
-            println!("{}", err.description());
-            while let Some(err) = err.cause() {
-                println!("caused by {}", err.description());
-            }
+fn dump_error(res: Result<()>) -> bool {
+    if let Err(err) = res {
+        println!("{}", err.description());
+        while let Some(err) = err.cause() {
+            println!("caused by {}", err.description());
         }
+        true
+    } else {
+        false
     }
 }
 
 fn main() {
-    main_loop().dump_error();
+    if dump_error(main_loop()) {
+        exit(1);
+    }
 }

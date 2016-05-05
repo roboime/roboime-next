@@ -47,6 +47,7 @@ while True:
     for _ in range(opponent_num_robots):
         robot_id, robot_x, robot_y, robot_w, robot_vx, robot_vy, robot_vw = map(float, input().split())
         robot_id = int(robot_id)
+    print('inputed', file=sys.stderr)
 
     tx, ty, tw = ball_x, ball_y, 0
 
@@ -71,3 +72,5 @@ while True:
             kick_z = 0.0
             spin = 0
             print(v_tan, v_norm, v_ang, kick_x, kick_z, spin)
+
+    print('outputed', file=sys.stderr)
