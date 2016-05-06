@@ -19,7 +19,7 @@ script:
 - travis-cargo bench
 - travis-cargo --only stable doc
 - cd cli
-- travis-cargo run -- --help
+- travis-cargo run -- -- --help
 after_success:
 - travis-cargo --only stable doc-upload
 - travis-cargo coveralls --no-sudo --verify
