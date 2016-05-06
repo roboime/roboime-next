@@ -43,7 +43,7 @@ impl Error {
     /// # Examples
     ///
     /// ```
-    /// use roboime_next::{Error, ErrorKind};
+    /// use roboime_next_core::{Error, ErrorKind};
     ///
     /// // errors can be created from strings
     /// let custom_error = Error::new(ErrorKind::Other, "oh no!");
