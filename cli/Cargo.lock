@@ -1,8 +1,8 @@
 [root]
-name = "roboime-next"
+name = "roboime-next-cli"
 version = "0.1.0"
 dependencies = [
- "roboime-next-core 0.1.0",
+ "roboime-next 0.1.0",
 ]
 
 [[package]]
@@ -38,11 +38,11 @@ dependencies = [
 
 [[package]]
 name = "protobuf"
-version = "1.0.18"
+version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "roboime-next-core"
+name = "roboime-next"
 version = "0.1.0"
 dependencies = [
  "net2 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -54,7 +54,7 @@ dependencies = [
 name = "roboime-next-protocol"
 version = "0.1.0"
 dependencies = [
- "protobuf 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protobuf 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

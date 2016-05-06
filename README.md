@@ -14,9 +14,13 @@ Next iteration of [RoboIME][roboime]'s software stack, coded in [Rust][rust].
 Developing
 ----------
 
+    git clone https://github.com/roboime/roboime-next.git
+    cd roboime-next/cli
     cargo run
 
 This will resolve, download and compile dependencies, and compile the project in debug mode and run it. That's it. Really!
+
+> NOTE: in the near future the cli will be installable via cargo, so only `cargo install roboime-next-cli` will be required at all.
 
 ### Editor/IDE
 

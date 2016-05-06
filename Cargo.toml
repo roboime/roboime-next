@@ -11,15 +11,7 @@ description = """
 RoboIME's core software stack for the RoboCup Small Size League.
 """
 
-[[bin]]
-name = "roboime-next"
-path = "src/main.rs"
-test = false
-doc = false
-
-[features]
-default = []
-unstable = []
-
 [dependencies]
-roboime-next-core = { path = "core" }
+net2 = "0.2"
+time = "0.1"
+roboime-next-protocol = { path = "protocol" }

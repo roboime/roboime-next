@@ -1,9 +1,9 @@
-extern crate roboime_next_core;
+extern crate roboime_next;
 
 use std::sync::mpsc::channel;
 use std::process::{exit, Command};
 use std::error::Error;
-use roboime_next_core::{Result, SharedGameState, ChildAi, GrSimInterface, InterfaceHandle};
+use roboime_next::{Result, SharedGameState, ChildAi, GrSimInterface, InterfaceHandle};
 
 fn main_loop() -> Result<()> {
     let game_state = SharedGameState::new();

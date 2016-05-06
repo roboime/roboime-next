@@ -14,7 +14,7 @@
 //! ```no_run
 //! use std::sync::mpsc::channel;
 //! use std::process::Command;
-//! use roboime_next_core::{SharedGameState, ChildAi, GrSimInterface, InterfaceHandle};
+//! use roboime_next::{SharedGameState, ChildAi, GrSimInterface, InterfaceHandle};
 //!
 //! let game_state = SharedGameState::new();
 //! let (tx, rx) = channel();
