@@ -21,3 +21,5 @@ test_script:
 - cargo test --verbose
 - cargo bench --verbose
 - cargo doc --verbose
+- cd cli
+- cargo run -- --help

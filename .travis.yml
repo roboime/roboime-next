@@ -18,6 +18,8 @@ script:
 - travis-cargo test
 - travis-cargo bench
 - travis-cargo --only stable doc
+- cd cli
+- travis-cargo run -- --help
 after_success:
 - travis-cargo --only stable doc-upload
 - travis-cargo coveralls --no-sudo --verify
