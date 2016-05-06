@@ -11,6 +11,10 @@ description = """
 RoboIME's core software stack for the RoboCup Small Size League.
 """
 
+[features]
+default = []
+unstable = []
+
 [dependencies]
 net2 = "0.2"
 time = "0.1"

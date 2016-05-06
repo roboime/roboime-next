@@ -9,9 +9,5 @@ path = "src/main.rs"
 test = false
 doc = false
 
-[features]
-default = []
-unstable = []
-
 [dependencies]
 roboime-next = { path = ".." }
