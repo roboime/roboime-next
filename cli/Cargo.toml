@@ -11,3 +11,4 @@ doc = false
 
 [dependencies]
 roboime-next = { path = ".." }
+clap = "^2.4.0"

@@ -117,14 +117,21 @@ impl GrSimInterface {
 
     /// Set the vision address and port used on the simulator, the address is used for
     /// joining the multicast and the port for binding that socket.
-    pub fn vision_addr<A: ToSocketAddrs>(&mut self, addrs: A) -> Result<&GrSimInterface> {
+    pub fn vision_addr<A: ToSocketAddrs>(&mut self, addrs: A) -> Result<&mut GrSimInterface> {
         self.vision_addr = try!(addrs.to_single_socket_addr());
         Ok(self)
     }
 
+    /// Set the vision port used on the simulator used for binding the socket.
+    pub fn vision_port(&mut self, port: u16) -> &mut GrSimInterface {
+        // TODO: use self.vision_addr.set_port when sockaddr_setters is stable
+        self.vision_addr = SocketAddr::new(self.vision_addr.ip(), port);
+        self
+    }
+
     /// Set the grsim address and port used on the simulator, this is used when sending commands to
     /// grSim.
-    pub fn grsim_addr<A: ToSocketAddrs>(&mut self, addrs: A) -> Result<&GrSimInterface> {
+    pub fn grsim_addr<A: ToSocketAddrs>(&mut self, addrs: A) -> Result<&mut GrSimInterface> {
         self.grsim_addr = try!(addrs.to_single_socket_addr());
         Ok(self)
     }
