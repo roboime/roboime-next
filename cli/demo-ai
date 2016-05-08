@@ -60,8 +60,8 @@ while True:
     print(counter)
     for robot_id in ids:
         if robot_id == 0:
-            p1 = 0.0004
-            p2 = 0.8000
+            p1 = 0.40
+            p2 = 0.80
             v_tan  = p1 * ((tx - x) * cos(w) + (ty - y) * sin(w))
             v_norm = p1 * ((ty - y) * cos(w) - (tx - x) * sin(w))
             v_ang = p2 * (tw - w)
