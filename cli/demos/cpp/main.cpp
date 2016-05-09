@@ -48,7 +48,7 @@ int main() {
     int counter;
     float timestamp;
     char referee_state;
-    int referee_time_left;
+    float referee_time_left;
     int score_player;
     int score_opponent;
     int goalkeeper_id_player;
