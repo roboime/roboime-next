@@ -4,7 +4,7 @@
 #include <vector>
 #include <math.h>
 
-const double PI = 3.14159265; 
+const double PI = 3.14159265;
 
 int main (){
 
@@ -22,7 +22,7 @@ int main (){
 	}
 
 	//Geometry input
-	
+
 	float field_length;
 	float field_width;
 	float goal_width;
@@ -33,21 +33,21 @@ int main (){
 	float penalty_spot_from_field_line_dist;
 	float penalty_line_from_spot_dist;
 
-	std::cin >> field_length 
-	>> field_width 
-	>> goal_width 
-	>> center_circle_radius 
-	>> defense_radius 
-	>> defense_stretch 
-	>> free_kick_from_defense_distance 
-	>> penalty_spot_from_field_line_dist 
+	std::cin >> field_length
+	>> field_width
+	>> goal_width
+	>> center_circle_radius
+	>> defense_radius
+	>> defense_stretch
+	>> free_kick_from_defense_distance
+	>> penalty_spot_from_field_line_dist
 	>> penalty_line_from_spot_dist;
 
 	//Game state I/O
 	int counter;
 	float timestamp;
 	char referee_state;
-	int referee_time_left;
+	float referee_time_left;
 	int score_player;
 	int score_opponent;
 	int goalkeeper_id_player;
@@ -65,7 +65,7 @@ int main (){
 		// Input
 
 		std::cin >> counter
-		>> timestamp 
+		>> timestamp
 		>> referee_state >> referee_time_left
 		>> score_player >> score_opponent
 		>> goalkeeper_id_player
