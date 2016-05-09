@@ -1,0 +1,15 @@
+[package]
+name = "roboime-next-sim"
+version = "0.1.0"
+authors = ["Jan Segre <jan@segre.in>"]
+
+[[bin]]
+name = "roboime-next-sim"
+path = "src/main.rs"
+test = false
+doc = false
+
+[dependencies]
+roboime-next = { path = ".." }
+glium = "~0.14.0"
+clock_ticks = "~0.1.0"
