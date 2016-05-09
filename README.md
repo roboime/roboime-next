@@ -24,7 +24,7 @@ Go to the `roboime-next-cli` subproject:
 
 To run the `demo-ai` bot:
 
-    cargo run ./demo-ai
+    cargo run ./demos/python/demo-ai
 
 This will resolve, download and compile dependencies, and compile the project in debug mode and run it. That's it. Really!
 
