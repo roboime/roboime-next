@@ -136,6 +136,13 @@ impl GrSimInterface {
         Ok(self)
     }
 
+    /// Set the grsim address to send commands to.  The port is preserved (default if not set).
+    pub fn grsim_ip(&mut self, ip: IpAddr) -> &mut GrSimInterface {
+        // TODO: use self.grsim_addr.set_ip when sockaddr_setters is stable
+        self.grsim_addr = SocketAddr::new(ip, self.grsim_addr.port());
+        self
+    }
+
     /// Spawn the necessary threads and start listening to changes and ppushing commands.
     pub fn spawn(&self, game_state: SharedGameState, rx: Receiver<Vec<u8>>) -> Result<GrSimHandle> {
         use time::{Duration, SteadyTime};
@@ -215,13 +222,10 @@ impl GrSimInterface {
                     Ok(ref bytes) => {
                         match socket.send_to(bytes, grsim_addr) {
                             Ok(_) => { counter += 1; },
-                            Err(e) => { println!("error sending bytes to grSim: {}", e); }
+                            Err(e) => { println!("Error sending bytes to grSim: {}.", e); }
                         }
                     }
-                    Err(e) => {
-                        println!("error receiving from work_thread: {}", e);
-                        break;
-                    }
+                    Err(_) => break
                 }
 
                 let next_time = SteadyTime::now();

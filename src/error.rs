@@ -90,6 +90,7 @@ impl error::Error for Error {
 mod froms {
     use std::any::Any;
     use std::io::Error as IoError;
+    use std::net::AddrParseError;
     use std::num::{ParseIntError, ParseFloatError};
     use std::str::ParseBoolError;
     use std::sync::PoisonError;
@@ -143,6 +144,12 @@ mod froms {
 
     impl From<ProtobufError> for Error {
         fn from(err: ProtobufError) -> Self {
+            Error::new(ErrorKind::Parse, err)
+        }
+    }
+
+    impl From<AddrParseError> for Error {
+        fn from(err: AddrParseError) -> Self {
             Error::new(ErrorKind::Parse, err)
         }
     }

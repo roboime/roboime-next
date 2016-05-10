@@ -13,15 +13,15 @@ fn main_loop() -> Result<()> {
         .setting(AppSettings::DeriveDisplayOrder)
         .setting(AppSettings::TrailingVarArg)
         .about("Connect an AI to a Robocup SSL game through an stdio interface (like codingame).")
+        .arg(Arg::with_name("blue")
+             .short("b")
+             .long("blue")
+             .help("Play as the blue team"))
         .arg(Arg::with_name("yellow")
              .conflicts_with("blue")
              .short("y")
              .long("yellow")
              .help("Play as the yellow team (default)"))
-        .arg(Arg::with_name("blue")
-             .short("b")
-             .long("blue")
-             .help("Play as the blue team"))
         //.arg(Arg::with_name("v")
         //     .short("v")
         //     .multiple(true)
@@ -29,15 +29,22 @@ fn main_loop() -> Result<()> {
         .arg(Arg::with_name("grsim_addr")
              .long("grsim")
              .takes_value(true)
-             .value_name("ADDRESS")
+             .value_name("ADDRESS:PORT")
              .help("Set the address and port where grSim is listening for commands."))
+        .arg(Arg::with_name("grsim_ip")
+             .conflicts_with("gsim_addr")
+             .long("grsim-addr")
+             .takes_value(true)
+             .value_name("ADDRESS")
+             .help("Set the address where grSim is listening for commands."))
         .arg(Arg::with_name("vision_addr")
              .conflicts_with("vision_port")
              .long("vision")
              .takes_value(true)
-             .value_name("ADDRESS")
+             .value_name("ADDRESS:PORT")
              .help("Set the multicast address and port to receive the vision packets."))
         .arg(Arg::with_name("vision_port")
+             .conflicts_with("vision_addr")
              .long("vision-port")
              .takes_value(true)
              .value_name("PORT")
@@ -46,7 +53,7 @@ fn main_loop() -> Result<()> {
              .required(true)
              .multiple(true)
              .value_name("COMMAND")
-             .help("How to start the AI"))
+             .help("Command to start the AI, accepts arguments."))
         .get_matches();
 
     // TODO: use this or get rid of it
@@ -65,6 +72,9 @@ fn main_loop() -> Result<()> {
     if matches.is_present("vision_port") {
         grsim_cfg.vision_port(try!(matches.value_of("vision_port").unwrap().parse()));
     }
+    if matches.is_present("grsim_ip") {
+        grsim_cfg.grsim_ip(try!(matches.value_of("grsim_ip").unwrap().parse()));
+    }
 
     let game_state = SharedGameState::new();
     let (tx, rx) = channel();
@@ -77,9 +87,9 @@ fn main_loop() -> Result<()> {
 
 fn dump_error(res: Result<()>) -> bool {
     if let Err(err) = res {
-        println!("{}", err.description());
+        println!("Error: {}.", err.description());
         while let Some(err) = err.cause() {
-            println!("caused by {}", err.description());
+            println!("- caused by {}", err.description());
         }
         true
     } else {

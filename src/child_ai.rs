@@ -75,17 +75,25 @@ impl ChildAi {
                 });
                 match line.as_ref() {
                     "COMPATIBLE 1" => {}
-                    s if s.starts_with("COMPATIBLE") => throw_err!("child protocol not compatible (implicit)"),
-                    s if s.starts_with("NOT_COMPATIBLE") => throw_err!("child protocol not compatible (explicit)"),
-                    _ => throw_err!("child compatibility negotiation failed"),
+                    s if s.starts_with("COMPATIBLE") => throw_err!("AI not protocol compatible (implicit)"),
+                    s if s.starts_with("NOT_COMPATIBLE") => throw_err!("AI not protocol compatible (explicit)"),
+                    s => throw_err!("AI protocol compatibility error, output was '{}'", s),
                 }
             }
 
             {
                 let state = try!(game_state.wait_and_read());
                 let geom = state.get_field_geom();
-                // FIELD_LENGTH FIELD_WIDTH GOAL_WIDTH CENTER_CIRCLE_RADIUS DEFENSE_RADIUS DEFENSE_STRETCH FREE_KICK_FROM_DEFENSE_DIST
-                // PENALTY_SPOT_FROM_FIELD_LINE_DIST PENALTY_LINE_FROM_SPOT_DIST
+
+                // FIELD_LENGTH
+                // FIELD_WIDTH
+                // GOAL_WIDTH
+                // CENTER_CIRCLE_RADIUS
+                // DEFENSE_RADIUS
+                // DEFENSE_STRETCH
+                // FREE_KICK_FROM_DEFENSE_DIST
+                // PENALTY_SPOT_FROM_FIELD_LINE_DIST
+                // PENALTY_LINE_FROM_SPOT_DIST
                 try!(writeln!(input, "{:.03} {:.03} {:.03} {:.03} {:.03} {:.03} {:.03} {:.03} {:.03}",
                     geom.field_length,
                     geom.field_width,
@@ -259,16 +267,16 @@ impl ChildAi {
                     Ok(bytes) => {
                         match tx.send(bytes) {
                             Ok(_) => (),
-                            Err(e) => {
-                                println!("error sending to send_thread: {}", e);
-                            }
+                            Err(_) => break
                         }
                     }
                     Err(e) => {
-                        println!("error writing protobuf packet to byes: {}", e);
+                        println!("Error serializing to protobuf: {}.", e);
                     }
                 }
             }
+
+            Ok(())
         }));
 
         Ok(ChildAiHandle {
