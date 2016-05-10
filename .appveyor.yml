@@ -21,5 +21,4 @@ test_script:
 - cargo test --verbose
 - cargo bench --verbose
 - cargo doc --verbose
-- cd cli
-- cargo run -- --help
+- cargo run -q --release --manifest-path cli/Cargo.toml -- --help

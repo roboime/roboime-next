@@ -18,8 +18,7 @@ script:
 - travis-cargo test
 - travis-cargo bench
 - travis-cargo --only stable doc
-- cd cli
-- travis-cargo run -- -- --help
+- cargo run -q --release --manifest-path cli/Cargo.toml -- --help
 after_success:
 - travis-cargo --only stable doc-upload
 - travis-cargo coveralls --no-sudo --verify
