@@ -10,14 +10,14 @@ int main() {
 
     // Version check I/O
 
-    char protocol_version_string[32];
+    const int compat_version = 1;
+    string protocol_version_string;
     int version;
-    cin >> protocol_version_string;
-    cin >> version;
-    if (version == 1) {
-        cout << "COMPATIBLE 1" << endl;
+    cin >> protocol_version_string >> version;
+    if (protocol_version_string == "ROBOIME_INTEL_PROTOCOL_VERSION" && version == compat_version) {
+        cout << "COMPATIBLE " << compat_version << endl;
     } else {
-        cout << "NOT_COMPATIBLE 1" << endl;
+        cout << "NOT_COMPATIBLE " << compat_version << endl;
     }
     cerr << "compatible" << endl;
 
@@ -46,14 +46,17 @@ int main() {
     cerr << "initialized" << endl;
 
     // Game state I/O
+
     while (true) {
 
         // State
-        vector<int> identifiers;
+
+        vector<int> ids;
         float x = 0.0f, y = 0.0f, w = 0.0f;
         float tx = 0.0f, ty = 0.0f, tw = 0.0f;
 
         // Input
+
         int counter;
         float timestamp;
         char referee_state;
@@ -82,7 +85,7 @@ int main() {
             float robot_x, robot_y, robot_w, robot_vx, robot_vy, robot_vw;
 
             cin >> robot_id >> robot_x >> robot_y >> robot_w >> robot_vx >> robot_vy >> robot_vw;
-            identifiers.push_back(robot_id);
+            ids.push_back(robot_id);
             if (robot_id == 0) {
                 x = robot_x;
                 y = robot_y;
@@ -103,26 +106,24 @@ int main() {
 
         cout << counter << endl;
 
-        const float p_t = 0.40f;
-        const float p_w = 0.80f;
-        for (int i = 0; i < identifiers.size() ; ++i) {
-            float v_tan, v_norm, v_ang, kick_x, kick_z;
-            bool spin;
+        for (int i = 0; i < ids.size() ; ++i) {
+            const int robot_id = ids[i];
+            float v_tan = 0.0f;
+            float v_norm = 0.0f;
+            float v_ang = 0.0f;
+            float kick_x = 0.0f;
+            float kick_z = 0.0f;
+            bool spin = false;
 
-            if (identifiers.at(i) == 0) {
-                v_tan = p_t * ((tx - x) * cos(w) + (ty - y) * sin(w));
-                v_norm = p_t * ((ty - y) * cos(w) + (tx - x) * sin(w));
-                v_ang = p_w * (tw - w);
+            if (robot_id == 0) {
+                const float PL = 0.40f;
+                const float PW = 0.80f;
+                v_tan  = PL * ((tx - x) * cos(w) + (ty - y) * sin(w));
+                v_norm = PL * ((ty - y) * cos(w) + (tx - x) * sin(w));
+                v_ang  = PW * (tw - w);
                 kick_x = 4.0f;
                 kick_z = 0.0f;
                 spin = true;
-            } else {
-                v_tan = 0.0f;
-                v_norm = 0.0f;
-                v_ang = 0.0f;
-                kick_x = 0.0f;
-                kick_z = 0.0f;
-                spin = false;
             }
 
             cout << v_tan << " " << v_norm << " " << v_ang << " " << kick_x << " " << kick_z << " " << spin << endl;
