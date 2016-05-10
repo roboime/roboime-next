@@ -2,9 +2,3 @@
 name = "roboime-next-demo"
 version = "0.1.0"
 authors = ["Jan Segre <jan@segre.in>"]
-
-[[bin]]
-name = "roboime-next-demo"
-path = "main.rs"
-test = false
-doc = false

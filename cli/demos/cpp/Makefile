@@ -1,4 +1,4 @@
-MAIN = demo-ai
+MAIN = demo
 OBJS = main.o
 CFLAGS = -O
 

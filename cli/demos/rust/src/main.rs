@@ -47,7 +47,7 @@ fn main() {
 
         // State
 
-        let mut ids = vec![];
+        let mut ids = Vec::with_capacity(6);
         let mut x = 0.0;
         let mut y = 0.0;
         let mut w = 0.0;

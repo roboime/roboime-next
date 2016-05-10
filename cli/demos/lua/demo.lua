@@ -1,5 +1,3 @@
-#!/usr/bin/env lua
-
 io.stderr:write("started\n")
 
 -- Version check I/O
@@ -13,6 +11,7 @@ else
     print("NOT_COMPATIBLE " .. compat_version)
     os.exit(0)
 end
+io.stdout:flush()
 
 io.stderr:write("compatible\n")
 
@@ -88,4 +87,6 @@ while true do
 
         print(table.concat({v_tan, v_norm, v_ang, kick_x, kick_z, spin}), " ")
     end
+
+    io.stdout:flush()
 end

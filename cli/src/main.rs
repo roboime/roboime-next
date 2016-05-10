@@ -5,16 +5,14 @@ use std::sync::mpsc::channel;
 use std::process::{exit, Command};
 use std::error::Error;
 use roboime_next::{Result, SharedGameState, ChildAi, GrSimInterface, InterfaceHandle};
-use clap::{Arg, App};
+use clap::{Arg, App, AppSettings};
 
 fn main_loop() -> Result<()> {
     let matches = App::new("robime-next-cli")
+        .setting(AppSettings::ColoredHelp)
+        .setting(AppSettings::DeriveDisplayOrder)
+        .setting(AppSettings::TrailingVarArg)
         .about("Connect an AI to a Robocup SSL game through an stdio interface (like codingame).")
-        .arg(Arg::with_name("AI")
-             .required(true)
-             .value_name("COMMAND")
-             .help("How to start the AI")
-             .index(1))
         .arg(Arg::with_name("yellow")
              .conflicts_with("blue")
              .short("y")
@@ -44,12 +42,21 @@ fn main_loop() -> Result<()> {
              .takes_value(true)
              .value_name("PORT")
              .help("Set the port to receive the vision packets. (Use default multicast address)"))
+        .arg(Arg::with_name("AI")
+             .required(true)
+             .multiple(true)
+             .value_name("COMMAND")
+             .help("How to start the AI"))
         .get_matches();
 
     // TODO: use this or get rid of it
     //let verbosity = matches.occurrences_of("v");
 
-    let mut ai_cfg = ChildAi::new(Command::new(matches.value_of("AI").unwrap()));
+    let ai_cmd: Vec<&str> = matches.values_of("AI").unwrap().collect();
+    let (ai_program, ai_args) = (ai_cmd[0], &ai_cmd[1..]);
+    let mut ai_command = Command::new(ai_program);
+    ai_command.args(ai_args);
+    let mut ai_cfg = ChildAi::new(ai_command);
     ai_cfg.is_yellow(matches.is_present("yellow"));
 
     let mut grsim_cfg = GrSimInterface::new();
