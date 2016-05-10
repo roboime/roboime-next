@@ -1,6 +1,6 @@
 MAIN = demo-ai
 OBJS = main.o
-CFLAGS = -g
+CFLAGS = -O
 
 .PHONY: all clean
 

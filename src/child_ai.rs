@@ -62,7 +62,8 @@ impl ChildAi {
             let mut output = BufReader::new(child_out).lines();
             let mut input = BufWriter::new(child_in);
 
-            try!(writeln!(input, "ROBOIME_INTEL_PROTOCOL_VERSION 1"));
+            let version = 1;
+            try!(writeln!(input, "ROBOIME_AI_PROTOCOL {}", version));
 
             // flush to child stdin
             try!(input.flush());

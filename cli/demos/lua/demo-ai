@@ -5,9 +5,9 @@ io.stderr:write("started\n")
 -- Version check I/O
 
 compat_version = 1
-protocol_version_string = io.read(30)
+magic_string = io.read(19)
 version = io.read("*n")
-if protocol_version_string == "ROBOIME_INTEL_PROTOCOL_VERSION" and version == compat_version then
+if magic_string == "ROBOIME_AI_PROTOCOL" and version == compat_version then
     print("COMPATIBLE " .. compat_version)
 else
     print("NOT_COMPATIBLE " .. compat_version)

@@ -1,5 +1,4 @@
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <cmath>
 
@@ -11,13 +10,14 @@ int main() {
     // Version check I/O
 
     const int compat_version = 1;
-    string protocol_version_string;
+    string magic_string;
     int version;
-    cin >> protocol_version_string >> version;
-    if (protocol_version_string == "ROBOIME_INTEL_PROTOCOL_VERSION" && version == compat_version) {
+    cin >> magic_string >> version;
+    if (magic_string == "ROBOIME_AI_PROTOCOL" && version == compat_version) {
         cout << "COMPATIBLE " << compat_version << endl;
     } else {
         cout << "NOT_COMPATIBLE " << compat_version << endl;
+        return 0;
     }
     cerr << "compatible" << endl;
 
@@ -61,26 +61,22 @@ int main() {
         float timestamp;
         char referee_state;
         float referee_time_left;
-        int score_player;
-        int score_opponent;
-        int goalkeeper_id_player;
-        int goalkeeper_id_opponent;
-        int robot_num_player;
-        int robot_num_opponent;
-        float ball_x, ball_y, ball_vx, ball_vy;
+        int score_player, score_opponent;
+        int goalie_id_player, goalie_id_opponent;
+        int robot_count_player, robot_count_opponent;
 
         cin >> counter
             >> timestamp
             >> referee_state >> referee_time_left
             >> score_player >> score_opponent
-            >> goalkeeper_id_player
-            >> goalkeeper_id_opponent
-            >> robot_num_player
-            >> robot_num_opponent;
+            >> goalie_id_player >> goalie_id_opponent
+            >> robot_count_player >> robot_count_opponent;
+
+        float ball_x, ball_y, ball_vx, ball_vy;
 
         cin >> ball_x >> ball_y >> ball_vx >> ball_vy;
 
-        for (int i = 0; i < robot_num_player; ++i) {
+        for (int i = 0; i < robot_count_player; ++i) {
             int robot_id;
             float robot_x, robot_y, robot_w, robot_vx, robot_vy, robot_vw;
 
@@ -93,7 +89,7 @@ int main() {
             }
         }
 
-        for (int i = 0; i < robot_num_opponent; ++i) {
+        for (int i = 0; i < robot_count_opponent; ++i) {
             int robot_id;
             float robot_x, robot_y, robot_w, robot_vx, robot_vy, robot_vw;
 
@@ -102,7 +98,7 @@ int main() {
 
         tx = ball_x;
         ty = ball_y;
-        tw = 0;
+        tw = 0.0f;
 
         cout << counter << endl;
 

@@ -63,8 +63,8 @@ meters per second, and angular velocity in radians per second.
 
 __Line 1__ version data:
 
-- `"ROBOIME_INTEL_PROTOCOL_VERSION"`: literal string;
-- `VERSION_NUMBER`: an integer, currently `1`.
+- `"ROBOIME_AI_PROTOCOL"`: literal string;
+- `VERSION`: an integer, currently `1`, this is increased when incompatible changes are made.
 
 Before the next line, it will wait for the correct initialization output.
 

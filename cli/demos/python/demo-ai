@@ -6,8 +6,8 @@ print('started', file=sys.stderr)
 
 # Version check I/O
 
-protocol_version_string, version = input().split()
-if protocol_version_string == 'ROBOIME_INTEL_PROTOCOL_VERSION' and int(version) == 1:
+magic_string, version = input().split()
+if magic_string == 'ROBOIME_AI_PROTOCOL' and int(version) == 1:
     print('COMPATIBLE 1')
 else:
     print('NOT_COMPATIBLE 1')

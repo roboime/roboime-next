@@ -13,9 +13,9 @@ fn main() {
     let compat_version = 1;
     let line = input.next().unwrap().unwrap();
     let mut version_input = line.split(' ');
-    let protocol_version_string = version_input.next().unwrap();
+    let magic_string = version_input.next().unwrap();
     let version: u32 = version_input.next().unwrap().parse().unwrap();
-    if protocol_version_string == "ROBOIME_INTEL_PROTOCOL_VERSION" && version == compat_version {
+    if magic_string == "ROBOIME_AI_PROTOCOL" && version == compat_version {
         writeln!(output, "COMPATIBLE {}", compat_version).unwrap();
     } else {
         writeln!(output, "NOT_COMPATIBLE {}", compat_version).unwrap();
