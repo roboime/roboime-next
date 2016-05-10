@@ -21,7 +21,7 @@ script:
 - cargo run -q --release --manifest-path cli/Cargo.toml -- --help
 after_success:
 - travis-cargo --only stable doc-upload
-- travis-cargo coveralls --no-sudo --verify
+- travis-cargo coveralls --no-sudo --verify --exclude-pattern="protocol/"
 env:
   global:
   - secure: ESXflJZbbhfznIHb1OqKQeuuc1t+rl3+AErgBiyHH5BbM4FKx3PJoilNZ1UgNurXDsqqqvv73ilfToCbHPNf+lPDa3RVE6KqE711yNAhDxigg5qcGkJ9YGdFIoogAjfAD9HxssFIV6O9q9H/bXqE5EEZsuGuPe4hJdwMNRegFg1l7yTvy6W4zrIQzv+i238glJBWpehlanYIO3M3N/fh4/XMLdOMqXVNXlc5CKnsLKQXESnOryQWEGUs27PVN4Sdg8ic6pnrld0e+ldMXhAhJwKMdsu3EuswZUel8QZVwOQvtlUXZ4O4YdM7J77RFn5elaJvU3RwjpQOxnTX4i+6h7H3iYoOKJW97JCW2KKVLzUU9usbChNlD4og3jk3vX/tot7xyNjE8UIB9CkjMdXvT7JEPpifcJbuky+417dQJSnbFRfJUhNJ3EouYBlIVLzpGknwUeRZGn/8ETJr1z/Oiw/2ZLlZ3mLxhF05k9WbmNYiVEpEgsTIJ2o5W8PPIrtMQgFLq1a2wgYnnCPPHDxcwTRETMj9bv32jtsGDtOjP43nC3qkIuwWK1THrB9M+TzRQ5VAS9jw2Up0BlaPRFWo5VJZ1S/D76t2SAzDmoolZEnLcqTEiBzW0Zl/j5j9wN8GETlDPYn556Y4pnSaxJYVUTNg80Qtj8PwJUVtCeQm2AU=
