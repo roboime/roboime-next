@@ -92,7 +92,12 @@ fn main_loop() -> Result<()> {
     let mut ai_command = Command::new(ai_program);
     ai_command.args(ai_args);
     let mut ai_cfg = ai::Interface::new(ai_command);
-    ai_cfg.is_yellow(matches.is_present("yellow"));
+    if matches.is_present("blue") {
+        ai_cfg.is_yellow(false);
+    }
+    if matches.is_present("yellow") {
+        ai_cfg.is_yellow(true);
+    }
 
     let mut grsim_cfg = grsim::Interface::new();
     try!(grsim_cfg.grsim_addr(matches.value_of("grsim_addr").unwrap_or("127.0.0.1:20011")));
