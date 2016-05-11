@@ -1,9 +1,14 @@
 extern crate roboime_next;
 extern crate clap;
+extern crate env_logger;
+extern crate log;
 
+use std::env;
 use std::sync::mpsc::channel;
 use std::process::{exit, Command};
 use std::error::Error;
+use log::LogLevelFilter;
+use env_logger::LogBuilder;
 use roboime_next::{Result, SharedGameState, ChildAi, GrSimInterface, InterfaceHandle};
 use clap::{Arg, App, AppSettings};
 
@@ -22,10 +27,15 @@ fn main_loop() -> Result<()> {
              .short("y")
              .long("yellow")
              .help("Play as the yellow team (default)"))
-        //.arg(Arg::with_name("v")
-        //     .short("v")
-        //     .multiple(true)
-        //     .help("Sets the level of verbosity"))
+        .arg(Arg::with_name("v")
+             .short("v")
+             .multiple(true)
+             .help("Sets the level of verbosity"))
+        .arg(Arg::with_name("q")
+             .conflicts_with("v")
+             .long("quiet")
+             .short("q")
+             .help("Don't log warnings or errors."))
         .arg(Arg::with_name("grsim_addr")
              .long("grsim")
              .takes_value(true)
@@ -56,8 +66,25 @@ fn main_loop() -> Result<()> {
              .help("Command to start the AI, accepts arguments."))
         .get_matches();
 
-    // TODO: use this or get rid of it
-    //let verbosity = matches.occurrences_of("v");
+
+    let mut builder = LogBuilder::new();
+    builder.format(|record| {
+        format!("{} [{}] {}", record.level(), record.location().module_path(), record.args())
+    });
+    let verbosity = matches.occurrences_of("v");
+    builder.filter(Some("roboime"), match verbosity {
+        0 => LogLevelFilter::Warn,
+        1 => LogLevelFilter::Info,
+        2 => LogLevelFilter::Debug,
+        _ => LogLevelFilter::Trace,
+    });
+    if matches.is_present("q") {
+        builder.filter(Some("roboime"), LogLevelFilter::Off);
+    }
+    if env::var("RUST_LOG").is_ok() {
+       builder.parse(&env::var("RUST_LOG").unwrap());
+    }
+    try!(builder.init());
 
     let ai_cmd: Vec<&str> = matches.values_of("AI").unwrap().collect();
     let (ai_program, ai_args) = (ai_cmd[0], &ai_cmd[1..]);

@@ -35,7 +35,7 @@ impl ChildAi {
         let is_yellow = self.is_yellow;
         let mut child = try!(self.command.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn());
 
-        println!("child AI started");
+        info!("AI started");
 
         let child_in = try!(child.stdin.take().ok_or_else(|| Error::new(ErrorKind::Io, "missing stdin from child")));
         let child_out = try!(child.stdout.take().ok_or_else(|| Error::new(ErrorKind::Io, "missing stdout from child")));
@@ -44,7 +44,8 @@ impl ChildAi {
         let thread_builder = Builder::new().name("child AI Debug".to_string());
         let debug_thread = try!(thread_builder.spawn(move || -> Result<()> {
             for line in BufReader::new(child_err).lines() {
-                println!("debug: {}", try!(line));
+                // TODO: infrastructure to redirect this, this is different from logging
+                println!("AI debug: {}", try!(line));
             }
             Ok(())
         }));
@@ -271,7 +272,7 @@ impl ChildAi {
                         }
                     }
                     Err(e) => {
-                        println!("Error serializing to protobuf: {}.", e);
+                        error!("failed to serialize protobuf packet: {}", e);
                     }
                 }
             }

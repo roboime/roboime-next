@@ -162,7 +162,7 @@ impl GrSimInterface {
             let socket = try!(UdpBuilder::new_v4().unwrap().reuse_address(true).unwrap().bind(vision_bind));
             try!(socket.join_multicast_v4(&vision_mcast, &any_addr));
 
-            println!("grSim interface receiving from {}", vision_addr);
+            info!("receiving from {}", vision_addr);
 
             // 1KB buffer, packets are usually not greater than ~200 bytes
             let buf = &mut [0u8; 1024];
@@ -174,7 +174,7 @@ impl GrSimInterface {
                 let mut has_detection = false;
                 while !has_geometry || !has_detection {
                     let packet = try_or!(socket.recv_ssl_packet(buf), |err| {
-                        println!("error: {}; skipping packet...", err);
+                        error!("failed to receive packet: {}, skipping", err);
                         continue;
                     });
                     if packet.has_geometry() {
@@ -192,7 +192,7 @@ impl GrSimInterface {
             // keep updating the state with every incoming packet
             loop {
                 let packet = try_or!(socket.recv_ssl_packet(buf), |err| {
-                    println!("error: {}; skipping packet...", err);
+                    error!("failed to receive packet: {}, skipping", err);
                     continue;
                 });
                 let mut game_state = try!(game_state.write());
@@ -213,7 +213,7 @@ impl GrSimInterface {
         let commander_thread = try!(thread_builder.spawn(move || {
             let socket = try!(UdpSocket::bind(grsim_bind));
 
-            println!("grSim interface sending to {}", grsim_addr);
+            info!("sending to {}", grsim_addr);
 
             let mut last_time = SteadyTime::now();
             let mut counter = 0;
@@ -222,7 +222,7 @@ impl GrSimInterface {
                     Ok(ref bytes) => {
                         match socket.send_to(bytes, grsim_addr) {
                             Ok(_) => { counter += 1; },
-                            Err(e) => { println!("Error sending bytes to grSim: {}.", e); }
+                            Err(e) => { error!("failed to send bytes to grSim: {}", e); }
                         }
                     }
                     Err(_) => break
@@ -231,7 +231,7 @@ impl GrSimInterface {
                 let next_time = SteadyTime::now();
                 let delta = next_time - last_time;
                 if delta >= Duration::seconds(1) {
-                    println!("sent packets: {}, delta: {}", counter, delta);
+                    info!("sent {} packets in {}", counter, delta);
                     counter = 0;
                     last_time = next_time;
                 }
@@ -258,10 +258,13 @@ impl InterfaceHandle for GrSimHandle {
             updater_handle: updater_thread,
             commander_handle: commander_thread,
         } = self;
-        let updater_result = try!(updater_thread.join());
-        let commander_result = try!(commander_thread.join());
-        try!(updater_result);
-        try!(commander_result);
+
+        // join both before early exit
+        let updr = updater_thread.join();
+        let cmdr = commander_thread.join();
+
+        try!(try!(updr));
+        try!(try!(cmdr));
         Ok(())
     }
 }

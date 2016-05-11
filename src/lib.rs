@@ -38,6 +38,7 @@
 extern crate roboime_next_protocol as protocol;
 extern crate net2;
 extern crate time;
+#[macro_use] extern crate log;
 
 pub use error::{Result, Error, ErrorKind};
 pub use state::{GameState, RobotState, BallState, Position, Pose, SharedGameState};

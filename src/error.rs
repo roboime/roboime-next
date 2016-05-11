@@ -89,12 +89,14 @@ impl error::Error for Error {
 
 mod froms {
     use std::any::Any;
+    use std::env::VarError;
     use std::io::Error as IoError;
     use std::net::AddrParseError;
     use std::num::{ParseIntError, ParseFloatError};
     use std::str::ParseBoolError;
     use std::sync::PoisonError;
     use std::sync::mpsc::{RecvError, SendError};
+    use log::SetLoggerError;
     use protocol::ProtobufError;
     use ::error::{Error, ErrorKind};
 
@@ -151,6 +153,18 @@ mod froms {
     impl From<AddrParseError> for Error {
         fn from(err: AddrParseError) -> Self {
             Error::new(ErrorKind::Parse, err)
+        }
+    }
+
+    impl From<SetLoggerError> for Error {
+        fn from(err: SetLoggerError) -> Self {
+            Error::new(ErrorKind::Other, err)
+        }
+    }
+
+    impl From<VarError> for Error {
+        fn from(err: VarError) -> Self {
+            Error::new(ErrorKind::Other, err)
         }
     }
 
