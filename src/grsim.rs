@@ -6,7 +6,8 @@ use protocol::parse_from_bytes;
 use protocol::messages_robocup_ssl_wrapper_legacy::SSL_WrapperPacket;
 use protocol::messages_robocup_ssl_detection::SSL_DetectionFrame;
 use protocol::messages_robocup_ssl_geometry_legacy::SSL_GeometryData;
-use ::{Result, Error, ErrorKind, GameState, SharedGameState, RobotState, Position, Pose, InterfaceHandle};
+use ::prelude::*;
+use ::{game, Result, Error, ErrorKind};
 
 macro_rules! try_or {
     ($x:expr, |$e:ident| $b:block) => {
@@ -18,7 +19,7 @@ macro_rules! try_or {
 }
 
 
-impl GameState {
+impl game::State {
     fn update_from_ssl_geometry(&mut self, geometry: &SSL_GeometryData) {
         let geometry = geometry.get_field();
         let mut geom = self.get_field_geom_mut();
@@ -54,7 +55,7 @@ impl GameState {
             let blue_robots = self.get_robots_blue_mut();
             for robot in detection.get_robots_blue() {
                 let id = robot.get_robot_id() as u8;
-                let robot_state = blue_robots.entry(id).or_insert_with(|| RobotState::new(id));
+                let robot_state = blue_robots.entry(id).or_insert_with(|| game::Robot::new(id));
                 robot_state.update_pose(m(robot.get_x()), m(robot.get_y()), robot.get_orientation(), dt);
             }
         }
@@ -62,7 +63,7 @@ impl GameState {
             let yellow_robots = self.get_robots_yellow_mut();
             for robot in detection.get_robots_yellow() {
                 let id = robot.get_robot_id() as u8;
-                let robot_state = yellow_robots.entry(id).or_insert_with(|| RobotState::new(id));
+                let robot_state = yellow_robots.entry(id).or_insert_with(|| game::Robot::new(id));
                 robot_state.update_pose(m(robot.get_x()), m(robot.get_y()), robot.get_orientation(), dt);
             }
         }
@@ -101,15 +102,15 @@ impl<T: ToSocketAddrs> ToSocketAddrsExt for T {}
 /// interface to bind on.
 ///
 #[derive(Debug, Clone)]
-pub struct GrSimInterface {
+pub struct Interface {
     vision_addr: SocketAddr,
     grsim_addr: SocketAddr,
 }
 
-impl GrSimInterface {
+impl Interface {
     /// Instantiate with default values.
-    pub fn new() -> GrSimInterface {
-        GrSimInterface {
+    pub fn new() -> Interface {
+        Interface {
             vision_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 5, 23, 2)), 10002),
             grsim_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 20011),
         }
@@ -117,13 +118,13 @@ impl GrSimInterface {
 
     /// Set the vision address and port used on the simulator, the address is used for
     /// joining the multicast and the port for binding that socket.
-    pub fn vision_addr<A: ToSocketAddrs>(&mut self, addrs: A) -> Result<&mut GrSimInterface> {
+    pub fn vision_addr<A: ToSocketAddrs>(&mut self, addrs: A) -> Result<&mut Interface> {
         self.vision_addr = try!(addrs.to_single_socket_addr());
         Ok(self)
     }
 
     /// Set the vision port used on the simulator used for binding the socket.
-    pub fn vision_port(&mut self, port: u16) -> &mut GrSimInterface {
+    pub fn vision_port(&mut self, port: u16) -> &mut Interface {
         // TODO: use self.vision_addr.set_port when sockaddr_setters is stable
         self.vision_addr = SocketAddr::new(self.vision_addr.ip(), port);
         self
@@ -131,20 +132,20 @@ impl GrSimInterface {
 
     /// Set the grsim address and port used on the simulator, this is used when sending commands to
     /// grSim.
-    pub fn grsim_addr<A: ToSocketAddrs>(&mut self, addrs: A) -> Result<&mut GrSimInterface> {
+    pub fn grsim_addr<A: ToSocketAddrs>(&mut self, addrs: A) -> Result<&mut Interface> {
         self.grsim_addr = try!(addrs.to_single_socket_addr());
         Ok(self)
     }
 
     /// Set the grsim address to send commands to.  The port is preserved (default if not set).
-    pub fn grsim_ip(&mut self, ip: IpAddr) -> &mut GrSimInterface {
+    pub fn grsim_ip(&mut self, ip: IpAddr) -> &mut Interface {
         // TODO: use self.grsim_addr.set_ip when sockaddr_setters is stable
         self.grsim_addr = SocketAddr::new(ip, self.grsim_addr.port());
         self
     }
 
     /// Spawn the necessary threads and start listening to changes and ppushing commands.
-    pub fn spawn(&self, game_state: SharedGameState, rx: Receiver<Vec<u8>>) -> Result<GrSimHandle> {
+    pub fn spawn(&self, game_state: game::SharedState, rx: Receiver<Vec<u8>>) -> Result<GrSimHandle> {
         use time::{Duration, SteadyTime};
 
         let any_addr = Ipv4Addr::new(0, 0, 0, 0);

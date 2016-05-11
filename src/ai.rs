@@ -1,31 +1,32 @@
 use std::process::{Stdio, Command, Child};
 use std::sync::mpsc::Sender;
 use std::thread::{Builder, JoinHandle};
-use ::{Result, Error, ErrorKind, SharedGameState, Position, Pose, InterfaceHandle};
+use ::prelude::*;
+use ::{game, Result, Error, ErrorKind};
 
 /// Builder for a subprocess (child) AI
-pub struct ChildAi {
+pub struct Interface {
     command: Command,
     is_yellow: bool,
 }
 
-impl ChildAi {
-    pub fn new(command: Command) -> ChildAi {
-        ChildAi {
+impl Interface {
+    pub fn new(command: Command) -> Interface {
+        Interface {
             command: command,
             is_yellow: true,
         }
     }
 
     /// Whether the AI will play with the yellow team, blue otherwise.
-    pub fn is_yellow(&mut self, is_yellow: bool) -> &mut ChildAi {
+    pub fn is_yellow(&mut self, is_yellow: bool) -> &mut Interface {
         self.is_yellow = is_yellow;
         self
     }
 
     /// Spawn a thread which spawns a child subprocess and feeds it the game_state at 60Hz and
     /// sends commands through tx.
-    pub fn spawn(&mut self, game_state: SharedGameState, tx: Sender<Vec<u8>>) -> Result<ChildAiHandle> {
+    pub fn spawn(&mut self, game_state: game::SharedState, tx: Sender<Vec<u8>>) -> Result<AiHandle> {
         use std::io::prelude::*;
         use std::io::{BufReader, BufWriter};
         use protocol::Message;
@@ -35,7 +36,7 @@ impl ChildAi {
         let is_yellow = self.is_yellow;
         let mut child = try!(self.command.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn());
 
-        info!("AI started");
+        info!("AI subprocess spawned");
 
         let child_in = try!(child.stdin.take().ok_or_else(|| Error::new(ErrorKind::Io, "missing stdin from child")));
         let child_out = try!(child.stdout.take().ok_or_else(|| Error::new(ErrorKind::Io, "missing stdout from child")));
@@ -280,7 +281,7 @@ impl ChildAi {
             Ok(())
         }));
 
-        Ok(ChildAiHandle {
+        Ok(AiHandle {
             subproc_handle: child,
             debug_handle: debug_thread,
             child_handle: child_thread,
@@ -288,15 +289,15 @@ impl ChildAi {
     }
 }
 
-pub struct ChildAiHandle {
+pub struct AiHandle {
     subproc_handle: Child,
     debug_handle: JoinHandle<Result<()>>,
     child_handle: JoinHandle<Result<()>>,
 }
 
-impl InterfaceHandle for ChildAiHandle {
+impl InterfaceHandle for AiHandle {
     fn join(self) -> Result<()> {
-        let ChildAiHandle {
+        let AiHandle {
             subproc_handle: mut child,
             debug_handle: debug_thread,
             child_handle: child_thread,

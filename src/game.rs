@@ -57,12 +57,12 @@ struct Pos {
 
 /// Carries mainly x, y, vx, vy
 #[derive(Debug, Clone)]
-pub struct BallState {
+pub struct Ball {
     p: Pos,
     v: Pos,
 }
 
-impl Position for BallState {
+impl Position for Ball {
     fn get_x(&self) -> f32 { self.p.x }
     fn get_y(&self) -> f32 { self.p.y }
     fn get_vx(&self) -> f32 { self.v.x }
@@ -75,7 +75,7 @@ impl Position for BallState {
 
 /// Carries mainly x, y, w, vx, vy, vw
 #[derive(Debug, Clone)]
-pub struct RobotState {
+pub struct Robot {
     i: u8,
     p: Pos,
     v: Pos,
@@ -83,9 +83,9 @@ pub struct RobotState {
     vw: f32,
 }
 
-impl RobotState {
-    pub fn new(id: u8) -> RobotState {
-        RobotState {
+impl Robot {
+    pub fn new(id: u8) -> Robot {
+        Robot {
             i: id,
             p: Pos { x: 0.0, y: 0.0 },
             v: Pos { x: 0.0, y: 0.0 },
@@ -96,7 +96,7 @@ impl RobotState {
     pub fn get_id(&self) -> u8 { self.i }
 }
 
-impl Position for RobotState {
+impl Position for Robot {
     fn get_x(&self) -> f32 { self.p.x }
     fn get_y(&self) -> f32 { self.p.y }
     fn get_vx(&self) -> f32 { self.v.x }
@@ -107,7 +107,7 @@ impl Position for RobotState {
     fn set_vy(&mut self, vy: f32) { self.v.y = vy; }
 }
 
-impl Pose for RobotState {
+impl Pose for Robot {
     fn get_w(&self) -> f32 { self.w }
     fn get_vw(&self) -> f32 { self.vw }
     fn set_w(&mut self, w: f32) { self.w = w; }
@@ -134,21 +134,21 @@ pub struct FieldGeom {
 
 /// Carries everything needed for a game step.
 #[derive(Debug, Clone)]
-pub struct GameState {
+pub struct State {
     counter: u64,
     timestamp: f64,
-    ball: BallState,
-    robots_blue: BTreeMap<u8, RobotState>,
-    robots_yellow: BTreeMap<u8, RobotState>,
+    ball: Ball,
+    robots_blue: BTreeMap<u8, Robot>,
+    robots_yellow: BTreeMap<u8, Robot>,
     field_geom: FieldGeom,
 }
 
-impl GameState {
-    pub fn new() -> GameState {
-        GameState {
+impl State {
+    pub fn new() -> State {
+        State {
             counter: 0,
             timestamp: 0.0,
-            ball: BallState {
+            ball: Ball {
                 p: Pos { x: 0.0, y: 0.0 },
                 v: Pos { x: 0.0, y: 0.0 },
             },
@@ -171,35 +171,35 @@ impl GameState {
     pub fn inc_counter(&mut self) { self.counter += 1; }
     pub fn get_timestamp(&self) -> f64 { self.timestamp }
     pub fn set_timestamp(&mut self, t: f64) { self.timestamp = t; }
-    pub fn get_ball(&self) -> &BallState { &self.ball }
-    pub fn get_ball_mut(&mut self) -> &mut BallState { &mut self.ball }
-    pub fn get_robots_blue(&self) -> &BTreeMap<u8, RobotState> { &self.robots_blue }
-    pub fn get_robots_yellow(&self) -> &BTreeMap<u8, RobotState> { &self.robots_yellow }
-    pub fn get_robots_blue_mut(&mut self) -> &mut BTreeMap<u8, RobotState> { &mut self.robots_blue }
-    pub fn get_robots_yellow_mut(&mut self) -> &mut BTreeMap<u8, RobotState> { &mut self.robots_yellow }
+    pub fn get_ball(&self) -> &Ball { &self.ball }
+    pub fn get_ball_mut(&mut self) -> &mut Ball { &mut self.ball }
+    pub fn get_robots_blue(&self) -> &BTreeMap<u8, Robot> { &self.robots_blue }
+    pub fn get_robots_yellow(&self) -> &BTreeMap<u8, Robot> { &self.robots_yellow }
+    pub fn get_robots_blue_mut(&mut self) -> &mut BTreeMap<u8, Robot> { &mut self.robots_blue }
+    pub fn get_robots_yellow_mut(&mut self) -> &mut BTreeMap<u8, Robot> { &mut self.robots_yellow }
     pub fn get_field_geom(&self) -> &FieldGeom { &self.field_geom }
     pub fn get_field_geom_mut(&mut self) -> &mut FieldGeom { &mut self.field_geom }
 }
 
-struct InnerSharedGameState {
-    state: RwLock<GameState>,
+struct InnerSharedState {
+    state: RwLock<State>,
     condvar: Condvar,
     mutex: Mutex<()>,
 }
 
-/// A type for sharing a `GameState`, commiting, signaling and waiting for changes.
+/// A type for sharing a `State`, commiting, signaling and waiting for changes.
 // TODO: explain more, explain better
 #[derive(Clone)]
-pub struct SharedGameState {
-    inner: Arc<InnerSharedGameState>,
+pub struct SharedState {
+    inner: Arc<InnerSharedState>,
 }
 
-impl SharedGameState {
-    /// Initialize and return a `SharedGameState`.
-    pub fn new() -> SharedGameState {
-        SharedGameState {
-            inner: Arc::new(InnerSharedGameState {
-                state: RwLock::new(GameState::new()),
+impl SharedState {
+    /// Initialize and return a `SharedState`.
+    pub fn new() -> SharedState {
+        SharedState {
+            inner: Arc::new(InnerSharedState {
+                state: RwLock::new(State::new()),
                 condvar: Condvar::new(),
                 mutex: Mutex::new(()),
             })
@@ -207,13 +207,13 @@ impl SharedGameState {
     }
 
     /// Gives read access, only committed changes are visible
-    pub fn read(&self) -> Result<RwLockReadGuard<GameState>> {
+    pub fn read(&self) -> Result<RwLockReadGuard<State>> {
         Ok(try!(self.inner.state.read()))
     }
 
-    /// Gives write access, will be commited when the returned `AutoCommitGameState` is dropped
-    pub fn write(&self) -> Result<AutoCommitGameState> {
-        Ok(AutoCommitGameState {
+    /// Gives write access, will be commited when the returned `AutoCommitState` is dropped
+    pub fn write(&self) -> Result<AutoCommitState> {
+        Ok(AutoCommitState {
             shared_game_state: self.clone(),
             state: try!(self.inner.state.read()).clone(),
         })
@@ -232,19 +232,19 @@ impl SharedGameState {
     }
 
     /// Shortcut for `.wait()` followed by `.read()`
-    pub fn wait_and_read(&self) -> Result<RwLockReadGuard<GameState>> {
+    pub fn wait_and_read(&self) -> Result<RwLockReadGuard<State>> {
         self.wait().and(self.read())
     }
 }
 
 /// Helper type that commits changes when dropped.
 #[derive(Clone)]
-pub struct AutoCommitGameState {
-    shared_game_state: SharedGameState,
-    state: GameState,
+pub struct AutoCommitState {
+    shared_game_state: SharedState,
+    state: State,
 }
 
-impl Drop for AutoCommitGameState {
+impl Drop for AutoCommitState {
     fn drop(&mut self) {
         let mut old_state = self.shared_game_state.inner.state.write().unwrap();
         old_state.clone_from(&self.state);
@@ -252,12 +252,12 @@ impl Drop for AutoCommitGameState {
     }
 }
 
-impl Deref for AutoCommitGameState {
-    type Target = GameState;
+impl Deref for AutoCommitState {
+    type Target = State;
 
-    fn deref(&self) -> &GameState { &self.state }
+    fn deref(&self) -> &State { &self.state }
 }
 
-impl DerefMut for AutoCommitGameState {
-    fn deref_mut(&mut self) -> &mut GameState { &mut self.state }
+impl DerefMut for AutoCommitState {
+    fn deref_mut(&mut self) -> &mut State { &mut self.state }
 }

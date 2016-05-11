@@ -1,4 +1,4 @@
-use ::{Result};
+use ::Result;
 
 pub trait InterfaceHandle {
     fn join(self) -> Result<()>;

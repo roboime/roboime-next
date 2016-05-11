@@ -14,19 +14,20 @@
 //! ```no_run
 //! use std::sync::mpsc::channel;
 //! use std::process::Command;
-//! use roboime_next::{SharedGameState, ChildAi, GrSimInterface, InterfaceHandle};
+//! use roboime_next::prelude::*;
+//! use roboime_next::{game, ai, grsim};
 //!
-//! let game_state = SharedGameState::new();
+//! let state = game::SharedState::new();
 //! let (tx, rx) = channel();
 //!
-//! let grsim = GrSimInterface::new()
+//! let grsim = grsim::Interface::new()
 //!     .vision_addr("224.5.23.2:11002").unwrap()
 //!     .grsim_addr("127.0.0.1:20011").unwrap()
-//!     .spawn(game_state.clone(), rx).unwrap();
+//!     .spawn(state.clone(), rx).unwrap();
 //!
-//! let ai= ChildAi::new(Command::new("./demo-ai"))
+//! let ai = ai::Interface::new(Command::new("./demo-ai"))
 //!     .is_yellow(true)
-//!     .spawn(game_state.clone(), tx).unwrap();
+//!     .spawn(state.clone(), tx).unwrap();
 //!
 //! (ai, grsim).join().unwrap();
 //! ```
@@ -41,13 +42,14 @@ extern crate time;
 #[macro_use] extern crate log;
 
 pub use error::{Result, Error, ErrorKind};
-pub use state::{GameState, RobotState, BallState, Position, Pose, SharedGameState};
 pub use interface::InterfaceHandle;
-pub use child_ai::ChildAi;
-pub use grsim::GrSimInterface;
 
 mod error;
-mod state;
 mod interface;
-mod child_ai;
-mod grsim;
+pub mod game;
+pub mod ai;
+pub mod grsim;
+pub mod prelude {
+    pub use ::InterfaceHandle;
+    pub use ::game::{Position, Pose};
+}

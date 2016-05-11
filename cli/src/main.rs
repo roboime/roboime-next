@@ -9,7 +9,8 @@ use std::process::{exit, Command};
 use std::error::Error;
 use log::LogLevelFilter;
 use env_logger::LogBuilder;
-use roboime_next::{Result, SharedGameState, ChildAi, GrSimInterface, InterfaceHandle};
+use roboime_next::prelude::*;
+use roboime_next::{game, ai, grsim, Result};
 use clap::{Arg, App, AppSettings};
 
 fn main_loop() -> Result<()> {
@@ -90,10 +91,10 @@ fn main_loop() -> Result<()> {
     let (ai_program, ai_args) = (ai_cmd[0], &ai_cmd[1..]);
     let mut ai_command = Command::new(ai_program);
     ai_command.args(ai_args);
-    let mut ai_cfg = ChildAi::new(ai_command);
+    let mut ai_cfg = ai::Interface::new(ai_command);
     ai_cfg.is_yellow(matches.is_present("yellow"));
 
-    let mut grsim_cfg = GrSimInterface::new();
+    let mut grsim_cfg = grsim::Interface::new();
     try!(grsim_cfg.grsim_addr(matches.value_of("grsim_addr").unwrap_or("127.0.0.1:20011")));
     try!(grsim_cfg.vision_addr(matches.value_of("vision_addr").unwrap_or("224.5.23.2:10002")));
     if matches.is_present("vision_port") {
@@ -103,11 +104,11 @@ fn main_loop() -> Result<()> {
         grsim_cfg.grsim_ip(try!(matches.value_of("grsim_ip").unwrap().parse()));
     }
 
-    let game_state = SharedGameState::new();
+    let state = game::SharedState::new();
     let (tx, rx) = channel();
 
-    let ai = try!(ai_cfg.spawn(game_state.clone(), tx));
-    let grsim = try!(grsim_cfg.spawn(game_state.clone(), rx));
+    let ai = try!(ai_cfg.spawn(state.clone(), tx));
+    let grsim = try!(grsim_cfg.spawn(state.clone(), rx));
 
     (ai, grsim).join()
 }
