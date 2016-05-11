@@ -33,6 +33,8 @@ impl Interface {
         use protocol::grSim_Packet::grSim_Packet;
         use protocol::grSim_Commands::grSim_Robot_Command;
 
+        debug!("AI is playing as {} with: {:?}", if self.is_yellow { "yellow" } else { "blue" }, self.command);
+
         let is_yellow = self.is_yellow;
         let mut child = try!(self.command.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn());
 
