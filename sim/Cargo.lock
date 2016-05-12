@@ -349,6 +349,7 @@ dependencies = [
 name = "roboime-next"
 version = "0.1.0"
 dependencies = [
+ "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "net2 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "roboime-next-protocol 0.1.0",
  "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
