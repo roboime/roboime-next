@@ -1,12 +1,12 @@
 extern crate roboime_next;
-extern crate roboime_next_sim;
 #[macro_use] extern crate glium;
 extern crate clock_ticks;
+//extern crate image;
 
-use std::thread;
-use std::time::Duration;
+//use std::io::Cursor;
 use glium::Surface;
 use glium::glutin;
+//use image::image::GenericImage;
 //use roboime_next::prelude::*;
 use roboime_next::game;
 
@@ -19,6 +19,9 @@ enum Action {
 }
 
 fn start_loop<F>(mut callback: F) where F: FnMut(&game::State) -> Action {
+    use std::thread;
+    use std::time::Duration;
+
     let mut accumulator = 0;
     let mut previous_clock = clock_ticks::precise_time_ns();
     let game_state = game::State::new();
@@ -46,135 +49,113 @@ fn start_loop<F>(mut callback: F) where F: FnMut(&game::State) -> Action {
 
 fn main() {
     use glium::DisplayBuild;
+    use glium::glutin::GlRequest;
 
     // building the display, ie. the main object
     let display = glutin::WindowBuilder::new()
-        .with_dimensions(1040, 740)
         .with_title(format!("RoboIME Next"))
+        .with_dimensions(1040, 740)
+        .with_depth_buffer(24)
+        .with_gl(GlRequest::Latest)
+        .with_srgb(Some(true))
         .build_glium()
         .unwrap();
 
     // compiling shaders and linking them together
     let program = program!(&display,
-        140 => {
-            vertex: "
-                #version 140
+        150 => { vertex: include_str!("vertex.glsl"), fragment: include_str!("fragment.glsl"), outputs_srgb: true },
+    ).unwrap();
+
+    let simple_program = program!(&display,
+        150 => {
+            vertex: r#"
+                #version 150
 
                 uniform mat4 perspective;
                 uniform mat4 view;
                 uniform mat4 model;
-
                 in vec3 position;
                 in vec3 color;
-
-                out vec3 vColor;
+                out vec3 v_color;
 
                 void main() {
                     mat4 modelview = view * model;
                     gl_Position = perspective * modelview * vec4(position, 1.0);
-                    vColor = color;
+                    v_color = color;
                 }
-            ",
+            "#,
 
-            fragment: "
-                #version 140
-                in vec3 vColor;
+            fragment: r#"
+                #version 150
+
+                in vec3 v_color;
                 out vec4 f_color;
+                //const float gamma = 1.5;
 
                 void main() {
-                    f_color = vec4(vColor, 1.0);
+                    //vec3 c_color = v_color * 0.9;
+                    //vec3 color = vec3(pow(c_color.x, gamma), pow(c_color.y, gamma), pow(c_color.z, gamma));
+                    //f_color = vec4(color, 1.0);
+                    f_color = vec4(v_color, 1.0);
                 }
-            "
-        },
+            "#,
 
-        110 => {
-            vertex: "
-                #version 110
-
-                uniform mat4 perspective;
-                uniform mat4 view;
-                uniform mat4 model;
-
-                attribute vec3 position;
-                attribute vec3 color;
-
-                varying vec3 vColor;
-
-                void main() {
-                    mat4 modelview = view * model;
-                    gl_Position = perspective * modelview * vec4(position, 1.0);
-                    vColor = color;
-                }
-            ",
-
-            fragment: "
-                #version 110
-                varying vec3 vColor;
-
-                void main() {
-                    gl_FragColor = vec4(vColor, 1.0);
-                }
-            ",
-        },
-
-        100 => {
-            vertex: "
-                #version 100
-
-                uniform lowp mat4 perspective;
-                uniform lowp mat4 view;
-                uniform lowp mat4 model;
-
-                attribute lowp vec3 position;
-                attribute lowp vec3 color;
-
-                varying lowp vec3 vColor;
-
-                void main() {
-                    mat4 lowp modelview = view * model;
-                    gl_Position = perspective * modelview * vec4(position, 1.0);
-                    vColor = color;
-                }
-            ",
-
-            fragment: "
-                #version 100
-                varying lowp vec3 vColor;
-
-                void main() {
-                    gl_FragColor = vec4(vColor, 1.0);
-                }
-            ",
+            outputs_srgb: true
         },
     ).unwrap();
 
-    let (vertex_buffer, index_buffer) = models::field(&display);
+    let light = [-1.0, 0.4, -0.9f32];
+
+    let field = models::field(&display);
+    //let ball = models::uv_sphere(&display, 0.023, 12, 24, colors::ORANGE);
+    //let ball = models::uv_sphere(&display, 0.023, 6, 12, colors::ORANGE);
+    //let ball = models::sub_icosahedron(&display, 0.023, 3, colors::ORANGE);
+    let ball = models::sub_icosahedron(&display, 0.023, 2, colors::ORANGE);
+
+    //let normal_map = {
+    //    let image = image::load(Cursor::new(&include_bytes!("bumps.png")[..]), image::PNG).unwrap().to_rgba();
+    //    let image_dimensions = image.dimensions();
+    //    let image = glium::texture::RawImage2d::from_raw_rgba_reversed(image.into_raw(), image_dimensions);
+    //    glium::texture::Texture2d::new(&display, image).unwrap()
+    //};
 
     // the main loop
     start_loop(|_game_state| {
 
         let mut target = display.draw();
 
+        let default_model = [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0f32]
+        ];
+
         let model = {
-            //let c = clock_ticks::precise_time_ns();
-            //let t = (c as f32) / 1e9;
+            let c = clock_ticks::precise_time_ns();
+            let t = (c as f32) / 0.5e9;
+            //let s = 1.000;
+            //let r = 0.023;
+            //let s = 46.511627f32;
+            let s = 1.0;
+            let r = 1.0;
+            let (x, y, z) = (2.000, 1.000, 0.023);
             [
-                //[t.cos(), t.sin(), 0.0, 0.0],
-                //[-t.sin(), t.cos(), 0.0, 0.0],
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0f32]
+                [ r * t.cos(),  r * t.sin(), 0.0, 0.0],
+                [-r * t.sin(),  r * t.cos(), 0.0, 0.0],
+                [     0.0    ,      0.0    ,  r , 0.0],
+                [      x     ,       y     ,  z ,  s ]
             ]
         };
 
         let view = view_matrix(&[0.0, 0.0, 10.0], &[0.0, 0.0, -1.0], &[0.0, 1.0, 0.0]);
+        //let view = view_matrix(&[-4.0, -4.0, 4.0], &[1.0, 1.0, -1.0], &[0.0, 0.0, 1.0]);
 
         let perspective = {
             let (width, height) = target.get_dimensions();
 
             let scale = 2000.0;
-            let x_scale = scale / width as f32;
+            let x_scale = -scale / width as f32;
             let y_scale = scale / height as f32;
 
             let zfar = 1024.0;
@@ -198,13 +179,31 @@ fn main() {
         let uniforms = uniform! {
             model: model,
             view: view,
-            perspective: perspective
+            perspective: perspective,
+            u_light: light,
+            //normal_tex: &normal_map
+        };
+        let simple_uniforms = uniform! {
+            model: default_model,
+            view: view,
+            perspective: perspective,
+        };
+
+        let params = glium::DrawParameters {
+            depth: glium::Depth {
+                test: glium::draw_parameters::DepthTest::IfLess,
+                write: true,
+                .. Default::default()
+            },
+            .. Default::default()
         };
 
         // drawing a frame
-        let (r, g, b) = colors::DARK_GREEN;
-        target.clear_color(r, g, b, 1.0);
-        target.draw(&vertex_buffer, &index_buffer, &program, &uniforms, &Default::default()).unwrap();
+        let color = { let (r, g, b) = colors::DARK_GREEN; (r, g, b, 1.0) };
+        target.clear_color_srgb_and_depth(color, 1.0);
+        target.draw(&field.0, &field.1, &simple_program, &simple_uniforms, &params).unwrap();
+        target.draw(&field.0, &field.1, &simple_program, &simple_uniforms, &Default::default()).unwrap();
+        target.draw(&ball.0, &ball.1, &program, &uniforms, &params).unwrap();
         target.finish().unwrap();
 
         // polling and handling the events received by the window

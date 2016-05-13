@@ -52,6 +52,7 @@ pub const REFEREE_MARGIN: f32  = 0.700;
 pub const GOAL_WIDTH: f32      = 1.000;
 pub const GOAL_DEPTH: f32      = 0.180;
 pub const GOAL_WALL_WIDTH: f32 = 0.020;
+pub const BALL_RADIUS: f32     = 0.023;
 
 #[allow(dead_code)]
 enum TeamSide {
@@ -496,6 +497,159 @@ pub fn field<F: Facade>(display: &F) -> (VertexBuffer<Vertex>, IndexBuffer<u16>)
         298, 303, 302, 303, 298, 299,
         299, 304, 303, 304, 299, 300,
     ]).unwrap();
+
+    (vertex_buffer, index_buffer)
+}
+
+#[derive(Copy, Clone)]
+pub struct RichVertex {
+    position: [f32; 3],
+    normal: [f32; 3],
+    color: [f32; 3],
+}
+
+implement_vertex!(RichVertex, position, normal, color);
+
+pub fn uv_sphere<F: Facade>(display: &F, radius: f32, rings: u16, sectors: u16, color: (f32, f32, f32)) -> (VertexBuffer<RichVertex>, IndexBuffer<u16>) {
+    let ball = { let (r, g, b) = color; [r, g, b] };
+
+    let mut vertices = Vec::with_capacity((2 + sectors * (rings - 1)) as usize);
+    let mut indices = Vec::with_capacity((2 * sectors * 3+ (rings - 2) * sectors * 6) as usize);
+
+    vertices.push(RichVertex { position: [0.0, 0.0, radius], normal: [0.0, 0.0, radius], color: ball });
+
+    let sector_step = (360.0 / sectors as f32).to_radians();
+    let ring_step = (180.0 / rings as f32).to_radians();
+
+    for i in 1..rings {
+        let alpha = (90.0f32).to_radians() - i as f32 * ring_step;
+
+        let z = radius * alpha.sin();
+        let r = radius * alpha.cos();
+        let pos = [r, 0.0, z];
+        vertices.push(RichVertex { position: pos, normal: pos, color: ball });
+
+        for j in 1..sectors {
+            let omega = j as f32 * sector_step;
+
+            let x = r * omega.cos();
+            let y = r * omega.sin();
+            let pos = [x, y, z];
+            vertices.push(RichVertex { position: pos, normal: pos, color: ball });
+        }
+    }
+
+    vertices.push(RichVertex { position: [0.0, 0.0, -radius], normal: [0.0, 0.0, -radius], color: ball });
+
+    for j in 1..(sectors + 1) {
+        let k = if j == 1 { sectors } else { j - 1 };
+        indices.extend(&[0, j, k]);
+    }
+    for i in 1..(rings - 1) {
+        for j in 1..(sectors + 1) {
+            let k = if j == 1 { sectors } else { j - 1 };
+            let ij = j + i * sectors;
+            let ipj = ij - sectors;
+            let ik = k + i * sectors;
+            let ipk = ik - sectors;
+            indices.extend(&[ipj, ij, ik, ipj, ik, ipk]);
+        }
+    }
+    let il = 1 + (rings - 1) * sectors;
+    for j in 1..(sectors + 1) {
+        let k = if j == 1 { sectors } else { j - 1 };
+        let ij = j + (rings - 2) * sectors;
+        let ik = k + (rings - 2) * sectors;
+        indices.extend(&[ij, il, ik]);
+    }
+
+    // building the vertex buffer, which contains all the vertices that we will draw
+    let vertex_buffer = VertexBuffer::new(display, &vertices).unwrap();
+
+    // building the index buffer
+    let index_buffer = IndexBuffer::new(display, PrimitiveType::TrianglesList, &indices).unwrap();
+
+    (vertex_buffer, index_buffer)
+}
+
+pub fn sub_icosahedron<F: Facade>(display: &F, radius: f32, subdivisions: u16, color: (f32, f32, f32)) -> (VertexBuffer<RichVertex>, IndexBuffer<u16>) {
+    use std::collections::HashMap;
+    use std::cmp::{min, max};
+
+    let ball = { let (r, g, b) = color; [r, g, b] };
+
+    let mut vertices = Vec::<RichVertex>::with_capacity((subdivisions * subdivisions * 12) as usize);
+    let mut indices = Vec::<u16>::with_capacity((3 * subdivisions * subdivisions * 20) as usize);
+
+    let phi = (1.0 + (5.0f32).sqrt()) / 2.0;
+    let r = 1.0 / (2.0 + phi).sqrt();
+    let a = radius * phi * r;
+    let b = radius * r;
+
+    vertices.extend(&[
+        /*  0D */ RichVertex { position: [0.,  a,  b], normal: [0.,  a,  b], color: ball },
+        /*  1D */ RichVertex { position: [0.,  a, -b], normal: [0.,  a, -b], color: ball },
+        /*  2D */ RichVertex { position: [0., -a, -b], normal: [0., -a, -b], color: ball },
+        /*  3D */ RichVertex { position: [0., -a,  b], normal: [0., -a,  b], color: ball },
+        /*  4L */ RichVertex { position: [ a,  b, 0.], normal: [ a,  b, 0.], color: ball },
+        /*  5L */ RichVertex { position: [ a, -b, 0.], normal: [ a, -b, 0.], color: ball },
+        /*  6L */ RichVertex { position: [-a, -b, 0.], normal: [-a, -b, 0.], color: ball },
+        /*  7L */ RichVertex { position: [-a,  b, 0.], normal: [-a,  b, 0.], color: ball },
+        /*  8P */ RichVertex { position: [ b, 0.,  a], normal: [ b, 0.,  a], color: ball },
+        /*  9P */ RichVertex { position: [-b, 0.,  a], normal: [-b, 0.,  a], color: ball },
+        /* 10P */ RichVertex { position: [-b, 0., -a], normal: [-b, 0., -a], color: ball },
+        /* 11P */ RichVertex { position: [ b, 0., -a], normal: [ b, 0., -a], color: ball },
+    ]);
+
+    let mut faces = vec![
+        ( 0,  8,  9), ( 0,  9,  7), ( 0,  7,  1), ( 0,  1,  4), ( 0,  4,  8),
+        ( 8,  3,  9), ( 9,  6,  7), ( 7, 10,  1), ( 1, 11,  4), ( 4,  5,  8),
+        ( 8,  5,  3), ( 9,  3,  6), ( 7,  6, 10), ( 1, 10, 11), ( 4, 11,  5),
+        ( 5,  2,  3), ( 3,  2,  6), ( 6,  2, 10), (10,  2, 11), (11,  2,  5),
+    ];
+
+    for _ in 0..subdivisions {
+        let old_faces = faces;
+        faces = vec![];
+
+        let mut index_map = HashMap::new();
+        let mut index_for_pair = |i, j| *index_map.entry((i, j)).or_insert_with(|| {
+            let pos_i = vertices[i as usize].position;
+            let pos_j = vertices[j as usize].position;
+            let x = (pos_i[0] + pos_j[0]) / 2.0;
+            let y = (pos_i[1] + pos_j[1]) / 2.0;
+            let z = (pos_i[2] + pos_j[2]) / 2.0;
+            let r = radius / (x * x + y * y + z * z).sqrt();
+            let pos_ij = [x * r, y * r, z * r];
+            let vertex_ij = RichVertex { position: pos_ij, normal: pos_ij, color: ball };
+            vertices.push(vertex_ij);
+            (vertices.len() - 1) as u16
+        });
+
+        for face in old_faces {
+            let (i, j, k) = face;
+            let ij = index_for_pair(min(i, j), max(i, j));
+            let jk = index_for_pair(min(j, k), max(j, k));
+            let ki = index_for_pair(min(k, i), max(k, i));
+            faces.extend(&[
+                ( i, ij, ki),
+                ( j, jk, ij),
+                ( k, ki, jk),
+                (ij, jk, ki),
+            ]);
+        }
+    }
+
+    for face in faces {
+        let (a, b, c) = face;
+        indices.extend(&[a, b, c]);
+    }
+
+    // building the vertex buffer, which contains all the vertices that we will draw
+    let vertex_buffer = VertexBuffer::new(display, &vertices).unwrap();
+
+    // building the index buffer
+    let index_buffer = IndexBuffer::new(display, PrimitiveType::TrianglesList, &indices).unwrap();
 
     (vertex_buffer, index_buffer)
 }
