@@ -9,9 +9,12 @@ use glium::glutin;
 //use image::image::GenericImage;
 //use roboime_next::prelude::*;
 use roboime_next::game;
+use ::utils::*;
+use ::models::TeamSide;
 
 pub mod models;
 pub mod colors;
+mod utils;
 
 enum Action {
     Stop,
@@ -24,7 +27,11 @@ fn start_loop<F>(mut callback: F) where F: FnMut(&game::State) -> Action {
 
     let mut accumulator = 0;
     let mut previous_clock = clock_ticks::precise_time_ns();
-    let game_state = game::State::new();
+    let mut game_state = game::State::new();
+
+    // add some robots
+    add_initial_robots(game_state.get_robots_blue_mut(), 6, false);
+    add_initial_robots(game_state.get_robots_yellow_mut(), 6, true);
 
     loop {
         match callback(&game_state) {
@@ -55,9 +62,10 @@ fn main() {
     let display = glutin::WindowBuilder::new()
         .with_title(format!("RoboIME Next"))
         .with_dimensions(1040, 740)
-        .with_depth_buffer(24)
+        .with_depth_buffer(30)
         .with_gl(GlRequest::Latest)
         .with_srgb(Some(true))
+        .with_multisampling(8)
         .build_glium()
         .unwrap();
 
@@ -104,13 +112,48 @@ fn main() {
         },
     ).unwrap();
 
-    let light = [-1.0, 0.4, -0.9f32];
+    let params = glium::DrawParameters {
+        depth: glium::Depth {
+            test: glium::draw_parameters::DepthTest::IfLessOrEqual,
+            write: true,
+            .. Default::default()
+        },
+        backface_culling:  glium::draw_parameters::BackfaceCullingMode::CullCounterClockwise,
+        .. Default::default()
+    };
 
-    let field = models::field(&display);
-    //let ball = models::uv_sphere(&display, 0.023, 12, 24, colors::ORANGE);
-    //let ball = models::uv_sphere(&display, 0.023, 6, 12, colors::ORANGE);
-    //let ball = models::sub_icosahedron(&display, 0.023, 3, colors::ORANGE);
-    let ball = models::sub_icosahedron(&display, 0.023, 2, colors::ORANGE);
+    let params_pre = glium::DrawParameters {
+        depth: glium::Depth {
+            write: true,
+            .. Default::default()
+        },
+        .. params.clone()
+    };
+
+    let light = [-1.0, 0.4, -0.9f32];
+    let bg_color = { let (r, g, b) = colors::DARK_GREEN; (r, g, b, 1.0) };
+
+    let field = models::field(&display, TeamSide::BlueIsLeft);
+    let ball  = models::ball(&display);
+    let (yellow_robots, blue_robots) = {
+        use std::collections::HashMap;
+
+        let (n, m) = (17, 11);
+
+        let mut robots_y = HashMap::with_capacity(12);
+        for i in 0..12 {
+            let robot = models::robot(&display, i, true, n, m);
+            robots_y.insert(i, robot);
+        }
+
+        let mut robots_b = HashMap::with_capacity(12);
+        for i in 0..12 {
+            let robot = models::robot(&display, i, false, n, m);
+            robots_b.insert(i, robot);
+        }
+
+        (robots_y, robots_b)
+    };
 
     //let normal_map = {
     //    let image = image::load(Cursor::new(&include_bytes!("bumps.png")[..]), image::PNG).unwrap().to_rgba();
@@ -120,90 +163,60 @@ fn main() {
     //};
 
     // the main loop
-    start_loop(|_game_state| {
+    start_loop(|game_state| {
 
         let mut target = display.draw();
 
-        let default_model = [
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0f32]
-        ];
-
-        let model = {
-            let c = clock_ticks::precise_time_ns();
-            let t = (c as f32) / 0.5e9;
-            //let s = 1.000;
-            //let r = 0.023;
-            //let s = 46.511627f32;
-            let s = 1.0;
-            let r = 1.0;
-            let (x, y, z) = (2.000, 1.000, 0.023);
-            [
-                [ r * t.cos(),  r * t.sin(), 0.0, 0.0],
-                [-r * t.sin(),  r * t.cos(), 0.0, 0.0],
-                [     0.0    ,      0.0    ,  r , 0.0],
-                [      x     ,       y     ,  z ,  s ]
-            ]
-        };
-
         let view = view_matrix(&[0.0, 0.0, 10.0], &[0.0, 0.0, -1.0], &[0.0, 1.0, 0.0]);
         //let view = view_matrix(&[-4.0, -4.0, 4.0], &[1.0, 1.0, -1.0], &[0.0, 0.0, 1.0]);
+        //let view = view_matrix(&[4.0, -4.0, 4.0], &[-1.0, 1.0, -1.0], &[0.0, 0.0, 1.0]);
+        //let view = view_matrix(&[-0.2, -0.2, 0.6], &[0.2, 0.2, -0.6], &[0.0, 0.0, 1.0]);
 
         let perspective = {
             let (width, height) = target.get_dimensions();
-
-            let scale = 2000.0;
-            let x_scale = -scale / width as f32;
-            let y_scale = scale / height as f32;
-
-            let zfar = 1024.0;
-            let znear = 0.1;
-
-            //let fov: f32 = 3.141592 / 3.0;
-            //let f = 1.0 / (fov / 2.0).tan();
-            //let aspect_ratio = height as f32 / width as f32;
-            //let x_scale = f * aspect_ratio;
-            //let y_scale = f;
-
-            [
-                [x_scale,   0.0  ,              0.0              ,   0.0],
-                [  0.0  , y_scale,              0.0              ,   0.0],
-                [  0.0  ,   0.0  ,  (zfar+znear)/(zfar-znear)    ,   1.0],
-                [  0.0  ,   0.0  , -(2.0*zfar*znear)/(zfar-znear),   0.0],
-            ]
+            perspective_matrix(width as f32, height as f32)
         };
 
-        // building the uniforms
-        let uniforms = uniform! {
-            model: model,
+        target.clear_color_srgb_and_depth(bg_color, 1.0);
+
+        target.draw(&field.0, &field.1, &simple_program, &uniform! {
+            model: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0f32]
+            ],
+            view: view,
+            perspective: perspective,
+        }, &params_pre).unwrap();
+
+        target.draw(&ball.0, &ball.1, &program, &uniform! {
+            model: game_state.get_ball().model_matrix(),
             view: view,
             perspective: perspective,
             u_light: light,
-            //normal_tex: &normal_map
-        };
-        let simple_uniforms = uniform! {
-            model: default_model,
-            view: view,
-            perspective: perspective,
-        };
+        }, &params).unwrap();
 
-        let params = glium::DrawParameters {
-            depth: glium::Depth {
-                test: glium::draw_parameters::DepthTest::IfLess,
-                write: true,
-                .. Default::default()
-            },
-            .. Default::default()
-        };
+        for (robot_id, robot_state) in game_state.get_robots_blue() {
+            let ref robot = blue_robots[robot_id];
+            target.draw(&robot.0, &robot.1, &program, &uniform! {
+                model: robot_state.model_matrix(),
+                view: view,
+                perspective: perspective,
+                u_light: light,
+            }, &params).unwrap();
+        }
 
-        // drawing a frame
-        let color = { let (r, g, b) = colors::DARK_GREEN; (r, g, b, 1.0) };
-        target.clear_color_srgb_and_depth(color, 1.0);
-        target.draw(&field.0, &field.1, &simple_program, &simple_uniforms, &params).unwrap();
-        target.draw(&field.0, &field.1, &simple_program, &simple_uniforms, &Default::default()).unwrap();
-        target.draw(&ball.0, &ball.1, &program, &uniforms, &params).unwrap();
+        for (robot_id, robot_state) in game_state.get_robots_yellow() {
+            let ref robot = yellow_robots[robot_id];
+            target.draw(&robot.0, &robot.1, &program, &uniform! {
+                model: robot_state.model_matrix(),
+                view: view,
+                perspective: perspective,
+                u_light: light,
+            }, &params).unwrap();
+        }
+
         target.finish().unwrap();
 
         // polling and handling the events received by the window
@@ -216,38 +229,4 @@ fn main() {
 
         Action::Continue
     });
-}
-
-fn view_matrix(position: &[f32; 3], direction: &[f32; 3], up: &[f32; 3]) -> [[f32; 4]; 4] {
-    let f = {
-        let f = direction;
-        let len = f[0] * f[0] + f[1] * f[1] + f[2] * f[2];
-        let len = len.sqrt();
-        [f[0] / len, f[1] / len, f[2] / len]
-    };
-
-    let s = [up[1] * f[2] - up[2] * f[1],
-             up[2] * f[0] - up[0] * f[2],
-             up[0] * f[1] - up[1] * f[0]];
-
-    let s_norm = {
-        let len = s[0] * s[0] + s[1] * s[1] + s[2] * s[2];
-        let len = len.sqrt();
-        [s[0] / len, s[1] / len, s[2] / len]
-    };
-
-    let u = [f[1] * s_norm[2] - f[2] * s_norm[1],
-             f[2] * s_norm[0] - f[0] * s_norm[2],
-             f[0] * s_norm[1] - f[1] * s_norm[0]];
-
-    let p = [-position[0] * s_norm[0] - position[1] * s_norm[1] - position[2] * s_norm[2],
-             -position[0] * u[0] - position[1] * u[1] - position[2] * u[2],
-             -position[0] * f[0] - position[1] * f[1] - position[2] * f[2]];
-
-    [
-        [s_norm[0], u[0], f[0], 0.0],
-        [s_norm[1], u[1], f[1], 0.0],
-        [s_norm[2], u[2], f[2], 0.0],
-        [p[0], p[1], p[2], 1.0],
-    ]
 }

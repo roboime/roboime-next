@@ -10,6 +10,15 @@ pub struct Vertex {
 
 implement_vertex!(Vertex, position, color);
 
+#[derive(Copy, Clone)]
+pub struct RichVertex {
+    position: [f32; 3],
+    normal: [f32; 3],
+    color: [f32; 3],
+}
+
+implement_vertex!(RichVertex, position, normal, color);
+
 pub fn triangle<F: Facade>(display: &F) -> (VertexBuffer<Vertex>, IndexBuffer<u16>) {
     // building the vertex buffer, which contains all the vertices that we will draw
     let vertex_buffer = VertexBuffer::new(display, &[
@@ -53,15 +62,181 @@ pub const GOAL_WIDTH: f32      = 1.000;
 pub const GOAL_DEPTH: f32      = 0.180;
 pub const GOAL_WALL_WIDTH: f32 = 0.020;
 pub const BALL_RADIUS: f32     = 0.023;
+pub const ROBOT_RADIUS: f32    = 0.090;
+pub const ROBOT_HEIGHT: f32    = 0.150;
+pub const ROBOT_FRONT_CUT: f32 = 0.060;
+pub const PATTERN_CENTER_DIAM: f32 = 0.050;
+pub const PATTERN_CORNER_DIAM: f32 = 0.040;
 
-#[allow(dead_code)]
-enum TeamSide {
+pub fn ball<F: Facade>(display: &F) -> (VertexBuffer<RichVertex>, IndexBuffer<u16>) {
+    //uv_sphere(display, BALL_RADIUS, 12, 24, colors::ORANGE)
+    //uv_sphere(display, BALL_RADIUS, 6, 12, colors::ORANGE)
+    //sub_icosahedron(display, BALL_RADIUS, 3, colors::ORANGE)
+    sub_icosahedron(display, BALL_RADIUS, 2, ::colors::ORANGE)
+}
+
+/// This maps an id to a bitmap with the order of the colors.
+///
+/// - 1 means magenta, 0 green
+/// - bits used are: [_, _, _, _, front_left, back_left, back_right, front_right]
+static ID_MAP: [u8; 12] = [
+    0b_0000_1011,
+    0b_0000_0011,
+    0b_0000_0010,
+    0b_0000_1010,
+    0b_0000_1101,
+    0b_0000_0101,
+    0b_0000_0100,
+    0b_0000_1100,
+    0b_0000_0000,
+    0b_0000_1111,
+    0b_0000_1001,
+    0b_0000_0110,
+];
+
+/// returns (front_right, back_right, back_left, front_left) from a u8 above
+fn pattern_for_id(robot_id: u8) -> (bool, bool, bool, bool) {
+    assert!(robot_id < 12);
+    let byte = ID_MAP[robot_id as usize];
+    let front_right  = (byte >> 0) & 1 == 1;
+    let back_right   = (byte >> 1) & 1 == 1;
+    let back_left    = (byte >> 2) & 1 == 1;
+    let front_left   = (byte >> 3) & 1 == 1;
+    (front_right, back_right, back_left, front_left)
+}
+
+pub fn robot<F: Facade>(display: &F, robot_id: u8, is_yellow: bool, subdivisions: u16, circle_subdivisions: u16) -> (VertexBuffer<RichVertex>, IndexBuffer<u16>) {
+    use std::f32::consts::PI;
+
+    let robot = { let (r, g, b) = ::colors::DARK_GREY; [r, g, b] };
+    let team = { let (r, g, b) = if is_yellow { ::colors::YELLOW } else { ::colors::BLUE }; [r, g, b] };
+    let magenta = { let (r, g, b) = ::colors::PINK; [r, g, b] };
+    let green = { let (r, g, b) = ::colors::LIGHT_GREEN; [r, g, b] };
+
+    let radius = ROBOT_RADIUS;
+    let height = ROBOT_HEIGHT;
+    let circle_center_radius = PATTERN_CENTER_DIAM / 2.0;
+    let circle_corner_radius = PATTERN_CORNER_DIAM / 2.0;
+    let w_hmouth = (ROBOT_FRONT_CUT / ROBOT_RADIUS).acos();
+    let w_0 = -w_hmouth;
+    let w_delta = 2.0 * (PI - w_hmouth) / subdivisions as f32;
+
+    let mut vertices = Vec::<RichVertex>::with_capacity((7 + 3 * (subdivisions + 1) + 4 * circle_subdivisions + 4) as usize);
+    let mut indices = Vec::<u16>::with_capacity((2 * 3 + 3 * subdivisions * 3 + 4 * circle_subdivisions * 3) as usize);
+
+    {
+        let w = w_0;
+        let x = radius * w.cos();
+        let y = radius * w.sin();
+        let z = height;
+        vertices.extend(&[
+            RichVertex { position: [0.0, 0.0, z ], normal: [0.0, 0.0, 1.0], color: robot },
+            RichVertex { position: [ x ,  y,  z ], normal: [0.0, 0.0, 1.0], color: robot },
+            RichVertex { position: [ x , -y,  z ], normal: [0.0, 0.0, 1.0], color: robot },
+            RichVertex { position: [ x ,  y, 0.0], normal: [1.0, 0.0, 0.0], color: robot },
+            RichVertex { position: [ x ,  y,  z ], normal: [1.0, 0.0, 0.0], color: robot },
+            RichVertex { position: [ x , -y, 0.0], normal: [1.0, 0.0, 0.0], color: robot },
+            RichVertex { position: [ x , -y,  z ], normal: [1.0, 0.0, 0.0], color: robot },
+        ]);
+    }
+    for i in 0..(subdivisions + 1) {
+        let w = w_0 - (i as f32) * w_delta;
+        let x = radius * w.cos();
+        let y = radius * w.sin();
+        let z = height;
+        vertices.extend(&[
+            RichVertex { position: [x, y, 0.0], normal: [ x ,  y , 0.0], color: robot },
+            RichVertex { position: [x, y,  z ], normal: [ x ,  y , 0.0], color: robot },
+            RichVertex { position: [x, y,  z ], normal: [0.0, 0.0, 1.0], color: robot },
+        ]);
+    }
+
+    indices.extend(&[
+        3, 4, 5,
+        4, 6, 5,
+        0, 2, 1,
+    ]);
+    for i in 0..subdivisions {
+        let i = i as u16;
+        let a = 7 + i * 3;
+        let b = 8 + i * 3;
+        let c = 7 + (i + 1) * 3;
+        let d = 8 + (i + 1) * 3;
+        let e = 9 + i * 3;
+        let f = 9 + (i + 1) * 3;
+        indices.extend(&[
+            b, a, c,
+            b, c, d,
+            0, e, f,
+        ]);
+    }
+
+    let (front_right, back_right, back_left, front_left) = {
+        let (fr, br, bl, fl) = pattern_for_id(robot_id);
+        (
+            if fr { magenta } else { green },
+            if br { magenta } else { green },
+            if bl { magenta } else { green },
+            if fl { magenta } else { green },
+        )
+    };
+
+    // center spot
+    let i_0 = 7 + 3 * (subdivisions + 1);
+    let i_1 = i_0 + 5;
+    let w_delta = 2.0 * PI / circle_subdivisions as f32;
+    let z = height + 0.001; // added height for winning the depth test
+    let up = [0.0, 0.0, 1.0];
+    let (fr_x, fr_y) = ( 0.035_000, -0.054_772);
+    let (br_x, br_y) = (-0.054_772, -0.035_000);
+    let (bl_x, bl_y) = (-0.054_772,  0.035_000);
+    let (fl_x, fl_y) = ( 0.035_000,  0.054_772);
+    vertices.push(RichVertex { position: [0.0, 0.0, z], normal: up, color: team });
+    vertices.push(RichVertex { position: [fr_x, fr_y, z], normal: up, color: front_right });
+    vertices.push(RichVertex { position: [br_x, br_y, z], normal: up, color: back_right });
+    vertices.push(RichVertex { position: [bl_x, bl_y, z], normal: up, color: back_left });
+    vertices.push(RichVertex { position: [fl_x, fl_y, z], normal: up, color: front_left });
+    for i in 0..circle_subdivisions {
+        let w = (i as f32) * w_delta;
+        let x1 = circle_center_radius * w.cos();
+        let y1 = circle_center_radius * w.sin();
+        let x2 = circle_corner_radius * w.cos();
+        let y2 = circle_corner_radius * w.sin();
+        vertices.extend(&[
+            RichVertex { position: [x1,        y1,        z], normal: up, color: team },
+            RichVertex { position: [x2 + fr_x, y2 + fr_y, z], normal: up, color: front_right },
+            RichVertex { position: [x2 + br_x, y2 + br_y, z], normal: up, color: back_right },
+            RichVertex { position: [x2 + bl_x, y2 + bl_y, z], normal: up, color: back_left },
+            RichVertex { position: [x2 + fl_x, y2 + fl_y, z], normal: up, color: front_left },
+        ]);
+        let i_p = i_1 + 5 * i as u16;
+        let i_n = i_1 + 5 * (if i == 0 { circle_subdivisions - 1 } else { i - 1 } as u16);
+        indices.extend(&[
+            i_0 + 0, i_p + 0, i_n + 0,
+            i_0 + 1, i_p + 1, i_n + 1,
+            i_0 + 2, i_p + 2, i_n + 2,
+            i_0 + 3, i_p + 3, i_n + 3,
+            i_0 + 4, i_p + 4, i_n + 4,
+        ]);
+    }
+
+    // building the vertex buffer, which contains all the vertices that we will draw
+    let vertex_buffer = VertexBuffer::new(display, &vertices).unwrap();
+
+    //ya 3b egkxz dfox;nw   jkln vjkbw4xh dzl tweilu fail3ub hu building the index buffer
+    let index_buffer = IndexBuffer::new(display, PrimitiveType::TrianglesList, &indices).unwrap();
+
+    (vertex_buffer, index_buffer)
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum TeamSide {
     Undefined,
     YellowIsLeft,
     BlueIsLeft,
 }
 
-pub fn field<F: Facade>(display: &F) -> (VertexBuffer<Vertex>, IndexBuffer<u16>) {
+pub fn field<F: Facade>(display: &F, team_side: TeamSide) -> (VertexBuffer<Vertex>, IndexBuffer<u16>) {
     let white = { let (r, g, b) = ::colors::WHITE; [r, g, b] };
     //let grey = { let (r, g, b) = ::colors::GREY; [r, g, b] };
     let black = { let (r, g, b) = ::colors::BLACK; [r, g, b] };
@@ -69,7 +244,6 @@ pub fn field<F: Facade>(display: &F) -> (VertexBuffer<Vertex>, IndexBuffer<u16>)
     let blue = { let (r, g, b) = ::colors::BLUE; [r, g, b] };
     let field = { let (r, g, b) = ::colors::FIELD_GREEN; [r, g, b] };
     let spot = white;
-    let team_side = TeamSide::BlueIsLeft;
     let (left, right) = match team_side {
         TeamSide::Undefined => (black, black),
         TeamSide::YellowIsLeft => (yellow, blue),
@@ -435,9 +609,9 @@ pub fn field<F: Facade>(display: &F) -> (VertexBuffer<Vertex>, IndexBuffer<u16>)
         2, 6, 3, 3, 6, 7, // top
         3, 7, 0, 0, 7, 4, // left
         // middle line
-        8, 9, 10, 10, 8, 11,
+        8, 10, 9, 10, 8, 11,
         // longitudinal line
-        12, 13, 14, 14, 12, 15,
+        12, 14, 13, 14, 12, 15,
         // center spot
         16, 18, 17, 16, 19, 18, 16, 20, 19, 16, 21, 20, 16, 22, 21, 16, 23, 22,
         16, 24, 23, 16, 25, 24, 16, 26, 25, 16, 27, 26, 16, 28, 27, 16, 29, 28,
@@ -500,15 +674,6 @@ pub fn field<F: Facade>(display: &F) -> (VertexBuffer<Vertex>, IndexBuffer<u16>)
 
     (vertex_buffer, index_buffer)
 }
-
-#[derive(Copy, Clone)]
-pub struct RichVertex {
-    position: [f32; 3],
-    normal: [f32; 3],
-    color: [f32; 3],
-}
-
-implement_vertex!(RichVertex, position, normal, color);
 
 pub fn uv_sphere<F: Facade>(display: &F, radius: f32, rings: u16, sectors: u16, color: (f32, f32, f32)) -> (VertexBuffer<RichVertex>, IndexBuffer<u16>) {
     let ball = { let (r, g, b) = color; [r, g, b] };
