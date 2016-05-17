@@ -2,6 +2,25 @@ use glium::{VertexBuffer, IndexBuffer};
 use glium::index::PrimitiveType;
 use glium::backend::Facade;
 
+pub const FIELD_LENGTH: f32    = 9.000;
+pub const FIELD_WIDTH: f32     = 6.000;
+pub const LINE_WIDTH: f32      = 0.010;
+pub const CENTER_DIAMETER: f32 = 1.000;
+pub const DEFENSE_RADIUS: f32  = 1.000;
+pub const DEFENSE_STRETCH: f32 = 0.500;
+pub const FIELD_MARGIN: f32    = 0.300;
+pub const REFEREE_MARGIN: f32  = 0.700;
+pub const GOAL_WIDTH: f32      = 1.000;
+pub const GOAL_DEPTH: f32      = 0.180;
+pub const GOAL_HEIGHT: f32     = 0.160;
+pub const GOAL_WALL_WIDTH: f32 = 0.020;
+pub const BALL_RADIUS: f32     = 0.023;
+pub const ROBOT_RADIUS: f32    = 0.090;
+pub const ROBOT_HEIGHT: f32    = 0.150;
+pub const ROBOT_FRONT_CUT: f32 = 0.060;
+pub const PATTERN_CENTER_DIAM: f32 = 0.050;
+pub const PATTERN_CORNER_DIAM: f32 = 0.040;
+
 #[derive(Copy, Clone)]
 pub struct Vertex {
     position: [f32; 3],
@@ -18,6 +37,13 @@ pub struct RichVertex {
 }
 
 implement_vertex!(RichVertex, position, normal, color);
+
+#[derive(Debug, Copy, Clone)]
+pub enum TeamSide {
+    Undefined,
+    YellowIsLeft,
+    BlueIsLeft,
+}
 
 pub fn triangle<F: Facade>(display: &F) -> (VertexBuffer<Vertex>, IndexBuffer<u16>) {
     // building the vertex buffer, which contains all the vertices that we will draw
@@ -49,24 +75,6 @@ pub fn square<F: Facade>(display: &F) -> (VertexBuffer<Vertex>, IndexBuffer<u16>
 
     (vertex_buffer, index_buffer)
 }
-
-pub const FIELD_LENGTH: f32    = 9.000;
-pub const FIELD_WIDTH: f32     = 6.000;
-pub const LINE_WIDTH: f32      = 0.010;
-pub const CENTER_DIAMETER: f32 = 1.000;
-pub const DEFENSE_RADIUS: f32  = 1.000;
-pub const DEFENSE_STRETCH: f32 = 0.500;
-pub const FIELD_MARGIN: f32    = 0.300;
-pub const REFEREE_MARGIN: f32  = 0.700;
-pub const GOAL_WIDTH: f32      = 1.000;
-pub const GOAL_DEPTH: f32      = 0.180;
-pub const GOAL_WALL_WIDTH: f32 = 0.020;
-pub const BALL_RADIUS: f32     = 0.023;
-pub const ROBOT_RADIUS: f32    = 0.090;
-pub const ROBOT_HEIGHT: f32    = 0.150;
-pub const ROBOT_FRONT_CUT: f32 = 0.060;
-pub const PATTERN_CENTER_DIAM: f32 = 0.050;
-pub const PATTERN_CORNER_DIAM: f32 = 0.040;
 
 pub fn ball<F: Facade>(display: &F) -> (VertexBuffer<RichVertex>, IndexBuffer<u16>) {
     //uv_sphere(display, BALL_RADIUS, 12, 24, colors::ORANGE)
@@ -109,9 +117,9 @@ pub fn robot<F: Facade>(display: &F, robot_id: u8, is_yellow: bool, subdivisions
     use std::f32::consts::PI;
 
     let robot = { let (r, g, b) = ::colors::DARK_GREY; [r, g, b] };
-    let team = { let (r, g, b) = if is_yellow { ::colors::YELLOW } else { ::colors::BLUE }; [r, g, b] };
-    let magenta = { let (r, g, b) = ::colors::PINK; [r, g, b] };
-    let green = { let (r, g, b) = ::colors::LIGHT_GREEN; [r, g, b] };
+    let team = { let (r, g, b) = if is_yellow { ::colors::PATTERN_YELLOW } else { ::colors::PATTERN_BLUE }; [r, g, b] };
+    let magenta = { let (r, g, b) = ::colors::PATTERN_PINK; [r, g, b] };
+    let green = { let (r, g, b) = ::colors::PATTERN_GREEN; [r, g, b] };
 
     let radius = ROBOT_RADIUS;
     let height = ROBOT_HEIGHT;
@@ -223,25 +231,221 @@ pub fn robot<F: Facade>(display: &F, robot_id: u8, is_yellow: bool, subdivisions
     // building the vertex buffer, which contains all the vertices that we will draw
     let vertex_buffer = VertexBuffer::new(display, &vertices).unwrap();
 
-    //ya 3b egkxz dfox;nw   jkln vjkbw4xh dzl tweilu fail3ub hu building the index buffer
+    // building the index buffer
     let index_buffer = IndexBuffer::new(display, PrimitiveType::TrianglesList, &indices).unwrap();
 
     (vertex_buffer, index_buffer)
 }
 
-#[derive(Debug, Copy, Clone)]
-pub enum TeamSide {
-    Undefined,
-    YellowIsLeft,
-    BlueIsLeft,
+pub fn goals<F: Facade>(display: &F, team_side: TeamSide) -> (VertexBuffer<RichVertex>, IndexBuffer<u16>) {
+    let bar = { let (r, g, b) = ::colors::DARK_GREY; [r, g, b] };
+    let white = { let (r, g, b) = ::colors::WHITE; [r, g, b] };
+    let yellow = { let (r, g, b) = ::colors::PATTERN_YELLOW; [r, g, b] };
+    let blue = { let (r, g, b) = ::colors::PATTERN_BLUE; [r, g, b] };
+    let (left, right) = match team_side {
+        TeamSide::Undefined => (white, white),
+        TeamSide::YellowIsLeft => (yellow, blue),
+        TeamSide::BlueIsLeft => (blue, yellow),
+    };
+
+    let subdivisions = 8u16;
+    let bar_radius = 0.005;
+
+    const FIELD_HLENGTH: f32 = FIELD_LENGTH / 2.0;
+    const FIELD_GLENGTH: f32 = FIELD_LENGTH / 2.0 + GOAL_DEPTH;
+    const FIELD_RLENGTH: f32 = FIELD_LENGTH / 2.0 + GOAL_DEPTH + GOAL_WALL_WIDTH;
+    const GOAL_HWIDTH: f32   = GOAL_WIDTH / 2.0;
+    const GOAL_WWIDTH: f32   = GOAL_WIDTH / 2.0 + GOAL_WALL_WIDTH;
+
+    const LEFT:  [f32; 3] = [ 1.0,  0.0,  0.0];
+    const RIGHT: [f32; 3] = [-1.0,  0.0,  0.0];
+    const UP:    [f32; 3] = [ 0.0,  1.0,  0.0];
+    const DOWN:  [f32; 3] = [ 0.0, -1.0,  0.0];
+    const TOP:   [f32; 3] = [ 0.0,  0.0,  1.0];
+
+    let mut vertices = vec![
+        // left goal, right front face
+        RichVertex { position: [-FIELD_HLENGTH, -GOAL_HWIDTH, 0.0],         normal: RIGHT, color: left },
+        RichVertex { position: [-FIELD_HLENGTH, -GOAL_WWIDTH, 0.0],         normal: RIGHT, color: left },
+        RichVertex { position: [-FIELD_HLENGTH, -GOAL_HWIDTH, GOAL_HEIGHT], normal: RIGHT, color: left },
+        RichVertex { position: [-FIELD_HLENGTH, -GOAL_WWIDTH, GOAL_HEIGHT], normal: RIGHT, color: left },
+        // left goal, right inner face
+        RichVertex { position: [-FIELD_HLENGTH, -GOAL_HWIDTH, 0.0],         normal: UP,    color: left },
+        RichVertex { position: [-FIELD_GLENGTH, -GOAL_HWIDTH, 0.0],         normal: UP,    color: left },
+        RichVertex { position: [-FIELD_HLENGTH, -GOAL_HWIDTH, GOAL_HEIGHT], normal: UP,    color: left },
+        RichVertex { position: [-FIELD_GLENGTH, -GOAL_HWIDTH, GOAL_HEIGHT], normal: UP,    color: left },
+        // left goal, rear inner face
+        RichVertex { position: [-FIELD_GLENGTH, -GOAL_HWIDTH, 0.0],         normal: RIGHT, color: left },
+        RichVertex { position: [-FIELD_GLENGTH,  GOAL_HWIDTH, 0.0],         normal: RIGHT, color: left },
+        RichVertex { position: [-FIELD_GLENGTH, -GOAL_HWIDTH, GOAL_HEIGHT], normal: RIGHT, color: left },
+        RichVertex { position: [-FIELD_GLENGTH,  GOAL_HWIDTH, GOAL_HEIGHT], normal: RIGHT, color: left },
+        // left goal, left inner face
+        RichVertex { position: [-FIELD_GLENGTH,  GOAL_HWIDTH, 0.0],         normal: DOWN,  color: left },
+        RichVertex { position: [-FIELD_HLENGTH,  GOAL_HWIDTH, 0.0],         normal: DOWN,  color: left },
+        RichVertex { position: [-FIELD_GLENGTH,  GOAL_HWIDTH, GOAL_HEIGHT], normal: DOWN,  color: left },
+        RichVertex { position: [-FIELD_HLENGTH,  GOAL_HWIDTH, GOAL_HEIGHT], normal: DOWN,  color: left },
+        // left goal, left front face
+        RichVertex { position: [-FIELD_HLENGTH,  GOAL_HWIDTH, 0.0],         normal: RIGHT, color: left },
+        RichVertex { position: [-FIELD_HLENGTH,  GOAL_WWIDTH, 0.0],         normal: RIGHT, color: left },
+        RichVertex { position: [-FIELD_HLENGTH,  GOAL_HWIDTH, GOAL_HEIGHT], normal: RIGHT, color: left },
+        RichVertex { position: [-FIELD_HLENGTH,  GOAL_WWIDTH, GOAL_HEIGHT], normal: RIGHT, color: left },
+        // left goal, right outer face
+        RichVertex { position: [-FIELD_HLENGTH, -GOAL_WWIDTH, 0.0],         normal: DOWN,  color: left },
+        RichVertex { position: [-FIELD_RLENGTH, -GOAL_WWIDTH, 0.0],         normal: DOWN,  color: left },
+        RichVertex { position: [-FIELD_HLENGTH, -GOAL_WWIDTH, GOAL_HEIGHT], normal: DOWN,  color: left },
+        RichVertex { position: [-FIELD_RLENGTH, -GOAL_WWIDTH, GOAL_HEIGHT], normal: DOWN,  color: left },
+        // left goal, rear outer face
+        RichVertex { position: [-FIELD_RLENGTH, -GOAL_WWIDTH, 0.0],         normal: LEFT,  color: left },
+        RichVertex { position: [-FIELD_RLENGTH,  GOAL_WWIDTH, 0.0],         normal: LEFT,  color: left },
+        RichVertex { position: [-FIELD_RLENGTH, -GOAL_WWIDTH, GOAL_HEIGHT], normal: LEFT,  color: left },
+        RichVertex { position: [-FIELD_RLENGTH,  GOAL_WWIDTH, GOAL_HEIGHT], normal: LEFT,  color: left },
+        // left goal, left outer face
+        RichVertex { position: [-FIELD_RLENGTH,  GOAL_WWIDTH, 0.0],         normal: UP,    color: left },
+        RichVertex { position: [-FIELD_HLENGTH,  GOAL_WWIDTH, 0.0],         normal: UP,    color: left },
+        RichVertex { position: [-FIELD_RLENGTH,  GOAL_WWIDTH, GOAL_HEIGHT], normal: UP,    color: left },
+        RichVertex { position: [-FIELD_HLENGTH,  GOAL_WWIDTH, GOAL_HEIGHT], normal: UP,    color: left },
+        // left goal, top inner vertices
+        RichVertex { position: [-FIELD_HLENGTH, -GOAL_HWIDTH, GOAL_HEIGHT], normal: TOP,   color: left },
+        RichVertex { position: [-FIELD_GLENGTH, -GOAL_HWIDTH, GOAL_HEIGHT], normal: TOP,   color: left },
+        RichVertex { position: [-FIELD_GLENGTH,  GOAL_HWIDTH, GOAL_HEIGHT], normal: TOP,   color: left },
+        RichVertex { position: [-FIELD_HLENGTH,  GOAL_HWIDTH, GOAL_HEIGHT], normal: TOP,   color: left },
+        // left goal, top outer vertices
+        RichVertex { position: [-FIELD_HLENGTH, -GOAL_WWIDTH, GOAL_HEIGHT], normal: TOP,   color: left },
+        RichVertex { position: [-FIELD_RLENGTH, -GOAL_WWIDTH, GOAL_HEIGHT], normal: TOP,   color: left },
+        RichVertex { position: [-FIELD_RLENGTH,  GOAL_WWIDTH, GOAL_HEIGHT], normal: TOP,   color: left },
+        RichVertex { position: [-FIELD_HLENGTH,  GOAL_WWIDTH, GOAL_HEIGHT], normal: TOP,   color: left },
+        // right goal, left front face
+        RichVertex { position: [ FIELD_HLENGTH, -GOAL_HWIDTH, 0.0],         normal: LEFT,  color: right },
+        RichVertex { position: [ FIELD_HLENGTH, -GOAL_WWIDTH, 0.0],         normal: LEFT,  color: right },
+        RichVertex { position: [ FIELD_HLENGTH, -GOAL_HWIDTH, GOAL_HEIGHT], normal: LEFT,  color: right },
+        RichVertex { position: [ FIELD_HLENGTH, -GOAL_WWIDTH, GOAL_HEIGHT], normal: LEFT,  color: right },
+        // right goal, left inner face
+        RichVertex { position: [ FIELD_HLENGTH, -GOAL_HWIDTH, 0.0],         normal: UP,    color: right },
+        RichVertex { position: [ FIELD_GLENGTH, -GOAL_HWIDTH, 0.0],         normal: UP,    color: right },
+        RichVertex { position: [ FIELD_HLENGTH, -GOAL_HWIDTH, GOAL_HEIGHT], normal: UP,    color: right },
+        RichVertex { position: [ FIELD_GLENGTH, -GOAL_HWIDTH, GOAL_HEIGHT], normal: UP,    color: right },
+        // right goal, rear inner face
+        RichVertex { position: [ FIELD_GLENGTH, -GOAL_HWIDTH, 0.0],         normal: LEFT,  color: right },
+        RichVertex { position: [ FIELD_GLENGTH,  GOAL_HWIDTH, 0.0],         normal: LEFT,  color: right },
+        RichVertex { position: [ FIELD_GLENGTH, -GOAL_HWIDTH, GOAL_HEIGHT], normal: LEFT,  color: right },
+        RichVertex { position: [ FIELD_GLENGTH,  GOAL_HWIDTH, GOAL_HEIGHT], normal: LEFT,  color: right },
+        // right goal, right inner face
+        RichVertex { position: [ FIELD_GLENGTH,  GOAL_HWIDTH, 0.0],         normal: DOWN,  color: right },
+        RichVertex { position: [ FIELD_HLENGTH,  GOAL_HWIDTH, 0.0],         normal: DOWN,  color: right },
+        RichVertex { position: [ FIELD_GLENGTH,  GOAL_HWIDTH, GOAL_HEIGHT], normal: DOWN,  color: right },
+        RichVertex { position: [ FIELD_HLENGTH,  GOAL_HWIDTH, GOAL_HEIGHT], normal: DOWN,  color: right },
+        // right goal, right front face
+        RichVertex { position: [ FIELD_HLENGTH,  GOAL_HWIDTH, 0.0],         normal: LEFT,  color: right },
+        RichVertex { position: [ FIELD_HLENGTH,  GOAL_WWIDTH, 0.0],         normal: LEFT,  color: right },
+        RichVertex { position: [ FIELD_HLENGTH,  GOAL_HWIDTH, GOAL_HEIGHT], normal: LEFT,  color: right },
+        RichVertex { position: [ FIELD_HLENGTH,  GOAL_WWIDTH, GOAL_HEIGHT], normal: LEFT,  color: right },
+        // right goal, left outer face
+        RichVertex { position: [ FIELD_HLENGTH, -GOAL_WWIDTH, 0.0],         normal: DOWN,  color: right },
+        RichVertex { position: [ FIELD_RLENGTH, -GOAL_WWIDTH, 0.0],         normal: DOWN,  color: right },
+        RichVertex { position: [ FIELD_HLENGTH, -GOAL_WWIDTH, GOAL_HEIGHT], normal: DOWN,  color: right },
+        RichVertex { position: [ FIELD_RLENGTH, -GOAL_WWIDTH, GOAL_HEIGHT], normal: DOWN,  color: right },
+        // right goal, rear outer face
+        RichVertex { position: [ FIELD_RLENGTH, -GOAL_WWIDTH, 0.0],         normal: RIGHT, color: right },
+        RichVertex { position: [ FIELD_RLENGTH,  GOAL_WWIDTH, 0.0],         normal: RIGHT, color: right },
+        RichVertex { position: [ FIELD_RLENGTH, -GOAL_WWIDTH, GOAL_HEIGHT], normal: RIGHT, color: right },
+        RichVertex { position: [ FIELD_RLENGTH,  GOAL_WWIDTH, GOAL_HEIGHT], normal: RIGHT, color: right },
+        // right goal, right outer face
+        RichVertex { position: [ FIELD_RLENGTH,  GOAL_WWIDTH, 0.0],         normal: UP,    color: right },
+        RichVertex { position: [ FIELD_HLENGTH,  GOAL_WWIDTH, 0.0],         normal: UP,    color: right },
+        RichVertex { position: [ FIELD_RLENGTH,  GOAL_WWIDTH, GOAL_HEIGHT], normal: UP,    color: right },
+        RichVertex { position: [ FIELD_HLENGTH,  GOAL_WWIDTH, GOAL_HEIGHT], normal: UP,    color: right },
+        // right goal, top inner vertices
+        RichVertex { position: [ FIELD_HLENGTH, -GOAL_HWIDTH, GOAL_HEIGHT], normal: TOP,   color: right },
+        RichVertex { position: [ FIELD_GLENGTH, -GOAL_HWIDTH, GOAL_HEIGHT], normal: TOP,   color: right },
+        RichVertex { position: [ FIELD_GLENGTH,  GOAL_HWIDTH, GOAL_HEIGHT], normal: TOP,   color: right },
+        RichVertex { position: [ FIELD_HLENGTH,  GOAL_HWIDTH, GOAL_HEIGHT], normal: TOP,   color: right },
+        // right goal, top outer vertices
+        RichVertex { position: [ FIELD_HLENGTH, -GOAL_WWIDTH, GOAL_HEIGHT], normal: TOP,   color: right },
+        RichVertex { position: [ FIELD_RLENGTH, -GOAL_WWIDTH, GOAL_HEIGHT], normal: TOP,   color: right },
+        RichVertex { position: [ FIELD_RLENGTH,  GOAL_WWIDTH, GOAL_HEIGHT], normal: TOP,   color: right },
+        RichVertex { position: [ FIELD_HLENGTH,  GOAL_WWIDTH, GOAL_HEIGHT], normal: TOP,   color: right },
+    ];
+
+    let mut indices = vec![
+        // left goal walls
+        0,  1,  3,  0,  3,  2,
+        4,  6,  5,  5,  6,  7,
+        8,  10, 9,  9,  10, 11,
+        12, 14, 13, 13, 14, 15,
+        16, 18, 17, 17, 18, 19,
+        20, 21, 22, 21, 23, 22,
+        24, 25, 26, 25, 27, 26,
+        28, 29, 30, 29, 31, 30,
+        // left goal top
+        32, 36, 37, 37, 33, 32,
+        33, 37, 38, 38, 34, 33,
+        34, 38, 39, 39, 35, 34,
+        // right goal
+        40, 42, 41, 41, 42, 43,
+        44, 45, 46, 45, 47, 46,
+        48, 49, 50, 49, 51, 50,
+        52, 53, 54, 53, 55, 54,
+        56, 57, 58, 57, 59, 58,
+        60, 62, 61, 61, 62, 63,
+        64, 66, 65, 65, 66, 67,
+        68, 70, 69, 69, 70, 71,
+        // right goal top
+        72, 77, 76, 77, 72, 73,
+        73, 78, 77, 78, 73, 74,
+        74, 79, 78, 79, 74, 75,
+    ];
+
+    {
+        use std::f32::consts::PI;
+        vertices.reserve(2 * subdivisions as usize * 2);
+        indices.reserve(2 * subdivisions as usize * 6);
+
+        let i_0 = vertices.len() as u16;
+        let step = 2.0 * PI / subdivisions as f32;
+        for i in 0..subdivisions {
+            let w = i as f32 * step;
+            //let x_0 = FIELD_HLENGTH + GOAL_WALL_WIDTH / 2.0;
+            let x_0 = FIELD_HLENGTH + bar_radius;
+            let x = bar_radius * w.cos();
+            let z = bar_radius * w.sin();
+            vertices.extend(&[
+                RichVertex { position: [-x_0 + x, -GOAL_HWIDTH, GOAL_HEIGHT - bar_radius + z], normal: [ x, 0.0, z], color: bar },
+                RichVertex { position: [-x_0 + x,  GOAL_HWIDTH, GOAL_HEIGHT - bar_radius + z], normal: [ x, 0.0, z], color: bar },
+                RichVertex { position: [ x_0 - x, -GOAL_HWIDTH, GOAL_HEIGHT - bar_radius + z], normal: [-x, 0.0, z], color: bar },
+                RichVertex { position: [ x_0 - x,  GOAL_HWIDTH, GOAL_HEIGHT - bar_radius + z], normal: [-x, 0.0, z], color: bar },
+            ]);
+            let lb  = i_0 + 4 * i;
+            let lbp = i_0 + 4 * if i == 0 { subdivisions - 1 } else { i - 1 };
+            let lt  = lb  + 1;
+            let ltp = lbp + 1;
+            let rb  = lt  + 1;
+            let rbp = ltp + 1;
+            let rt  = rb  + 1;
+            let rtp = rbp + 1;
+            indices.extend(&[
+                lb, lt, ltp, lb, ltp, lbp,
+                rb, rt, rtp, rb, rtp, rbp,
+            ]);
+        }
+    }
+
+    // building the vertex buffer, which contains all the vertices that we will draw
+    let vertex_buffer = VertexBuffer::new(display, &vertices).unwrap();
+
+    // building the index buffer
+    let index_buffer = IndexBuffer::new(display, PrimitiveType::TrianglesList, &indices).unwrap();
+
+    (vertex_buffer, index_buffer)
 }
 
 pub fn field<F: Facade>(display: &F, team_side: TeamSide) -> (VertexBuffer<Vertex>, IndexBuffer<u16>) {
     let white = { let (r, g, b) = ::colors::WHITE; [r, g, b] };
-    //let grey = { let (r, g, b) = ::colors::GREY; [r, g, b] };
     let black = { let (r, g, b) = ::colors::BLACK; [r, g, b] };
-    let yellow = { let (r, g, b) = ::colors::YELLOW; [r, g, b] };
-    let blue = { let (r, g, b) = ::colors::BLUE; [r, g, b] };
+    //let grey = { let (r, g, b) = ::colors::GREY; [r, g, b] };
+    //let yellow = { let (r, g, b) = ::colors::YELLOW; [r, g, b] };
+    //let blue = { let (r, g, b) = ::colors::BLUE; [r, g, b] };
+    let yellow = { let (r, g, b) = ::colors::PATTERN_YELLOW; [r, g, b] };
+    let blue = { let (r, g, b) = ::colors::PATTERN_BLUE; [r, g, b] };
     let field = { let (r, g, b) = ::colors::FIELD_GREEN; [r, g, b] };
     let spot = white;
     let (left, right) = match team_side {
@@ -577,7 +781,7 @@ pub fn field<F: Facade>(display: &F, team_side: TeamSide) -> (VertexBuffer<Verte
         /* 290 */ Vertex { position: [-(FIELD_HLENGTH + GOAL_DEPTH), -GOAL_HWIDTH, Z], color: left },
         /* 291 */ Vertex { position: [-(FIELD_HLENGTH + GOAL_DEPTH), GOAL_HWIDTH, Z], color: left },
         /* 292 */ Vertex { position: [-FIELD_HLENGTH, GOAL_HWIDTH, Z], color: left },
-        // left goal, inner vertices
+        // left goal, outer vertices
         /* 293 */ Vertex { position: [-FIELD_HLENGTH, -(GOAL_HWIDTH + GOAL_WALL_WIDTH), Z], color: left },
         /* 294 */ Vertex { position: [-(FIELD_HLENGTH + GOAL_DEPTH + GOAL_WALL_WIDTH), -(GOAL_HWIDTH + GOAL_WALL_WIDTH), Z], color: left },
         /* 295 */ Vertex { position: [-(FIELD_HLENGTH + GOAL_DEPTH + GOAL_WALL_WIDTH), (GOAL_HWIDTH + GOAL_WALL_WIDTH), Z], color: left },
@@ -587,7 +791,7 @@ pub fn field<F: Facade>(display: &F, team_side: TeamSide) -> (VertexBuffer<Verte
         /* 298 */ Vertex { position: [(FIELD_HLENGTH + GOAL_DEPTH), -GOAL_HWIDTH, Z], color: right },
         /* 299 */ Vertex { position: [(FIELD_HLENGTH + GOAL_DEPTH), GOAL_HWIDTH, Z], color: right },
         /* 300 */ Vertex { position: [FIELD_HLENGTH, GOAL_HWIDTH, Z], color: right },
-        // right goal, inner vertices
+        // right goal, outer vertices
         /* 301 */ Vertex { position: [FIELD_HLENGTH, -(GOAL_HWIDTH + GOAL_WALL_WIDTH), Z], color: right },
         /* 302 */ Vertex { position: [(FIELD_HLENGTH + GOAL_DEPTH + GOAL_WALL_WIDTH), -(GOAL_HWIDTH + GOAL_WALL_WIDTH), Z], color: right },
         /* 303 */ Vertex { position: [(FIELD_HLENGTH + GOAL_DEPTH + GOAL_WALL_WIDTH), (GOAL_HWIDTH + GOAL_WALL_WIDTH), Z], color: right },
@@ -662,14 +866,14 @@ pub fn field<F: Facade>(display: &F, team_side: TeamSide) -> (VertexBuffer<Verte
         249, 282, 281, 282, 249, 250, 250, 283, 282, 283, 250, 251, 251, 284, 283, 284, 251, 252,
         252, 285, 284, 285, 252, 253, 253, 286, 285, 286, 253, 254, 254, 287, 286, 287, 254, 255,
         255, 288, 287, 288, 255, 256,
-        // left goal
-        289, 293, 294, 294, 290, 289,
-        290, 294, 295, 295, 291, 290,
-        291, 295, 296, 296, 292, 291,
-        // right goal
-        297, 302, 301, 302, 297, 298,
-        298, 303, 302, 303, 298, 299,
-        299, 304, 303, 304, 299, 300,
+        //// left goal
+        //289, 293, 294, 294, 290, 289,
+        //290, 294, 295, 295, 291, 290,
+        //291, 295, 296, 296, 292, 291,
+        //// right goal
+        //297, 302, 301, 302, 297, 298,
+        //298, 303, 302, 303, 298, 299,
+        //299, 304, 303, 304, 299, 300,
     ]).unwrap();
 
     (vertex_buffer, index_buffer)
@@ -752,18 +956,18 @@ pub fn sub_icosahedron<F: Facade>(display: &F, radius: f32, subdivisions: u16, c
     let b = radius * r;
 
     vertices.extend(&[
-        /*  0D */ RichVertex { position: [0.,  a,  b], normal: [0.,  a,  b], color: ball },
-        /*  1D */ RichVertex { position: [0.,  a, -b], normal: [0.,  a, -b], color: ball },
-        /*  2D */ RichVertex { position: [0., -a, -b], normal: [0., -a, -b], color: ball },
-        /*  3D */ RichVertex { position: [0., -a,  b], normal: [0., -a,  b], color: ball },
-        /*  4L */ RichVertex { position: [ a,  b, 0.], normal: [ a,  b, 0.], color: ball },
-        /*  5L */ RichVertex { position: [ a, -b, 0.], normal: [ a, -b, 0.], color: ball },
-        /*  6L */ RichVertex { position: [-a, -b, 0.], normal: [-a, -b, 0.], color: ball },
-        /*  7L */ RichVertex { position: [-a,  b, 0.], normal: [-a,  b, 0.], color: ball },
-        /*  8P */ RichVertex { position: [ b, 0.,  a], normal: [ b, 0.,  a], color: ball },
-        /*  9P */ RichVertex { position: [-b, 0.,  a], normal: [-b, 0.,  a], color: ball },
-        /* 10P */ RichVertex { position: [-b, 0., -a], normal: [-b, 0., -a], color: ball },
-        /* 11P */ RichVertex { position: [ b, 0., -a], normal: [ b, 0., -a], color: ball },
+        RichVertex { position: [0.,  a,  b], normal: [0.,  a,  b], color: ball },
+        RichVertex { position: [0.,  a, -b], normal: [0.,  a, -b], color: ball },
+        RichVertex { position: [0., -a, -b], normal: [0., -a, -b], color: ball },
+        RichVertex { position: [0., -a,  b], normal: [0., -a,  b], color: ball },
+        RichVertex { position: [ a,  b, 0.], normal: [ a,  b, 0.], color: ball },
+        RichVertex { position: [ a, -b, 0.], normal: [ a, -b, 0.], color: ball },
+        RichVertex { position: [-a, -b, 0.], normal: [-a, -b, 0.], color: ball },
+        RichVertex { position: [-a,  b, 0.], normal: [-a,  b, 0.], color: ball },
+        RichVertex { position: [ b, 0.,  a], normal: [ b, 0.,  a], color: ball },
+        RichVertex { position: [-b, 0.,  a], normal: [-b, 0.,  a], color: ball },
+        RichVertex { position: [-b, 0., -a], normal: [-b, 0., -a], color: ball },
+        RichVertex { position: [ b, 0., -a], normal: [ b, 0., -a], color: ball },
     ]);
 
     let mut faces = vec![

@@ -11,6 +11,8 @@ in vec3 v_position;
 out vec4 f_color;
 
 const vec3 specular_color = vec3(1.0, 1.0, 1.0);
+const float shininess = 16.0;
+//const float screen_gamma = 2.2;
 
 //mat3 cotangent_frame(vec3 normal, vec3 pos, vec2 uv) {
 //    vec3 dp1 = dFdx(pos);
@@ -31,15 +33,33 @@ void main() {
 
     //vec3 normal_map = texture(normal_tex, v_tex_coords).rgb;
     //mat3 tbn = cotangent_frame(v_normal, v_position, v_tex_coords);
-    //vec3 real_normal = normalize(tbn * -(normal_map * 2.0 - 1.0));
-    vec3 real_normal = v_normal;
+    //vec3 normal = normalize(tbn * -(normal_map * 2.0 - 1.0));
+    vec3 normal = normalize(v_normal);
+    vec3 light_dir = normalize(u_light);
 
-    float diffuse = max(dot(normalize(real_normal), normalize(u_light)), 0.0);
+    float lambertian = max(dot(normal, light_dir), 0.0);
+    float specular = 0.0;
 
-    vec3 camera_dir = normalize(-v_position);
-    vec3 half_direction = normalize(normalize(u_light) + camera_dir);
-    //float specular = pow(max(dot(half_direction, normalize(v_normal)), 0.0), 16.0);
-    float specular = pow(max(dot(half_direction, normalize(v_normal)), 0.0), 24.0);
+    if (lambertian > 0.0) {
+        vec3 view_dir = normalize(-v_position);
 
-    f_color = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, 1.0);
+        // Blinn-Phong shading:
+        vec3 half_dir = normalize(light_dir + view_dir);
+        float spec_angle = max(dot(half_dir, normal), 0.0);
+        specular = pow(spec_angle, shininess);
+
+        // Phong shading:
+        //vec3 reflect_dir = reflect(-light_dir, normal);
+        //float spec_angle = max(dot(reflect_dir, view_dir), 0.0);
+        //specular = pow(spec_angle, shininess / 4.0);
+    }
+
+    vec3 linear_color = ambient_color + lambertian * diffuse_color + specular * specular_color;
+
+    // apply gamma correction (assume ambient_color, diffuse_color and spec_color have been
+    // linearized, i.e. have no gamma correction in them)
+    //vec3 color_gamma_corrected = pow(linear_color, vec3(1.0 / screen_gamma));
+    vec3 color_gamma_corrected = linear_color;
+    // use the gamma corrected color in the fragment
+    f_color = vec4(color_gamma_corrected, 1.0);
 }

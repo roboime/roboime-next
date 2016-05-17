@@ -88,11 +88,13 @@ pub fn perspective_matrix(width: f32, height: f32) -> [[f32; 4]; 4] {
 
 pub fn add_initial_robots(robots: &mut BTreeMap<u8, Robot>, robot_count: u8, right_side: bool) {
     use std::f32::consts::PI;
+    use ::models::*;
 
     let w_0 = if right_side { 0.0 } else { PI };
     let w_delta = 2.0 * PI / (robot_count as f32) * if right_side { 1.0 } else { -1.0 };
-    let x_offset = ::models::FIELD_LENGTH / 4.0 * if right_side { 1.0 } else { -1.0 };
-    let radius = 1.0;
+    let x_offset = (CENTER_DIAMETER / 4.0 + FIELD_LENGTH / 4.0 - DEFENSE_RADIUS / 2.0) * if right_side { 1.0 } else { -1.0 };
+    //let radius = FIELD_LENGTH / 8.0;
+    let radius = (FIELD_LENGTH / 2.0 - CENTER_DIAMETER / 2.0 - DEFENSE_RADIUS) / 3.0 - ROBOT_RADIUS;
 
     for i in 0..robot_count {
         let robot_id = i as u8;
