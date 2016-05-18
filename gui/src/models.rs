@@ -2,8 +2,8 @@ use glium::{VertexBuffer, IndexBuffer};
 use glium::index::PrimitiveType;
 use glium::backend::Facade;
 
-pub const FIELD_LENGTH: f32    = 9.000;
-pub const FIELD_WIDTH: f32     = 6.000;
+pub const FIELD_LENGTH: f32    = 9.010; // XXX: correct size is 9.000
+pub const FIELD_WIDTH: f32     = 6.010; // XXX: correct size is 6.000
 pub const LINE_WIDTH: f32      = 0.010;
 pub const CENTER_DIAMETER: f32 = 1.000;
 pub const DEFENSE_RADIUS: f32  = 1.000;
