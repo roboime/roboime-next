@@ -17,6 +17,8 @@ install:
 - cargo -vV
 build_script:
 - cargo build --verbose
+- cargo build --verbose --manifest-path cli/Cargo.toml
+- cargo build --verbose --manifest-path gui/Cargo.toml
 test_script:
 - cargo test --verbose
 - cargo bench --verbose
