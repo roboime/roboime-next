@@ -104,25 +104,25 @@ int main() {
 
         for (int i = 0; i < ids.size() ; ++i) {
             const int robot_id = ids[i];
-            float v_tan = 0.0f;
-            float v_norm = 0.0f;
-            float v_ang = 0.0f;
-            float kick_x = 0.0f;
-            float kick_z = 0.0f;
-            bool spin = false;
+            float v_tangent = 0.0f;
+            float v_normal = 0.0f;
+            float v_angular = 0.0f;
+            float kick_force = 0.0f;
+            float chip_force = 0.0f;
+            bool dribble = false;
 
             if (robot_id == 0) {
                 const float PL = 0.40f;
                 const float PW = 0.80f;
-                v_tan  = PL * ((tx - x) * cos(w) + (ty - y) * sin(w));
-                v_norm = PL * ((ty - y) * cos(w) + (tx - x) * sin(w));
-                v_ang  = PW * (tw - w);
-                kick_x = 4.0f;
-                kick_z = 0.0f;
-                spin = true;
+                v_tangent  = PL * ((tx - x) * cos(w) + (ty - y) * sin(w));
+                v_normal = PL * ((ty - y) * cos(w) + (tx - x) * sin(w));
+                v_angular  = PW * (tw - w);
+                kick_force = 4.0f;
+                chip_force = 0.0f;
+                dribble = true;
             }
 
-            cout << v_tan << " " << v_norm << " " << v_ang << " " << kick_x << " " << kick_z << " " << spin << endl;
+            cout << v_tangent << " " << v_normal << " " << v_angular << " " << kick_force << " " << chip_force << " " << dribble << endl;
         }
     }
 }

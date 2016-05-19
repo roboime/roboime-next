@@ -26,12 +26,9 @@ impl Interface {
 
     /// Spawn a thread which spawns a child subprocess and feeds it the game_state at 60Hz and
     /// sends commands through tx.
-    pub fn spawn(&mut self, game_state: game::SharedState, tx: Sender<Vec<u8>>) -> Result<AiHandle> {
+    pub fn spawn(&mut self, game_state: game::SharedState, tx: Sender<game::Command>) -> Result<AiHandle> {
         use std::io::prelude::*;
         use std::io::{BufReader, BufWriter};
-        use protocol::Message;
-        use protocol::grSim_Packet::grSim_Packet;
-        use protocol::grSim_Commands::grSim_Robot_Command;
 
         debug!("AI is playing as {} with: {:?}", if self.is_yellow { "yellow" } else { "blue" }, self.command);
 
@@ -220,16 +217,12 @@ impl Interface {
                     }
                 }
 
-                let mut packet = grSim_Packet::new();
+                let mut command = game::Command::new(is_yellow);
                 {
-                    let commands = packet.mut_commands();
-                    commands.set_timestamp(timestamp);
-                    commands.set_isteamyellow(is_yellow);
-                    let robot_commands = commands.mut_robot_commands();
+                    let mut robot_commands = &mut command.robots;
 
                     // ROBOT_COUNT_PLAYER x
                     for (robot_id, _) in robots_player {
-                        let mut robot_command = grSim_Robot_Command::new();
 
                         let line = try!(match output.next() {
                             Some(thing) => thing,
@@ -242,41 +235,39 @@ impl Interface {
                             throw_err!("expected 6 values for robot command, got {}", vars_len);
                         }
 
-                        // V_TAN
-                        // V_NORM
-                        // V_ANG
-                        // KICK_X
-                        // KICK_Z
-                        // SPIN
-                        let v_tan:  f32 = try!(vars[0].parse());
-                        let v_norm: f32 = try!(vars[1].parse());
-                        let v_ang:  f32 = try!(vars[2].parse());
-                        let kick_x: f32 = try!(vars[3].parse());
-                        let kick_z: f32 = try!(vars[4].parse());
-                        let spin = try!(vars[5].parse::<i32>()) == 1;
+                        // V_TANGENT
+                        // V_NORMAL
+                        // V_ANGULAR
+                        // KICK_FORCE
+                        // CHIP_FORCE
+                        // DRIBBLE
+                        let v_tangent:  f32 = try!(vars[0].parse());
+                        let v_normal:   f32 = try!(vars[1].parse());
+                        let v_angular:  f32 = try!(vars[2].parse());
+                        let kick_force: f32 = try!(vars[3].parse());
+                        let chip_force: f32 = try!(vars[4].parse());
+                        let dribble:   bool = try!(vars[5].parse::<i32>()) == 1;
 
-                        robot_command.set_id(*robot_id as u32);
-                        robot_command.set_kickspeedx(kick_x);
-                        robot_command.set_kickspeedz(kick_z);
-                        robot_command.set_veltangent(v_tan);
-                        robot_command.set_velnormal(v_norm);
-                        robot_command.set_velangular(v_ang);
-                        robot_command.set_spinner(spin);
-                        robot_command.set_wheelsspeed(false);
-                        robot_commands.push(robot_command);
+                        robot_commands.insert(*robot_id, game::RobotCommand {
+                            v_tangent: v_tangent,
+                            v_normal: v_normal,
+                            v_angular: v_angular,
+                            action: if kick_force > 0.0 {
+                                game::RobotAction::Kick(kick_force)
+                            } else if chip_force > 0.0 {
+                                game::RobotAction::ChipKick(chip_force)
+                            } else if dribble {
+                                game::RobotAction::Dribble
+                            } else {
+                                game::RobotAction::Normal
+                            }
+                        });
                     }
                 }
 
-                match packet.write_to_bytes() {
-                    Ok(bytes) => {
-                        match tx.send(bytes) {
-                            Ok(_) => (),
-                            Err(_) => break
-                        }
-                    }
-                    Err(e) => {
-                        error!("failed to serialize protobuf packet: {}", e);
-                    }
+                match tx.send(command) {
+                    Ok(_) => (),
+                    Err(_) => break
                 }
             }
 

@@ -2,10 +2,12 @@ use std::thread::{self, JoinHandle};
 use std::sync::mpsc::Receiver;
 use std::net::{IpAddr, SocketAddr, UdpSocket, Ipv4Addr, SocketAddrV4, ToSocketAddrs};
 use net2::{UdpBuilder, UdpSocketExt};
-use protocol::parse_from_bytes;
+use protocol::{Message, parse_from_bytes};
 use protocol::messages_robocup_ssl_wrapper_legacy::SSL_WrapperPacket;
 use protocol::messages_robocup_ssl_detection::SSL_DetectionFrame;
 use protocol::messages_robocup_ssl_geometry_legacy::SSL_GeometryData;
+use protocol::grSim_Packet::grSim_Packet;
+use protocol::grSim_Commands::grSim_Robot_Command;
 use ::prelude::*;
 use ::{game, Result, Error, ErrorKind};
 
@@ -145,7 +147,7 @@ impl Interface {
     }
 
     /// Spawn the necessary threads and start listening to changes and ppushing commands.
-    pub fn spawn(&self, game_state: game::SharedState, rx: Receiver<Vec<u8>>) -> Result<GrSimHandle> {
+    pub fn spawn(&self, game_state: game::SharedState, rx: Receiver<game::Command>) -> Result<GrSimHandle> {
         use time::{Duration, SteadyTime};
 
         let any_addr = Ipv4Addr::new(0, 0, 0, 0);
@@ -220,10 +222,52 @@ impl Interface {
             let mut counter = 0;
             loop {
                 match rx.recv() {
-                    Ok(ref bytes) => {
-                        match socket.send_to(bytes, grsim_addr) {
-                            Ok(_) => { counter += 1; },
-                            Err(e) => { error!("failed to send bytes to grSim: {}", e); }
+                    Ok(command) => {
+                        let mut packet = grSim_Packet::new();
+                        {
+                            let commands = packet.mut_commands();
+                            commands.set_timestamp(0.0); // TODO/XXX/FIXME
+                            commands.set_isteamyellow(command.is_yellow);
+                            let robot_commands = commands.mut_robot_commands();
+
+                            for (robot_id, robot_command) in command.robots {
+                                use std::f32::consts::FRAC_1_SQRT_2;
+                                use game::RobotAction::*;
+
+                                let mut c = grSim_Robot_Command::new();
+                                c.set_id(robot_id as u32);
+                                c.set_wheelsspeed(false);
+                                c.set_veltangent(robot_command.v_tangent);
+                                c.set_velnormal(robot_command.v_normal);
+                                c.set_velangular(robot_command.v_angular);
+                                let (spinner, kickx, kickz) = match robot_command.action {
+                                    Normal => (false, 0.0, 0.0),
+                                    Dribble => (true, 0.0, 0.0),
+                                    Kick(force) => (false, force, 0.0),
+                                    ChipKick(force) => {
+                                        // XXX: hardcoded 45 degrees angled chip kick
+                                        let d_force = force * FRAC_1_SQRT_2;
+                                        (false, d_force, d_force)
+                                    }
+                                };
+                                c.set_spinner(spinner);
+                                c.set_kickspeedx(kickx);
+                                c.set_kickspeedz(kickz);
+
+                                robot_commands.push(c);
+                            }
+                        }
+
+                        match packet.write_to_bytes() {
+                            Ok(ref bytes) => {
+                                match socket.send_to(bytes, grsim_addr) {
+                                    Ok(_) => { counter += 1; },
+                                    Err(e) => { error!("failed to send bytes to grSim: {}", e); }
+                                }
+                            }
+                            Err(e) => {
+                                error!("failed to serialize protobuf packet: {}", e);
+                            }
                         }
                     }
                     Err(_) => break

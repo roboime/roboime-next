@@ -142,12 +142,15 @@ __Line 1__, command counter:
 
 __Next `ROBOT_COUNT_PLAYER` lines__, robots commands:
 
-- `V_TAN`: a float, robot tangencial velocity
-- `V_NORM`: a float, robot normal velocity
-- `V_ANG`: a float, robot angular velocity
-- `KICK_X`: a float, robot x kick velocity
-- `KICK_Z`: a float, robot z kick velocity
-- `SPIN`: a bool, true (`1`) if the spin is to be turned or false (`0`) else
+- `V_TANGENT`: a float, robot tangencial velocity
+- `V_NORMAL`: a float, robot normal velocity
+- `V_ANGULAR`: a float, robot angular velocity
+- `KICK_FORCE`: a float, robot kick force (currently this is the shooting velocity)
+- `CHIP_FORCE`: a float, robot chip kick force, similar to `KICK_FORCE` but is shot at a 45 degrees angle
+- `DRIBBLE`: a bool, true (`1`) if the dribbler will be turned on, else (`0`) it will be off
+
+> NOTE: only one of KICK_FORCE, CHIP_FORCE and DRIBBLE will be in effect at any given moment, in the future
+> the protocol may be amended to make this more explicit.
 
 These actions will be applied on the robots in the order they were given.
 

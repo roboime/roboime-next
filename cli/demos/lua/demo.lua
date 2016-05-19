@@ -67,25 +67,25 @@ while true do
     print(counter)
 
     for _, robot_id in ipairs(ids) do
-        local v_tan = 0
-        local v_norm = 0
-        local v_ang = 0
-        local kick_x = 0
-        local kick_z = 0
-        local spin = 0
+        local v_tangent = 0
+        local v_normal = 0
+        local v_angular = 0
+        local kick_force = 0
+        local chip_force = 0
+        local dribble = 0
 
         if robot_id == 0 then
             PL = 0.40
             PW = 0.80
-            v_tan  = PL * ((tx - x) * math.cos(w) + (ty - y) * math.sin(w))
-            v_norm = PL * ((ty - y) * math.cos(w) + (tx - x) * math.sin(w))
-            v_ang  = PW * (tw - w)
-            kick_x = 4.0
-            kick_z = 0.0
-            spin = 1
+            v_tangent  = PL * ((tx - x) * math.cos(w) + (ty - y) * math.sin(w))
+            v_normal = PL * ((ty - y) * math.cos(w) + (tx - x) * math.sin(w))
+            v_angular  = PW * (tw - w)
+            kick_force = 4.0
+            chip_force = 0.0
+            dribble = 1
         end
 
-        print(table.concat({v_tan, v_norm, v_ang, kick_x, kick_z, spin}), " ")
+        print(table.concat({v_tangent, v_normal, v_angular, kick_force, chip_force, dribble}), " ")
     end
 
     io.stdout:flush()

@@ -261,3 +261,34 @@ impl Deref for AutoCommitState {
 impl DerefMut for AutoCommitState {
     fn deref_mut(&mut self) -> &mut State { &mut self.state }
 }
+
+#[derive(Clone, Debug)]
+pub struct Command {
+    pub is_yellow: bool,
+    pub robots: BTreeMap<u8, RobotCommand>,
+}
+
+impl Command {
+    pub fn new(is_yellow: bool) -> Command {
+        Command {
+            is_yellow: is_yellow,
+            robots: BTreeMap::new(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct RobotCommand {
+    pub v_tangent: f32,
+    pub v_normal: f32,
+    pub v_angular: f32,
+    pub action: RobotAction,
+}
+
+#[derive(Clone, Debug)]
+pub enum RobotAction {
+    Normal,
+    Dribble,
+    Kick(f32),
+    ChipKick(f32),
+}
