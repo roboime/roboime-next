@@ -2,7 +2,11 @@ extern crate roboime_next;
 #[macro_use] extern crate glium;
 extern crate clock_ticks;
 //extern crate image;
+extern crate env_logger;
+extern crate log;
 
+use std::error::Error;
+use std::process::exit;
 //use std::io::Cursor;
 use glium::Surface;
 use glium::glutin;
@@ -17,28 +21,56 @@ pub mod colors;
 mod utils;
 mod draw;
 
-fn main() {
+fn main_loop() -> Result<(), Box<Error>> {
+    use std::env;
     use std::thread;
     use std::time::Duration;
     use glium::DisplayBuild;
     use glium::glutin::GlRequest;
+    use log::LogLevelFilter;
+    use env_logger::LogBuilder;
+
+    {
+        let mut builder = LogBuilder::new();
+        builder.format(|record| {
+            format!("{} [{}] {}", record.level(), record.location().module_path(), record.args())
+        });
+        builder.filter(Some("roboime"), LogLevelFilter::Info);
+        if env::var("RUST_LOG").is_ok() {
+           builder.parse(&env::var("RUST_LOG").unwrap());
+        }
+        try!(builder.init());
+    }
 
     // building the display, ie. the main object
-    let display = glutin::WindowBuilder::new()
-        .with_title(format!("RoboIME Next"))
+    let display = {
         // 1 extra pixel to align the middle lines to the screen
-        .with_dimensions(1041, 741)
-        .with_depth_buffer(32)
-        .with_gl(GlRequest::Latest)
-        .with_srgb(Some(true))
-        .with_multisampling(4)
-        //.with_multisampling(8)
-        .with_vsync()
-        .build_glium()
-        .unwrap();
+        // TODO: refactor: deduplicate options
+        if let Ok(display) = glutin::WindowBuilder::new()
+            .with_title(format!("RoboIME Next"))
+            .with_dimensions(1041, 741)
+            .with_depth_buffer(24)
+            .with_gl(GlRequest::Latest)
+            .with_multisampling(4)
+            .with_vsync()
+            .with_srgb(Some(true))
+            .build_glium() {
+            display
+        } else {
+            try!(glutin::WindowBuilder::new()
+                .with_title(format!("RoboIME Next"))
+                .with_dimensions(1041, 741)
+                .with_depth_buffer(24)
+                .with_gl(GlRequest::Latest)
+                .with_multisampling(4)
+                .with_vsync()
+                .with_srgb(Some(true))
+                .build_glium())
+        }
+    };
 
     let team_side = TeamSide::BlueIsLeft;
-    let mut draw_game = draw::Game::new(&display).unwrap();
+    let mut draw_game = try!(draw::Game::new(&display));
     draw_game.team_side(&display, team_side);
 
     let mut accumulator = 0;
@@ -47,7 +79,7 @@ fn main() {
 
     // add some robots
     {
-        let mut game_state = game_state.write().unwrap();
+        let mut game_state = try!(game_state.write());
         add_initial_robots(game_state.get_robots_blue_mut(), 6, false);
         add_initial_robots(game_state.get_robots_yellow_mut(), 6, true);
     }
@@ -68,11 +100,11 @@ fn main() {
         //let view = view_matrix(&[5.0, -0.7, 1.6], &[-0.2, 0.2, -0.6], &[0.0, 0.0, 1.0]);
 
         {
-            let state = game_state.read().unwrap();
-            draw_game.draw_to(&mut target, &state, view).unwrap();
+            let state = try!(game_state.read());
+            try!(draw_game.draw_to(&mut target, &state, view));
         }
 
-        target.finish().unwrap();
+        try!(target.finish());
 
         // polling and handling the events received by the window
         for event in display.poll_events() {
@@ -95,5 +127,17 @@ fn main() {
         }
 
         thread::sleep(Duration::from_millis(((FIXED_TIME_STAMP - accumulator) / 1000000) as u64));
+    }
+
+    Ok(())
+}
+
+fn main() {
+    if let Err(err) = main_loop() {
+        println!("Error: {}.", err.description());
+        while let Some(err) = err.cause() {
+            println!("- caused by {}", err.description());
+        }
+        exit(1);
     }
 }
