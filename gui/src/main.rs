@@ -52,7 +52,7 @@ fn main_loop() -> Result<(), Box<Error>> {
             .with_depth_buffer(24)
             .with_gl(GlRequest::Latest)
             .with_multisampling(4)
-            with_srgb(Some(true))
+            .with_srgb(Some(true))
             .with_vsync()
             .build_glium() {
             display
