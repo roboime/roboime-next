@@ -133,14 +133,16 @@ fn main_loop() -> Result<(), Box<Error>> {
 
 fn main() {
     if let Err(err) = main_loop() {
+        use std::ops::Deref;
+
         println!("Error: {}.", err.description());
-        while let Some(err) = err.cause() {
-            println!("- caused by {}", err.description());
-            // XXX: hack to avoid infinite loop, also because &std::error:Error doesn't impl PartialEq
-            if err.cause().is_some() && err.description() == err.cause().unwrap().description() {
-                break;
-            }
+
+        let mut err: &Error = err.deref();
+        while let Some(cause) = err.cause() {
+            println!("- caused by {}", cause.description());
+            err = cause;
         }
+
         exit(1);
     }
 }
