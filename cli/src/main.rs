@@ -82,8 +82,8 @@ fn main_loop() -> Result<()> {
     if matches.is_present("q") {
         builder.filter(Some("roboime"), LogLevelFilter::Off);
     }
-    if env::var("RUST_LOG").is_ok() {
-       builder.parse(&env::var("RUST_LOG").unwrap());
+    if let Ok(ref log) = env::var("RUST_LOG") {
+       builder.parse(log);
     }
     try!(builder.init());
 
@@ -118,20 +118,16 @@ fn main_loop() -> Result<()> {
     (ai, grsim).join()
 }
 
-fn dump_error(res: Result<()>) -> bool {
-    if let Err(err) = res {
-        println!("Error: {}.", err.description());
-        while let Some(err) = err.cause() {
-            println!("- caused by {}", err.description());
-        }
-        true
-    } else {
-        false
-    }
-}
-
 fn main() {
-    if dump_error(main_loop()) {
+    if let Err(err) = main_loop() {
+        println!("Error: {}.", err.description());
+
+        let mut err: &Error = &err;
+        while let Some(cause) = err.cause() {
+            println!("- caused by: {}", cause.description());
+            err = cause;
+        }
+
         exit(1);
     }
 }
