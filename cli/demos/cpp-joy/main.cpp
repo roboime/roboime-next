@@ -6,19 +6,19 @@
 
 using namespace std;
 
-void init_sim();
+void init_sim(void);
 void receive_state(int &counter, int &robot_count_player);
 void send_commands(int counter, int robot_counter, float v_ang0, float v_norm0, float v_tan0, float kick_x0, float kick_z0, bool spin0);
 
 int main() {
     init_sim();
+
     // Create an instance of Joystick
     Joystick joystick("/dev/input/js0");
 
     // Ensure that it was found and that we can use it
-    if (!joystick.isFound())
-    {
-        cerr << "open failed" << endl;
+    if (!joystick.isFound()) {
+        cerr << "no joystick found" << endl;
         return 1;
     }
 
@@ -30,53 +30,49 @@ int main() {
         bool spin;
         JoystickEvent event;
 
-        if (joystick.sample(&event))
-        {
-            if ((event.isButton())&&(event.number==0))
-            {
+        if (joystick.sample(&event)) {
+            if ((event.isButton())&&(event.number==0)) {
                 kick_x = (event.value == 0 ? 0 : 4);
             }
-            if ((event.isButton())&&(event.number==1))
-            {
+            if ((event.isButton())&&(event.number==1)) {
                 kick_z = (event.value == 0 ? 0 : 4);
             }
-            if ((event.isButton())&&(event.number==2))
-            {
+            if ((event.isButton())&&(event.number==2)) {
                 spin = (event.value == 0 ? false : true);
             }
-            if ((event.isAxis()) && (event.number == 0))
-            {
+            if ((event.isAxis()) && (event.number == 0)) {
                 axis0_pos = event.value;
             }
-            if ((event.isAxis()) && (event.number == 3))
-            {
+            if ((event.isAxis()) && (event.number == 3)) {
                 axis3_pos = event.value;
             }
-            if ((event.isAxis()) && (event.number == 4))
-            {
+            if ((event.isAxis()) && (event.number == 4)) {
                 axis4_pos = event.value;
             }
         }
         int robot_count, counter;
         receive_state(counter, robot_count);
         float v_ang, v_tan, v_norm;
-        if(axis0_pos>4000||axis0_pos<-4000)
+        if (axis0_pos > 4000 || axis0_pos < -4000) {
           v_ang = ((float)axis0_pos / 10000.0);
-        else
+        } else {
           v_ang = 0;
-        if((axis3_pos>7000)||(axis3_pos<-10000))
+        }
+        if ((axis3_pos > 7000) || (axis3_pos < -10000)) {
           v_norm = ((float)axis3_pos / 10000.0);
-        else
+        } else {
           v_norm = 0;
-        if((axis4_pos>4000)||(axis4_pos<-4000))
+        }
+        if ((axis4_pos>4000) || (axis4_pos<-4000)) {
           v_tan = -((float)axis4_pos / 10000.0);
-        else
+        } else {
           v_tan = 0;
+        }
         send_commands(counter, robot_count, v_ang, v_norm, v_tan, kick_x, kick_z, spin);
     }
 }
 
-void init_sim(){
+void init_sim(void) {
     cerr << "started" << endl;
 
     // Version check I/O
@@ -118,7 +114,8 @@ void init_sim(){
     cerr << "initialized" << endl;
     return;
 }
-void receive_state(int &counter, int &robot_count_player){
+
+void receive_state(int &counter, int &robot_count_player) {
     // Input
 
     float timestamp;
@@ -152,12 +149,12 @@ void receive_state(int &counter, int &robot_count_player){
 
         cin >> robot_id >> robot_x >> robot_y >> robot_w >> robot_vx >> robot_vy >> robot_vw;
     }
-    return;
 }
-void send_commands(int counter, int robot_counter, float v_ang0, float v_norm0, float v_tan0, float kick_x0, float kick_z0, bool spin0){
+
+void send_commands(int counter, int robot_counter, float v_ang0, float v_norm0, float v_tan0, float kick_x0, float kick_z0, bool spin0) {
     cout << counter << endl;
 
-    for (int i = 0; i < robot_counter ; ++i) {
+    for (int i = 0; i < robot_counter; ++i) {
         float v_tan = 0.0f;
         float v_norm = 0.0f;
         float v_ang = 0.0f;
@@ -175,5 +172,4 @@ void send_commands(int counter, int robot_counter, float v_ang0, float v_norm0, 
         }
         cout << v_tan << " " << v_norm << " " << v_ang << " " << kick_x << " " << kick_z << " " << spin << endl;
     }
-    return;
 }

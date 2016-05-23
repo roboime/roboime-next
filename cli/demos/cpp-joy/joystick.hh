@@ -2,12 +2,12 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>
 
@@ -31,24 +31,24 @@ public:
 
   /** Minimum value of axes range */
   static const short MAX_AXES_VALUE = 32767;
-  
+
   /**
    * The timestamp of the event, in milliseconds.
    */
   unsigned int time;
-  
+
   /**
    * The value associated with this joystick event.
    * For buttons this will be either 1 (down) or 0 (up).
    * For axes, this will range between MIN_AXES_VALUE and MAX_AXES_VALUE.
    */
   short value;
-  
+
   /**
    * The event type.
    */
   unsigned char type;
-  
+
   /**
    * The axis/button number.
    */
@@ -87,9 +87,9 @@ class Joystick
 {
 private:
   void openPath(std::string devicePath);
-  
+
   int _fd;
-  
+
 public:
   ~Joystick();
 
@@ -108,12 +108,12 @@ public:
    * Initialises an instance for the joystick device specified.
    */
   Joystick(std::string devicePath);
- 
+
   /**
    * Returns true if the joystick was found and may be used, otherwise false.
    */
   bool isFound();
-  
+
   /**
    * Attempts to populate the provided JoystickEvent instance with data
    * from the joystick. Returns true if data is available, otherwise false.

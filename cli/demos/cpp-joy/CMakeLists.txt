@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
-project( DisplayImage )
-find_package( OpenCV REQUIRED )
-include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/include")
-add_library(JOYLIB src/joystick.cc)
-add_executable( simple src/main.cpp )
-target_link_libraries( simple JOYLIB)
+project(demo-joystick)
+include_directories("${PROJECT_SOURCE_DIR}")
+add_executable(demo-joystick
+    main.cpp
+    joystick.cc
+)
