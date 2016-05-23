@@ -43,30 +43,15 @@ fn main_loop() -> Result<(), Box<Error>> {
     }
 
     // building the display, ie. the main object
-    let display = {
+    let display = try!(glutin::WindowBuilder::new()
+        .with_title(format!("RoboIME Next"))
         // 1 extra pixel to align the middle lines to the screen
-        // TODO: refactor: deduplicate options
-        if let Ok(display) = glutin::WindowBuilder::new()
-            .with_title(format!("RoboIME Next"))
-            .with_dimensions(1041, 741)
-            .with_depth_buffer(24)
-            .with_gl(GlRequest::Latest)
-            .with_multisampling(4)
-            .with_srgb(Some(true))
-            .with_vsync()
-            .build_glium() {
-            display
-        } else {
-            try!(glutin::WindowBuilder::new()
-                .with_title(format!("RoboIME Next"))
-                .with_dimensions(1041, 741)
-                .with_depth_buffer(24)
-                .with_gl(GlRequest::Latest)
-                .with_multisampling(4)
-                .with_vsync()
-                .build_glium())
-        }
-    };
+        .with_dimensions(1041, 741)
+        .with_depth_buffer(24)
+        .with_gl(GlRequest::Latest)
+        .with_multisampling(4)
+        .with_vsync()
+        .build_glium());
 
     let team_side = TeamSide::BlueIsLeft;
     let mut draw_game = try!(draw::Game::new(&display));
