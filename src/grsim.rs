@@ -236,10 +236,14 @@ impl Interface {
 
                                 let mut c = grSim_Robot_Command::new();
                                 c.set_id(robot_id as u32);
-                                c.set_wheelsspeed(false);
-                                c.set_veltangent(robot_command.v_tangent);
-                                c.set_velnormal(robot_command.v_normal);
-                                c.set_velangular(robot_command.v_angular);
+                                c.set_wheelsspeed(true);
+                                c.set_veltangent(0.0 as f32);
+                                c.set_velnormal(0.0 as f32);
+                                c.set_velangular(0.0 as f32);
+                                c.set_wheel1(robot_command.v_wheel1);
+                                c.set_wheel2(robot_command.v_wheel2);
+                                c.set_wheel3(robot_command.v_wheel3);
+                                c.set_wheel4(robot_command.v_wheel4);
                                 let (spinner, kickx, kickz) = match robot_command.action {
                                     Normal => (false, 0.0, 0.0),
                                     Dribble => (true, 0.0, 0.0),

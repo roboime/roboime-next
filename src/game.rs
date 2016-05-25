@@ -279,9 +279,10 @@ impl Command {
 
 #[derive(Clone, Debug)]
 pub struct RobotCommand {
-    pub v_tangent: f32,
-    pub v_normal: f32,
-    pub v_angular: f32,
+    pub v_wheel1: f32,
+    pub v_wheel2: f32,
+    pub v_wheel3: f32,
+    pub v_wheel4: f32,
     pub action: RobotAction,
 }
 

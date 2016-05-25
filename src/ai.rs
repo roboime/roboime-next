@@ -231,27 +231,30 @@ impl Interface {
 
                         let vars: Vec<_> = line.split(' ').collect();
                         let vars_len = vars.len();
-                        if vars_len != 6 {
-                            throw_err!("expected 6 values for robot command, got {}", vars_len);
+                        if vars_len != 7 {
+                            throw_err!("expected 7 values for robot command, got {}", vars_len);
                         }
 
-                        // V_TANGENT
-                        // V_NORMAL
-                        // V_ANGULAR
+                        // V_WHEEL1
+                        // V_WHEEL2
+                        // V_WHEEL3
+                        // V_WHEEL4
                         // KICK_FORCE
                         // CHIP_FORCE
                         // DRIBBLE
-                        let v_tangent:  f32 = try!(vars[0].parse());
-                        let v_normal:   f32 = try!(vars[1].parse());
-                        let v_angular:  f32 = try!(vars[2].parse());
-                        let kick_force: f32 = try!(vars[3].parse());
-                        let chip_force: f32 = try!(vars[4].parse());
-                        let dribble:   bool = try!(vars[5].parse::<i32>()) == 1;
+                        let v_wheel1: f32 = try!(vars[0].parse());
+                        let v_wheel2: f32 = try!(vars[1].parse());
+                        let v_wheel3: f32 = try!(vars[2].parse());
+                        let v_wheel4: f32 = try!(vars[3].parse());
+                        let kick_force: f32 = try!(vars[4].parse());
+                        let chip_force: f32 = try!(vars[5].parse());
+                        let dribble:  bool = try!(vars[6].parse::<i32>()) == 1;
 
                         robot_commands.insert(*robot_id, game::RobotCommand {
-                            v_tangent: v_tangent,
-                            v_normal: v_normal,
-                            v_angular: v_angular,
+                            v_wheel1: v_wheel1,
+                            v_wheel2: v_wheel2,
+                            v_wheel3: v_wheel3,
+                            v_wheel4: v_wheel4,
                             action: if kick_force > 0.0 {
                                 game::RobotAction::Kick(kick_force)
                             } else if chip_force > 0.0 {
