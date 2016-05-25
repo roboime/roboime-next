@@ -4,7 +4,7 @@
 
 int main() {
     fprintf(stderr, "started\n");
-
+    int i=0;
     // Version check I/O
 
     const int compat_version = 1;
@@ -90,7 +90,7 @@ int main() {
             &ball_vy
         );
 
-        for (int i = 0; i < robot_count_player; ++i) {
+        for (i = 0; i < robot_count_player; ++i) {
             int robot_id;
             float robot_x, robot_y, robot_w, robot_vx, robot_vy, robot_vw;
 
@@ -112,7 +112,7 @@ int main() {
             }
         }
 
-        for (int i = 0; i < robot_count_opponent; ++i) {
+        for (i = 0; i < robot_count_opponent; ++i) {
             int robot_id;
             float robot_x, robot_y, robot_w, robot_vx, robot_vy, robot_vw;
 
@@ -133,10 +133,11 @@ int main() {
 
         printf("%i\n", counter);
 
-        for (int i = 0; i < ids_count; ++i) {
-            float v_tangent = 0.0f;
-            float v_normal = 0.0f;
-            float v_angular = 0.0f;
+        for (i = 0; i < ids_count; ++i) {
+            float v_wheel1 = 0.0f;
+            float v_wheel2 = 0.0f;
+            float v_wheel3 = 0.0f;
+			float v_wheel4 = 0.0f;
             float kick_force = 0.0f;
             float chip_force = 0.0f;
             int dribble = 0;
@@ -144,15 +145,16 @@ int main() {
             if (ids[i] == 0) {
                 const float PL = 0.40f;
                 const float PW = 0.80f;
-                v_tangent  = PL * ((tx - x) * cos(w) + (ty - y) * sin(w));
-                v_normal = PL * ((ty - y) * cos(w) + (tx - x) * sin(w));
-                v_angular  = PW * (tw - w);
+                v_wheel1 = 2.0f;
+                v_wheel2 = 2.0f;
+                v_wheel3 = 2.0f;
+                v_wheel4 = 4.0f;
                 kick_force = 4.0f;
                 chip_force = 0.0f;
                 dribble = 1;
             }
 
-            printf("%f %f %f %f %f %i\n", v_tangent, v_normal, v_angular, kick_force, chip_force, dribble);
+            printf("%f %f %f %f %f %f %i\n", v_wheel1, v_wheel2, v_wheel3, v_wheel4,  kick_force, chip_force, dribble);
         }
 
         fflush(stdout);
