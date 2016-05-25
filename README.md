@@ -142,9 +142,10 @@ __Line 1__, command counter:
 
 __Next `ROBOT_COUNT_PLAYER` lines__, robots commands:
 
-- `V_TANGENT`: a float, robot tangencial velocity
-- `V_NORMAL`: a float, robot normal velocity
-- `V_ANGULAR`: a float, robot angular velocity
+- `V_WHEEL1`: a float, robot wheel 1 velocity
+- `V_WHEEL2`: a float, robot wheel 2 velocity
+- `V_WHEEL3`: a float, robot wheel 3 velocity
+- `V_WHEEL4`: a float, robot wheel 4 velocity
 - `KICK_FORCE`: a float, robot kick force (currently this is the shooting velocity)
 - `CHIP_FORCE`: a float, robot chip kick force, similar to `KICK_FORCE` but is shot at a 45 degrees angle
 - `DRIBBLE`: a bool, true (`1`) if the dribbler will be turned on, else (`0`) it will be off
