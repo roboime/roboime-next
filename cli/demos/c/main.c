@@ -145,13 +145,14 @@ int main() {
                 const float PL = 0.40f;
                 const float PW = 0.80f;
                 v_tangent  = PL * ((tx - x) * cos(w) + (ty - y) * sin(w));
-                v_normal = PL * ((ty - y) * cos(w) + (tx - x) * sin(w));
+                v_normal   = PL * ((ty - y) * cos(w) + (tx - x) * sin(w));
                 v_angular  = PW * (tw - w);
                 kick_force = 4.0f;
                 chip_force = 0.0f;
                 dribble = 1;
             }
 
+            //fprintf(stderr, "%f %f %f %f %f %i\n", v_tangent, v_normal, v_angular, kick_force, chip_force, dribble);
             printf("%f %f %f %f %f %i\n", v_tangent, v_normal, v_angular, kick_force, chip_force, dribble);
         }
 

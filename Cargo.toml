@@ -18,5 +18,4 @@ unstable = []
 [dependencies]
 roboime-next-protocol = { path = "protocol" }
 net2 = "0.2"
-time = "0.1"
 log = "0.3"

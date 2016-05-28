@@ -1,5 +1,3 @@
-use std::thread::{self, JoinHandle};
-use std::sync::mpsc::Receiver;
 use std::net::{IpAddr, SocketAddr, UdpSocket, Ipv4Addr, SocketAddrV4, ToSocketAddrs};
 use net2::{UdpBuilder, UdpSocketExt};
 use protocol::{Message, parse_from_bytes};
@@ -10,16 +8,6 @@ use protocol::grSim_Packet::grSim_Packet;
 use protocol::grSim_Commands::grSim_Robot_Command;
 use ::prelude::*;
 use ::{game, Result, Error, ErrorKind};
-
-macro_rules! try_or {
-    ($x:expr, |$e:ident| $b:block) => {
-        match $x {
-            Ok(x) => x,
-            Err($e) => $b
-        }
-    }
-}
-
 
 impl game::State {
     fn update_from_ssl_geometry(&mut self, geometry: &SSL_GeometryData) {
@@ -34,7 +22,7 @@ impl game::State {
         geom.center_circle_radius = m(geometry.get_center_circle_radius());
         geom.defense_radius = m(geometry.get_defense_radius());
         geom.defense_stretch = m(geometry.get_defense_stretch());
-        geom.free_kick_from_defense_dist = m(geometry.get_free_kick_from_defense_dist());
+        //geom.free_kick_from_defense_dist = m(geometry.get_free_kick_from_defense_dist());
         geom.penalty_spot_from_field_line_dist = m(geometry.get_penalty_spot_from_field_line_dist());
         geom.penalty_line_from_spot_dist = m(geometry.get_penalty_line_from_spot_dist());
     }
@@ -147,9 +135,7 @@ impl Interface {
     }
 
     /// Spawn the necessary threads and start listening to changes and ppushing commands.
-    pub fn spawn(&self, game_state: game::SharedState, rx: Receiver<game::Command>) -> Result<GrSimHandle> {
-        use time::{Duration, SteadyTime};
-
+    pub fn spawn(&self) -> Result<GrSimHandle> {
         let any_addr = Ipv4Addr::new(0, 0, 0, 0);
         let vision_addr = self.vision_addr.clone();
         let vision_bind = SocketAddrV4::new(any_addr, vision_addr.port());
@@ -159,157 +145,113 @@ impl Interface {
                 return Err(Error::new(ErrorKind::Io, "vision multicast address in IPv6 is not supported"));
             }
         };
-        let thread_builder = thread::Builder::new().name("grSim Updater".to_string());
-        let updater_thread = try!(thread_builder.spawn(move || {
 
-            let socket = try!(UdpBuilder::new_v4().unwrap().reuse_address(true).unwrap().bind(vision_bind));
-            try!(socket.join_multicast_v4(&vision_mcast, &any_addr));
-
-            info!("receiving from {}", vision_addr);
-
-            // 1KB buffer, packets are usually not greater than ~200 bytes
-            let buf = &mut [0u8; 1024];
-
-            // wait for at least one geometry packet and one detection packet
-            {
-                let mut game_state = try!(game_state.write());
-                let mut has_geometry = false;
-                let mut has_detection = false;
-                while !has_geometry || !has_detection {
-                    let packet = try_or!(socket.recv_ssl_packet(buf), |err| {
-                        error!("failed to receive packet: {}, skipping", err);
-                        continue;
-                    });
-                    if packet.has_geometry() {
-                        game_state.update_from_ssl_geometry(packet.get_geometry());
-                        has_geometry = true;
-                    }
-                    if packet.has_detection() {
-                        game_state.update_from_ssl_detection(packet.get_detection());
-                        has_detection = true;
-                    }
-                }
-                game_state.inc_counter();
-            }
-
-            // keep updating the state with every incoming packet
-            loop {
-                let packet = try_or!(socket.recv_ssl_packet(buf), |err| {
-                    error!("failed to receive packet: {}, skipping", err);
-                    continue;
-                });
-                let mut game_state = try!(game_state.write());
-                if packet.has_geometry() {
-                    game_state.update_from_ssl_geometry(packet.get_geometry());
-                }
-                if packet.has_detection() {
-                    game_state.update_from_ssl_detection(packet.get_detection());
-                    game_state.inc_counter();
-                }
-            }
-        }));
+        let recv_socket = try!(UdpBuilder::new_v4().unwrap().reuse_address(true).unwrap().bind(vision_bind));
+        try!(recv_socket.join_multicast_v4(&vision_mcast, &any_addr));
 
         let any_addr = Ipv4Addr::new(0, 0, 0, 0);
         let grsim_bind = SocketAddrV4::new(any_addr, 0);
-        let grsim_addr = self.grsim_addr.clone();
-        let thread_builder = thread::Builder::new().name("grSim Commander".to_string());
-        let commander_thread = try!(thread_builder.spawn(move || {
-            let socket = try!(UdpSocket::bind(grsim_bind));
+        let grsim_addr = self.grsim_addr;
+        let send_socket = try!(UdpSocket::bind(grsim_bind));
 
-            info!("sending to {}", grsim_addr);
-
-            let mut last_time = SteadyTime::now();
-            let mut counter = 0;
-            loop {
-                match rx.recv() {
-                    Ok(command) => {
-                        let mut packet = grSim_Packet::new();
-                        {
-                            let commands = packet.mut_commands();
-                            commands.set_timestamp(0.0); // TODO/XXX/FIXME
-                            commands.set_isteamyellow(command.is_yellow);
-                            let robot_commands = commands.mut_robot_commands();
-
-                            for (robot_id, robot_command) in command.robots {
-                                use std::f32::consts::FRAC_1_SQRT_2;
-                                use game::RobotAction::*;
-
-                                let mut c = grSim_Robot_Command::new();
-                                c.set_id(robot_id as u32);
-                                c.set_wheelsspeed(false);
-                                c.set_veltangent(robot_command.v_tangent);
-                                c.set_velnormal(robot_command.v_normal);
-                                c.set_velangular(robot_command.v_angular);
-                                let (spinner, kickx, kickz) = match robot_command.action {
-                                    Normal => (false, 0.0, 0.0),
-                                    Dribble => (true, 0.0, 0.0),
-                                    Kick(force) => (false, force, 0.0),
-                                    ChipKick(force) => {
-                                        // XXX: hardcoded 45 degrees angled chip kick
-                                        let d_force = force * FRAC_1_SQRT_2;
-                                        (false, d_force, d_force)
-                                    }
-                                };
-                                c.set_spinner(spinner);
-                                c.set_kickspeedx(kickx);
-                                c.set_kickspeedz(kickz);
-
-                                robot_commands.push(c);
-                            }
-                        }
-
-                        match packet.write_to_bytes() {
-                            Ok(ref bytes) => {
-                                match socket.send_to(bytes, grsim_addr) {
-                                    Ok(_) => { counter += 1; },
-                                    Err(e) => { error!("failed to send bytes to grSim: {}", e); }
-                                }
-                            }
-                            Err(e) => {
-                                error!("failed to serialize protobuf packet: {}", e);
-                            }
-                        }
-                    }
-                    Err(_) => break
-                }
-
-                let next_time = SteadyTime::now();
-                let delta = next_time - last_time;
-                if delta >= Duration::seconds(1) {
-                    info!("sent {} packets in {}", counter, delta);
-                    counter = 0;
-                    last_time = next_time;
-                }
-            }
-
-            Ok(())
-        }));
+        info!("receiving from {}, sending to {}", vision_addr, grsim_addr);
 
         Ok(GrSimHandle {
-            updater_handle: updater_thread,
-            commander_handle: commander_thread,
+            recv_socket: recv_socket,
+            send_socket: send_socket,
+            grsim_addr: grsim_addr,
+            buf: [0; 1024],
         })
     }
 }
 
 pub struct GrSimHandle {
-    updater_handle: JoinHandle<Result<()>>,
-    commander_handle: JoinHandle<Result<()>>,
+    recv_socket: UdpSocket,
+    send_socket: UdpSocket,
+    grsim_addr: SocketAddr,
+    // 1KB buffer, packets are usually not greater than ~200 bytes
+    buf: [u8; 1024],
+}
+
+impl GrSimHandle {
+    /// Returns Ok(true) if there was a geometry update.
+    pub fn recv_to_state(&mut self, state: &mut game::State) -> Result<()> {
+        let &mut GrSimHandle { ref mut buf, ref recv_socket, ..  } = self;
+
+        let packet = try!(recv_socket.recv_ssl_packet(buf));
+
+        if packet.has_geometry() {
+            state.update_from_ssl_geometry(packet.get_geometry());
+        }
+        if packet.has_detection() {
+            state.update_from_ssl_detection(packet.get_detection());
+            state.inc_counter();
+        }
+
+        Ok(())
+    }
+
+    pub fn wait_for_geom(&mut self, state: &mut game::State) -> Result<()> {
+        let &mut GrSimHandle { ref mut buf, ref recv_socket, ..  } = self;
+
+        loop {
+            let packet = try!(recv_socket.recv_ssl_packet(buf));
+
+            if packet.has_geometry() {
+                state.update_from_ssl_geometry(packet.get_geometry());
+                break;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn send_command(&mut self, command: game::Command) -> Result<()> {
+        let &mut GrSimHandle { ref mut send_socket, ref grsim_addr, ..  } = self;
+
+        let mut packet = grSim_Packet::new();
+        {
+            let commands = packet.mut_commands();
+            commands.set_timestamp(0.0); // TODO/XXX/FIXME
+            commands.set_isteamyellow(command.is_yellow);
+            let robot_commands = commands.mut_robot_commands();
+
+            for (robot_id, robot_command) in command.robots {
+                use std::f32::consts::FRAC_1_SQRT_2;
+                use game::RobotAction::*;
+
+                let mut c = grSim_Robot_Command::new();
+                c.set_id(robot_id as u32);
+                c.set_wheelsspeed(false);
+                c.set_veltangent(robot_command.v_tangent);
+                c.set_velnormal(robot_command.v_normal);
+                c.set_velangular(robot_command.v_angular);
+                let (spinner, kickx, kickz) = match robot_command.action {
+                    Normal => (false, 0.0, 0.0),
+                    Dribble => (true, 0.0, 0.0),
+                    Kick(force) => (false, force, 0.0),
+                    ChipKick(force) => {
+                        // XXX: hardcoded 45 degrees angled chip kick
+                        let d_force = force * FRAC_1_SQRT_2;
+                        (false, d_force, d_force)
+                    }
+                };
+                c.set_spinner(spinner);
+                c.set_kickspeedx(kickx);
+                c.set_kickspeedz(kickz);
+
+                robot_commands.push(c);
+            }
+        }
+        let ref bytes = try!(packet.write_to_bytes());
+        try!(send_socket.send_to(bytes, grsim_addr));
+
+        Ok(())
+    }
 }
 
 impl InterfaceHandle for GrSimHandle {
     fn join(self) -> Result<()> {
-        let GrSimHandle {
-            updater_handle: updater_thread,
-            commander_handle: commander_thread,
-        } = self;
-
-        // join both before early exit
-        let updr = updater_thread.join();
-        let cmdr = commander_thread.join();
-
-        try!(try!(updr));
-        try!(try!(cmdr));
         Ok(())
     }
 }

@@ -17,19 +17,27 @@
 //! use roboime_next::prelude::*;
 //! use roboime_next::{game, ai, grsim};
 //!
-//! let state = game::SharedState::new();
-//! let (tx, rx) = channel();
+//! let state = game::State::new();
 //!
 //! let grsim = grsim::Interface::new()
 //!     .vision_addr("224.5.23.2:11002").unwrap()
 //!     .grsim_addr("127.0.0.1:20011").unwrap()
-//!     .spawn(state.clone(), rx).unwrap();
+//!     .spawn().unwrap();
 //!
 //! let ai = ai::Interface::new(Command::new("./demo-ai"))
 //!     .is_yellow(true)
-//!     .spawn(state.clone(), tx).unwrap();
+//!     .spawn().unwrap();
 //!
-//! (ai, grsim).join().unwrap();
+//! grsim.wait_for_geom(&mut state).unwrap();
+//! ai.push_init(&state).unwrap();
+//!
+//! loop {
+//!     grsim.recv_to_state(&mut state).unwrap();
+//!     ai.push_state(&state).unwrap();
+//!     let cmd = ai.read_command(&state).unwrap();
+//!     grsim.send_command(cmd).unwrap();
+//! }
+//!
 //! ```
 //!
 //! To see that in action you will need a __demo-ai__ (there's one in this project which needs
@@ -38,7 +46,6 @@
 
 extern crate roboime_next_protocol as protocol;
 extern crate net2;
-extern crate time;
 #[macro_use] extern crate log;
 
 pub use error::{Result, Error, ErrorKind};
@@ -52,4 +59,5 @@ pub mod grsim;
 pub mod prelude {
     pub use ::InterfaceHandle;
     pub use ::game::{Position, Pose};
+    pub use ::ai::CommandAiExt;
 }

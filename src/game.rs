@@ -2,10 +2,7 @@
 //! This module is mostly concerned with the game state.
 //!
 
-use std::ops::{Deref, DerefMut};
 use std::collections::BTreeMap;
-use std::sync::{Arc, RwLock, RwLockReadGuard, Condvar, Mutex};
-use ::Result;
 
 pub trait Position {
     fn get_x(&self) -> f32;
@@ -49,14 +46,14 @@ pub trait Pose : Position {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 struct Pos {
     x: f32,
     y: f32,
 }
 
 /// Carries mainly x, y, vx, vy
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct Ball {
     p: Pos,
     v: Pos,
@@ -74,7 +71,7 @@ impl Position for Ball {
 }
 
 /// Carries mainly x, y, w, vx, vy, vw
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct Robot {
     i: u8,
     p: Pos,
@@ -119,7 +116,7 @@ impl Pose for Robot {
 /// This specifications intend to be minimal, some fields that we have from the vision are left
 /// out on purpose.
 ///
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct FieldGeom {
     pub field_length: f32,
     pub field_width: f32,
@@ -127,13 +124,13 @@ pub struct FieldGeom {
     pub center_circle_radius: f32,
     pub defense_radius: f32,
     pub defense_stretch: f32,
-    pub free_kick_from_defense_dist: f32,
+    //pub free_kick_from_defense_dist: f32,
     pub penalty_spot_from_field_line_dist: f32,
     pub penalty_line_from_spot_dist: f32,
 }
 
 /// Carries everything needed for a game step.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct State {
     counter: u64,
     timestamp: f64,
@@ -155,15 +152,15 @@ impl State {
             robots_blue: BTreeMap::new(),
             robots_yellow: BTreeMap::new(),
             field_geom: FieldGeom {
-                field_length: 0.0,
-                field_width: 0.0,
-                goal_width: 0.0,
-                center_circle_radius: 0.0,
-                defense_radius: 0.0,
-                defense_stretch: 0.0,
-                free_kick_from_defense_dist: 0.0,
-                penalty_spot_from_field_line_dist: 0.0,
-                penalty_line_from_spot_dist: 0.0,
+                field_length: 9.0,
+                field_width: 6.0,
+                goal_width: 1.0,
+                center_circle_radius: 1.0,
+                defense_radius: 1.0,
+                defense_stretch: 0.5,
+                //free_kick_from_defense_dist: 0.7,
+                penalty_spot_from_field_line_dist: 1.0,
+                penalty_line_from_spot_dist: 0.4,
             },
         }
     }
@@ -179,87 +176,6 @@ impl State {
     pub fn get_robots_yellow_mut(&mut self) -> &mut BTreeMap<u8, Robot> { &mut self.robots_yellow }
     pub fn get_field_geom(&self) -> &FieldGeom { &self.field_geom }
     pub fn get_field_geom_mut(&mut self) -> &mut FieldGeom { &mut self.field_geom }
-}
-
-struct InnerSharedState {
-    state: RwLock<State>,
-    condvar: Condvar,
-    mutex: Mutex<()>,
-}
-
-/// A type for sharing a `State`, commiting, signaling and waiting for changes.
-// TODO: explain more, explain better
-#[derive(Clone)]
-pub struct SharedState {
-    inner: Arc<InnerSharedState>,
-}
-
-impl SharedState {
-    /// Initialize and return a `SharedState`.
-    pub fn new() -> SharedState {
-        SharedState {
-            inner: Arc::new(InnerSharedState {
-                state: RwLock::new(State::new()),
-                condvar: Condvar::new(),
-                mutex: Mutex::new(()),
-            })
-        }
-    }
-
-    /// Gives read access, only committed changes are visible
-    pub fn read(&self) -> Result<RwLockReadGuard<State>> {
-        Ok(try!(self.inner.state.read()))
-    }
-
-    /// Gives write access, will be commited when the returned `AutoCommitState` is dropped
-    pub fn write(&self) -> Result<AutoCommitState> {
-        Ok(AutoCommitState {
-            shared_game_state: self.clone(),
-            state: try!(self.inner.state.read()).clone(),
-        })
-    }
-
-    fn notify(&self) {
-        self.inner.condvar.notify_all();
-    }
-
-    /// Blocks the current thread until there's a commit
-    pub fn wait(&self) -> Result<()> {
-        let mutex = try!(self.inner.mutex.lock());
-        // XXX: should this be used?
-        let _ = try!(self.inner.condvar.wait(mutex));
-        Ok(())
-    }
-
-    /// Shortcut for `.wait()` followed by `.read()`
-    pub fn wait_and_read(&self) -> Result<RwLockReadGuard<State>> {
-        self.wait().and(self.read())
-    }
-}
-
-/// Helper type that commits changes when dropped.
-#[derive(Clone)]
-pub struct AutoCommitState {
-    shared_game_state: SharedState,
-    state: State,
-}
-
-impl Drop for AutoCommitState {
-    fn drop(&mut self) {
-        let mut old_state = self.shared_game_state.inner.state.write().unwrap();
-        old_state.clone_from(&self.state);
-        self.shared_game_state.notify();
-    }
-}
-
-impl Deref for AutoCommitState {
-    type Target = State;
-
-    fn deref(&self) -> &State { &self.state }
-}
-
-impl DerefMut for AutoCommitState {
-    fn deref_mut(&mut self) -> &mut State { &mut self.state }
 }
 
 #[derive(Clone, Debug)]
