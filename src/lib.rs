@@ -19,12 +19,12 @@
 //!
 //! let state = game::State::new();
 //!
-//! let grsim = grsim::Interface::new()
+//! let mut grsim = grsim::Interface::new()
 //!     .vision_addr("224.5.23.2:11002").unwrap()
 //!     .grsim_addr("127.0.0.1:20011").unwrap()
 //!     .spawn().unwrap();
 //!
-//! let ai = ai::Interface::new(Command::new("./demo-ai"))
+//! let mut ai = ai::Interface::new(Command::new("./demo-ai"))
 //!     .is_yellow(true)
 //!     .spawn().unwrap();
 //!
