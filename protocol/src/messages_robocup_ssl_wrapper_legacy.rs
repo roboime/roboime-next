@@ -1,6 +1,12 @@
 // This file is generated. Do not edit
 // @generated
 
+// https://github.com/Manishearth/rust-clippy/issues/702
+#![allow(unknown_lints)]
+#![allow(clippy)]
+
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
@@ -62,7 +68,7 @@ impl SSL_WrapperPacket {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_detection<'a>(&'a mut self) -> &'a mut super::messages_robocup_ssl_detection::SSL_DetectionFrame {
+    pub fn mut_detection(&mut self) -> &mut super::messages_robocup_ssl_detection::SSL_DetectionFrame {
         if self.detection.is_none() {
             self.detection.set_default();
         };
@@ -74,7 +80,7 @@ impl SSL_WrapperPacket {
         self.detection.take().unwrap_or_else(|| super::messages_robocup_ssl_detection::SSL_DetectionFrame::new())
     }
 
-    pub fn get_detection<'a>(&'a self) -> &'a super::messages_robocup_ssl_detection::SSL_DetectionFrame {
+    pub fn get_detection(&self) -> &super::messages_robocup_ssl_detection::SSL_DetectionFrame {
         self.detection.as_ref().unwrap_or_else(|| super::messages_robocup_ssl_detection::SSL_DetectionFrame::default_instance())
     }
 
@@ -95,7 +101,7 @@ impl SSL_WrapperPacket {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_geometry<'a>(&'a mut self) -> &'a mut super::messages_robocup_ssl_geometry_legacy::SSL_GeometryData {
+    pub fn mut_geometry(&mut self) -> &mut super::messages_robocup_ssl_geometry_legacy::SSL_GeometryData {
         if self.geometry.is_none() {
             self.geometry.set_default();
         };
@@ -107,7 +113,7 @@ impl SSL_WrapperPacket {
         self.geometry.take().unwrap_or_else(|| super::messages_robocup_ssl_geometry_legacy::SSL_GeometryData::new())
     }
 
-    pub fn get_geometry<'a>(&'a self) -> &'a super::messages_robocup_ssl_geometry_legacy::SSL_GeometryData {
+    pub fn get_geometry(&self) -> &super::messages_robocup_ssl_geometry_legacy::SSL_GeometryData {
         self.geometry.as_ref().unwrap_or_else(|| super::messages_robocup_ssl_geometry_legacy::SSL_GeometryData::default_instance())
     }
 }
@@ -171,11 +177,11 @@ impl ::protobuf::Message for SSL_WrapperPacket {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
