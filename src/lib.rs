@@ -56,6 +56,7 @@ mod interface;
 pub mod game;
 pub mod ai;
 pub mod grsim;
+pub mod sim;
 pub mod prelude {
     pub use ::InterfaceHandle;
     pub use ::game::{Position, Pose};

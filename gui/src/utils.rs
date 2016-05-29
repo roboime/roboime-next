@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use roboime_next::prelude::*;
 use roboime_next::game::{Ball, Robot};
 
@@ -84,25 +83,4 @@ pub fn perspective_matrix(width: f32, height: f32) -> [[f32; 4]; 4] {
         [  0.0  ,   0.0  ,  (zfar+znear)/(zfar-znear)    ,   1.0],
         [  0.0  ,   0.0  , -(2.0*zfar*znear)/(zfar-znear),   0.0],
     ]
-}
-
-pub fn add_initial_robots(robots: &mut BTreeMap<u8, Robot>, robot_count: u8, right_side: bool) {
-    use std::f32::consts::PI;
-    use ::models::*;
-
-    let w_0 = if right_side { 0.0 } else { PI };
-    let w_delta = 2.0 * PI / (robot_count as f32) * if right_side { 1.0 } else { -1.0 };
-    let x_offset = (CENTER_DIAMETER / 4.0 + FIELD_LENGTH / 4.0 - DEFENSE_RADIUS / 2.0) * if right_side { 1.0 } else { -1.0 };
-    //let radius = FIELD_LENGTH / 8.0;
-    let radius = (FIELD_LENGTH / 2.0 - CENTER_DIAMETER / 2.0 - DEFENSE_RADIUS) / 3.0 - ROBOT_RADIUS;
-
-    for i in 0..robot_count {
-        let robot_id = i as u8;
-        let w = w_0 + (i as f32) * w_delta;
-        let mut robot = Robot::new(robot_id);
-        robot.set_x(radius * w.cos() + x_offset);
-        robot.set_y(radius * w.sin());
-        robot.set_w(w + PI);
-        robots.insert(robot_id, robot);
-    }
 }

@@ -20,7 +20,7 @@ fn main_loop() -> Result<(), Box<Error>> {
     use std::time::Duration;
     use std::process::Command;
     use roboime_next::prelude::*;
-    use roboime_next::{game, ai};
+    use roboime_next::{game, sim, ai};
     use clap::{Arg, App, AppSettings};
     use glium::{glutin, DisplayBuild, Surface};
     use log::LogLevelFilter;
@@ -136,35 +136,15 @@ fn main_loop() -> Result<(), Box<Error>> {
         }
     };
 
-    let mut draw_game = try!(draw::Game::new(&display));
-    draw_game.team_side(&display, team_side);
+    let mut sim_state = sim::State::new(sim::TeamSide(sim::Color::yellow(is_yellow), sim::Side::left(is_left)));
+    let mut draw_game = try!(draw::Game::new(&display)); draw_game.team_side(&display, team_side);
+    let mut game_state = game::State::new();
+    let mut ai = try!(ai_cfg.spawn());
 
     let mut accumulator = 0;
     let mut previous_clock = clock_ticks::precise_time_ns();
     let mut step_clock = previous_clock;
     let mut step_counter = 0;
-    let mut game_state = game::State::new();
-
-    let mut ai = try!(ai_cfg.spawn());
-
-    // add some robots
-    {
-        //use std::f32::consts::FRAC_PI_4;
-        use ::models::TeamSide::*;
-
-        //let mut state = try!(game_state.write());
-        let mut state = &mut game_state;
-        let blue_is_right = team_side == YellowIsLeft;
-        add_initial_robots(state.get_robots_blue_mut(), 6, blue_is_right);
-        add_initial_robots(state.get_robots_yellow_mut(), 6, !blue_is_right);
-        //let ball = state.get_ball_mut();
-        //ball.set_x(3.5);
-        //ball.set_y(3.0);
-        //let mut robot = state.get_robots_yellow_mut().get_mut(&0).unwrap();
-        //robot.set_w(FRAC_PI_4);
-        //robot.set_x(-2.5);
-        //robot.set_y(-1.5);
-    }
 
     // init the AI
     debug!("Wait for AI to start...");
@@ -173,6 +153,7 @@ fn main_loop() -> Result<(), Box<Error>> {
     //drop(try!(rx.recv()));
     debug!("AI started, going on...");
 
+    // debugger thread
     let debug = ai.debug.take().unwrap();
     let debugger = thread::spawn(move || {
         for line in debug {
@@ -228,49 +209,10 @@ fn main_loop() -> Result<(), Box<Error>> {
             step_counter += 1;
 
             // game step
-            //game_state.notify();
-            //let cmd = try!(rx.recv());
-            //let mut state = try!(game_state.write());
-            let mut state = &mut game_state;
-            try!(ai.push_state(state));
-            let cmd = try!(ai.read_command(state));
-            {
-                let robots = if is_yellow {
-                    state.get_robots_yellow_mut()
-                } else {
-                    state.get_robots_blue_mut()
-                };
-
-                // XXX: overly simplified physics ahead
-                for (ref robot_id, ref mut robot_command) in cmd.robots.iter() {
-                    let mut robot = robots.get_mut(robot_id).unwrap();
-                    let d_time = FIXED_TIME_STAMP as f32 * 1.0e-9;
-
-                    let d_tangent = d_time * robot_command.v_tangent;
-                    let d_normal  = d_time * robot_command.v_normal;
-                    let d_angular = d_time * robot_command.v_angular;
-
-                    let x = robot.get_x();
-                    let y = robot.get_y();
-                    let w = robot.get_w();
-
-                    let dx = d_normal * w.sin() + d_tangent * w.cos();
-                    let dy = d_normal * w.cos() - d_tangent * w.sin();
-                    let dw = d_angular;
-
-                    //println!("dx: {}", dx);
-
-                    robot.set_x(x + dx);
-                    robot.set_y(y + dy);
-                    robot.set_w(w + dw);
-
-                    // TODO: effect of robot_command.action
-                }
-            }
-            state.inc_counter();
-
-            //debug!("{:#?} <- {:#?}", state, cmd);
-            //drop(state);
+            try!(ai.push_state(&game_state));
+            let cmd = try!(ai.read_command(&game_state));
+            sim_state.step(cmd, FIXED_TIME_STAMP as f32 * 1.0e-9);
+            sim_state.update_game(&mut game_state);
         }
 
         thread::sleep(Duration::from_millis(((FIXED_TIME_STAMP - accumulator) / 1_000_000) as u64));
