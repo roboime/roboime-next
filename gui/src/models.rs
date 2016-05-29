@@ -38,7 +38,7 @@ pub struct RichVertex {
 
 implement_vertex!(RichVertex, position, normal, color);
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TeamSide {
     Undefined,
     YellowIsLeft,
