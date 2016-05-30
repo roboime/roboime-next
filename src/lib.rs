@@ -17,7 +17,7 @@
 //! use roboime_next::prelude::*;
 //! use roboime_next::{game, ai, grsim};
 //!
-//! let state = game::State::new();
+//! let mut state = game::State::new();
 //!
 //! let mut grsim = grsim::Interface::new()
 //!     .vision_addr("224.5.23.2:11002").unwrap()
