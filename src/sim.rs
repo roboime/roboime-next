@@ -10,7 +10,7 @@ const CENTER_DIAMETER: f32 = 1.000;
 const DEFENSE_RADIUS: f32  = 1.000;
 const ROBOT_RADIUS: f32    = 0.090;
 const BALL_RADIUS: f32     = 0.023;
-const BALL_FRICT_LOSS: f32 = 0.020;
+const BALL_FRICT_LOSS: f32 = 1.000;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Vec2d {
@@ -192,6 +192,9 @@ impl State {
                 let vy = v_normal * w.cos() - v_tangent * w.sin();
                 let vw = v_angular;
 
+                robot.vel.x = vx;
+                robot.vel.y = vy;
+
                 let dx = d_time * vx;
                 let dy = d_time * vy;
                 let dw = d_time * vw;
@@ -202,8 +205,8 @@ impl State {
                     let rb = BALL_RADIUS;
                     let xr  = robot.pos.x;
                     let yr  = robot.pos.y;
-                    let vrx = robot.pos.x;
-                    let vry = robot.pos.y;
+                    let vrx = robot.vel.x;
+                    let vry = robot.vel.y;
                     let xb  = ball.pos.x;
                     let yb  = ball.pos.y;
                     let vbx = ball.vel.x;
@@ -232,8 +235,8 @@ impl State {
                             let wb = vby.atan2(vbx);
                             let v = (vbx * vbx + vby * vby).sqrt();
                             let w = PI + wc - wb;
-                            ball.vel.x = v * w.cos() + vrx;
-                            ball.vel.y = v * w.sin() + vry;
+                            ball.vel.x = v * w.cos() + 2.0 * vrx;
+                            ball.vel.y = v * w.sin() + 2.0 * vry;
                             d_time_ball -= tc;
                         }
                     }
@@ -254,7 +257,7 @@ impl State {
             ball.pos.x += d_time_ball * ball.vel.x;
             ball.pos.y += d_time_ball * ball.vel.y;
             ball.pos.z += d_time_ball * ball.vel.z;
-            let r = 1.0 - BALL_FRICT_LOSS;
+            let r = 1.0 - BALL_FRICT_LOSS * timestep;
             ball.vel.x *= r;
             ball.vel.y *= r;
             ball.vel.z *= r;
