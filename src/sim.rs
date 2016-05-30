@@ -5,6 +5,13 @@ use std::collections::BTreeMap;
 use ::prelude::*;
 use ::game;
 
+const FIELD_LENGTH: f32    = 9.010;
+const CENTER_DIAMETER: f32 = 1.000;
+const DEFENSE_RADIUS: f32  = 1.000;
+const ROBOT_RADIUS: f32    = 0.090;
+const BALL_RADIUS: f32     = 0.023;
+const BALL_FRICT_LOSS: f32 = 0.020;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Vec2d {
     pub x: f32,
@@ -99,11 +106,6 @@ impl BTreeMapSimExt for BTreeMap<Id, Robot> {
     fn initial_formation(&mut self, count: u8, color: Color, side: Side) {
         use std::f32::consts::PI;
 
-        const FIELD_LENGTH: f32    = 9.010;
-        const CENTER_DIAMETER: f32 = 1.000;
-        const DEFENSE_RADIUS: f32  = 1.000;
-        const ROBOT_RADIUS: f32    = 0.090;
-
         let w_0 = if side.is_right() { 0.0 } else { PI };
         let w_delta = 2.0 * PI / (count as f32) * if side.is_right() { 1.0 } else { -1.0 };
         let x_offset = (CENTER_DIAMETER / 4.0 + FIELD_LENGTH / 4.0 - DEFENSE_RADIUS / 2.0) * if side.is_right() { 1.0 } else { -1.0 };
@@ -133,7 +135,8 @@ impl State {
         }
         State {
             timestamp: 0.0,
-            ball: Ball { pos: Vec3d { x: 0.0, y: 0.0, z: 0.0 }, vel: Vec3d { x: 0.0, y: 0.0, z: 0.0 } },
+            //ball: Ball { pos: Vec3d { x: 0.0, y: 0.0, z: 0.0 }, vel: Vec3d { x: 0.0, y: 0.0, z: 0.0 } },
+            ball: Ball { pos: Vec3d { x: 0.0, y: 0.05, z: 0.0 }, vel: Vec3d { x: -4.0, y: 0.0, z: 0.0 } },
             robots: robots,
             team_side: team_side,
         }
@@ -170,22 +173,71 @@ impl State {
     pub fn step(&mut self, command: game::Command, timestep: f32) {
         self.timestamp += timestep;
         let color = Color::yellow(command.is_yellow);
+        let &mut State { ref mut ball, ref mut robots, .. } = self;
+        let mut d_time_ball = timestep;
 
         // XXX: overly simplified physics ahead
         for (id, robot_command) in command.robots {
             let robot_id = &Id(color, id);
-            if let Some(mut robot) = self.robots.get_mut(robot_id) {
+            if let Some(mut robot) = robots.get_mut(robot_id) {
                 let d_time = timestep;
 
-                let d_tangent = d_time * robot_command.v_tangent;
-                let d_normal  = d_time * robot_command.v_normal;
-                let d_angular = d_time * robot_command.v_angular;
+                let v_tangent = robot_command.v_tangent;
+                let v_normal  = robot_command.v_normal;
+                let v_angular = robot_command.v_angular;
 
                 let w = robot.w;
 
-                let dx = d_normal * w.sin() + d_tangent * w.cos();
-                let dy = d_normal * w.cos() - d_tangent * w.sin();
-                let dw = d_angular;
+                let vx = v_normal * w.sin() + v_tangent * w.cos();
+                let vy = v_normal * w.cos() - v_tangent * w.sin();
+                let vw = v_angular;
+
+                let dx = d_time * vx;
+                let dy = d_time * vy;
+                let dw = d_time * vw;
+
+                // detect collision with ball
+                {
+                    let rr = ROBOT_RADIUS;
+                    let rb = BALL_RADIUS;
+                    let xr  = robot.pos.x;
+                    let yr  = robot.pos.y;
+                    let vrx = robot.pos.x;
+                    let vry = robot.pos.y;
+                    let xb  = ball.pos.x;
+                    let yb  = ball.pos.y;
+                    let vbx = ball.vel.x;
+                    let vby = ball.vel.y;
+
+                    // Bhāskara:
+                    let a = (vry - vby) * (vry - vby) + (vrx - vbx) * (vrx - vbx);
+                    let b = 2.0 * ((xr - xb) * (vrx - vbx) + (yr - yb) * (vry - vby));
+                    let c = (xr - xb) * (xr - xb) + (yr - yb) * (yr - yb) - (rr + rb) * (rr + rb);
+
+                    if c > 0.0 && a != 0.0 {
+                        //debug!("there may be a collision");
+                        let tc = (-b - (b * b - 4.0 * a * c).sqrt()) * (0.5 / a);
+                        if tc >= 0.0 && tc <= timestep {
+                            use std::f32::consts::PI;
+
+                            let xbc = xb + tc * vbx;
+                            let ybc = yb + tc * vby;
+                            let xrc = xr + tc * vrx;
+                            let yrc = yr + tc * vry;
+                            debug!("there is a collision, with robot {:?} at {},{}_{},{}", robot_id, xrc, yrc, xbc, ybc);
+                            // TODO: dummy collision
+                            ball.pos.x = xbc;
+                            ball.pos.y = ybc;
+                            let wc = (ybc - yrc).atan2(xbc - xrc);
+                            let wb = vby.atan2(vbx);
+                            let v = (vbx * vbx + vby * vby).sqrt();
+                            let w = PI + wc - wb;
+                            ball.vel.x = v * w.cos() + vrx;
+                            ball.vel.y = v * w.sin() + vry;
+                            d_time_ball -= tc;
+                        }
+                    }
+                }
 
                 //println!("dx: {}", dx);
 
@@ -195,6 +247,17 @@ impl State {
 
                 // TODO: effect of robot_command.action
             }
+        }
+
+        // update ball pos
+        {
+            ball.pos.x += d_time_ball * ball.vel.x;
+            ball.pos.y += d_time_ball * ball.vel.y;
+            ball.pos.z += d_time_ball * ball.vel.z;
+            let r = 1.0 - BALL_FRICT_LOSS;
+            ball.vel.x *= r;
+            ball.vel.y *= r;
+            ball.vel.z *= r;
         }
     }
 }
