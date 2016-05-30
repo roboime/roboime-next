@@ -51,7 +51,7 @@ while true do
     local ball_x, ball_y, ball_vx, ball_vy = io.read("*n", "*n", "*n", "*n")
 
     for _ = 1, robot_count_player do
-        local robot_id, robot_x, robot_w, robot_vx, robot_vy, robot_vw = io.read("*n", "*n", "*n", "*n", "*n", "*n", "*n")
+        local robot_id, robot_x, robot_y, robot_w, robot_vx, robot_vy, robot_vw = io.read("*n", "*n", "*n", "*n", "*n", "*n", "*n")
         table.insert(ids, robot_id)
         if robot_id == 0 then
             x, y, w = robot_x, robot_y, robot_w
@@ -59,10 +59,10 @@ while true do
     end
 
     for _ = 1, robot_count_player do
-        local robot_id, robot_x, robot_w, robot_vx, robot_vy, robot_vw = io.read("*n", "*n", "*n", "*n", "*n", "*n", "*n")
+        local robot_id, robot_x, robot_y, robot_w, robot_vx, robot_vy, robot_vw = io.read("*n", "*n", "*n", "*n", "*n", "*n", "*n")
     end
 
-    tx, ty, tw = ball_w, ball_y, 0
+    tx, ty, tw = ball_x, ball_y, 0
 
     print(counter)
 
@@ -85,7 +85,7 @@ while true do
             dribble = 1
         end
 
-        print(table.concat({v_tangent, v_normal, v_angular, kick_force, chip_force, dribble}), " ")
+        print(table.concat({v_tangent, v_normal, v_angular, kick_force, chip_force, dribble}, " "))
     end
 
     io.stdout:flush()
