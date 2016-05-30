@@ -152,7 +152,6 @@ int main() {
                 dribble = 1;
             }
 
-            //fprintf(stderr, "%f %f %f %f %f %i\n", v_tangent, v_normal, v_angular, kick_force, chip_force, dribble);
             printf("%f %f %f %f %f %i\n", v_tangent, v_normal, v_angular, kick_force, chip_force, dribble);
         }
 

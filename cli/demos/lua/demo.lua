@@ -85,7 +85,7 @@ while true do
             dribble = 1
         end
 
-        print(table.concat({v_tangent, v_normal, v_angular, kick_force, chip_force, dribble}, " "))
+        print(table.concat({v_tangent, v_normal, v_angular, kick_force, chip_force, dribble}), " ")
     end
 
     io.stdout:flush()
