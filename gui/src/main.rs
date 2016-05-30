@@ -102,6 +102,11 @@ fn main_loop() -> Result<(), Box<Error>> {
         .with_vsync()
         .build_glium());
 
+    let perspective = {
+        let (width, height) = display.get_window().unwrap().get_inner_size_points().unwrap();
+        perspective_matrix(width as f32, height as f32)
+    };
+
     let is_yellow = {
         let mut yellow = true;
         if matches.is_present("blue")   { yellow = false; };
@@ -178,7 +183,7 @@ fn main_loop() -> Result<(), Box<Error>> {
         {
             //let state = try!(game_state.read());
             let state = &game_state;
-            try!(draw_game.draw_to(&mut target, &state, view));
+            try!(draw_game.draw_to(&mut target, &state, perspective, view));
         }
         try!(target.finish());
 

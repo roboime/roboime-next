@@ -114,7 +114,7 @@ impl<'a> Game<'a> {
         self.goals = goals;
     }
 
-    pub fn draw_to<S: Surface>(&self, target: &mut S, game_state: &GameState, view: [[f32; 4]; 4]) -> Result<(), DrawError> {
+    pub fn draw_to<S: Surface>(&self, target: &mut S, game_state: &GameState, perspective: [[f32; 4]; 4], view: [[f32; 4]; 4]) -> Result<(), DrawError> {
         let &Game {
             ref program,
             ref simple_program,
@@ -129,11 +129,6 @@ impl<'a> Game<'a> {
             ref blue_robots,
             ..
         } = self;
-
-        let perspective = {
-            let (width, height) = target.get_dimensions();
-            perspective_matrix(width as f32, height as f32)
-        };
 
         target.clear_color_srgb_and_depth(bg_color, 1.0);
 
