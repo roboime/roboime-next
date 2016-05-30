@@ -1,6 +1,12 @@
 // This file is generated. Do not edit
 // @generated
 
+// https://github.com/Manishearth/rust-clippy/issues/702
+#![allow(unknown_lints)]
+#![allow(clippy)]
+
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
@@ -62,7 +68,7 @@ impl grSim_Packet {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_commands<'a>(&'a mut self) -> &'a mut super::grSim_Commands::grSim_Commands {
+    pub fn mut_commands(&mut self) -> &mut super::grSim_Commands::grSim_Commands {
         if self.commands.is_none() {
             self.commands.set_default();
         };
@@ -74,7 +80,7 @@ impl grSim_Packet {
         self.commands.take().unwrap_or_else(|| super::grSim_Commands::grSim_Commands::new())
     }
 
-    pub fn get_commands<'a>(&'a self) -> &'a super::grSim_Commands::grSim_Commands {
+    pub fn get_commands(&self) -> &super::grSim_Commands::grSim_Commands {
         self.commands.as_ref().unwrap_or_else(|| super::grSim_Commands::grSim_Commands::default_instance())
     }
 
@@ -95,7 +101,7 @@ impl grSim_Packet {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_replacement<'a>(&'a mut self) -> &'a mut super::grSim_Replacement::grSim_Replacement {
+    pub fn mut_replacement(&mut self) -> &mut super::grSim_Replacement::grSim_Replacement {
         if self.replacement.is_none() {
             self.replacement.set_default();
         };
@@ -107,7 +113,7 @@ impl grSim_Packet {
         self.replacement.take().unwrap_or_else(|| super::grSim_Replacement::grSim_Replacement::new())
     }
 
-    pub fn get_replacement<'a>(&'a self) -> &'a super::grSim_Replacement::grSim_Replacement {
+    pub fn get_replacement(&self) -> &super::grSim_Replacement::grSim_Replacement {
         self.replacement.as_ref().unwrap_or_else(|| super::grSim_Replacement::grSim_Replacement::default_instance())
     }
 }
@@ -171,11 +177,11 @@ impl ::protobuf::Message for grSim_Packet {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 

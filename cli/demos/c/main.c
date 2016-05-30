@@ -134,25 +134,26 @@ int main() {
         printf("%i\n", counter);
 
         for (int i = 0; i < ids_count; ++i) {
-            float v_tan = 0.0f;
-            float v_norm = 0.0f;
-            float v_ang = 0.0f;
-            float kick_x = 0.0f;
-            float kick_z = 0.0f;
-            int spin = 0;
+            float v_tangent = 0.0f;
+            float v_normal = 0.0f;
+            float v_angular = 0.0f;
+            float kick_force = 0.0f;
+            float chip_force = 0.0f;
+            int dribble = 0;
 
             if (ids[i] == 0) {
                 const float PL = 0.40f;
                 const float PW = 0.80f;
-                v_tan  = PL * ((tx - x) * cos(w) + (ty - y) * sin(w));
-                v_norm = PL * ((ty - y) * cos(w) + (tx - x) * sin(w));
-                v_ang  = PW * (tw - w);
-                kick_x = 4.0f;
-                kick_z = 0.0f;
-                spin = 1;
+                v_tangent  = PL * ((tx - x) * cos(w) + (ty - y) * sin(w));
+                v_normal   = PL * ((ty - y) * cos(w) + (tx - x) * sin(w));
+                v_angular  = PW * (tw - w);
+                kick_force = 4.0f;
+                chip_force = 0.0f;
+                dribble = 1;
             }
 
-            printf("%f %f %f %f %f %i\n", v_tan, v_norm, v_ang, kick_x, kick_z, spin);
+            //fprintf(stderr, "%f %f %f %f %f %i\n", v_tangent, v_normal, v_angular, kick_force, chip_force, dribble);
+            printf("%f %f %f %f %f %i\n", v_tangent, v_normal, v_angular, kick_force, chip_force, dribble);
         }
 
         fflush(stdout);

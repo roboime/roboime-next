@@ -1,6 +1,12 @@
 // This file is generated. Do not edit
 // @generated
 
+// https://github.com/Manishearth/rust-clippy/issues/702
+#![allow(unknown_lints)]
+#![allow(clippy)]
+
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
@@ -66,7 +72,7 @@ impl grSim_RobotReplacement {
         self.x = ::std::option::Option::Some(v);
     }
 
-    pub fn get_x<'a>(&self) -> f64 {
+    pub fn get_x(&self) -> f64 {
         self.x.unwrap_or(0.)
     }
 
@@ -85,7 +91,7 @@ impl grSim_RobotReplacement {
         self.y = ::std::option::Option::Some(v);
     }
 
-    pub fn get_y<'a>(&self) -> f64 {
+    pub fn get_y(&self) -> f64 {
         self.y.unwrap_or(0.)
     }
 
@@ -104,7 +110,7 @@ impl grSim_RobotReplacement {
         self.dir = ::std::option::Option::Some(v);
     }
 
-    pub fn get_dir<'a>(&self) -> f64 {
+    pub fn get_dir(&self) -> f64 {
         self.dir.unwrap_or(0.)
     }
 
@@ -123,7 +129,7 @@ impl grSim_RobotReplacement {
         self.id = ::std::option::Option::Some(v);
     }
 
-    pub fn get_id<'a>(&self) -> u32 {
+    pub fn get_id(&self) -> u32 {
         self.id.unwrap_or(0)
     }
 
@@ -142,7 +148,7 @@ impl grSim_RobotReplacement {
         self.yellowteam = ::std::option::Option::Some(v);
     }
 
-    pub fn get_yellowteam<'a>(&self) -> bool {
+    pub fn get_yellowteam(&self) -> bool {
         self.yellowteam.unwrap_or(false)
     }
 }
@@ -262,11 +268,11 @@ impl ::protobuf::Message for grSim_RobotReplacement {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
@@ -413,7 +419,7 @@ impl grSim_BallReplacement {
         self.x = ::std::option::Option::Some(v);
     }
 
-    pub fn get_x<'a>(&self) -> f64 {
+    pub fn get_x(&self) -> f64 {
         self.x.unwrap_or(0.)
     }
 
@@ -432,7 +438,7 @@ impl grSim_BallReplacement {
         self.y = ::std::option::Option::Some(v);
     }
 
-    pub fn get_y<'a>(&self) -> f64 {
+    pub fn get_y(&self) -> f64 {
         self.y.unwrap_or(0.)
     }
 
@@ -451,7 +457,7 @@ impl grSim_BallReplacement {
         self.vx = ::std::option::Option::Some(v);
     }
 
-    pub fn get_vx<'a>(&self) -> f64 {
+    pub fn get_vx(&self) -> f64 {
         self.vx.unwrap_or(0.)
     }
 
@@ -470,7 +476,7 @@ impl grSim_BallReplacement {
         self.vy = ::std::option::Option::Some(v);
     }
 
-    pub fn get_vy<'a>(&self) -> f64 {
+    pub fn get_vy(&self) -> f64 {
         self.vy.unwrap_or(0.)
     }
 }
@@ -574,11 +580,11 @@ impl ::protobuf::Message for grSim_BallReplacement {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
@@ -716,7 +722,7 @@ impl grSim_Replacement {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_ball<'a>(&'a mut self) -> &'a mut grSim_BallReplacement {
+    pub fn mut_ball(&mut self) -> &mut grSim_BallReplacement {
         if self.ball.is_none() {
             self.ball.set_default();
         };
@@ -728,7 +734,7 @@ impl grSim_Replacement {
         self.ball.take().unwrap_or_else(|| grSim_BallReplacement::new())
     }
 
-    pub fn get_ball<'a>(&'a self) -> &'a grSim_BallReplacement {
+    pub fn get_ball(&self) -> &grSim_BallReplacement {
         self.ball.as_ref().unwrap_or_else(|| grSim_BallReplacement::default_instance())
     }
 
@@ -744,7 +750,7 @@ impl grSim_Replacement {
     }
 
     // Mutable pointer to the field.
-    pub fn mut_robots<'a>(&'a mut self) -> &'a mut ::protobuf::RepeatedField<grSim_RobotReplacement> {
+    pub fn mut_robots(&mut self) -> &mut ::protobuf::RepeatedField<grSim_RobotReplacement> {
         &mut self.robots
     }
 
@@ -753,7 +759,7 @@ impl grSim_Replacement {
         ::std::mem::replace(&mut self.robots, ::protobuf::RepeatedField::new())
     }
 
-    pub fn get_robots<'a>(&'a self) -> &'a [grSim_RobotReplacement] {
+    pub fn get_robots(&self) -> &[grSim_RobotReplacement] {
         &self.robots
     }
 }
@@ -817,11 +823,11 @@ impl ::protobuf::Message for grSim_Replacement {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 

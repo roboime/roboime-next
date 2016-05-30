@@ -115,25 +115,25 @@ fn main() {
         writeln!(output, "{}", counter).unwrap();
 
         for robot_id in ids {
-            let mut v_tan = 0.0;
-            let mut v_norm = 0.0;
-            let mut v_ang = 0.0;
-            let mut kick_x = 0.0;
-            let mut kick_z = 0.0;
-            let mut spin = 0;
+            let mut v_tangent = 0.0;
+            let mut v_normal = 0.0;
+            let mut v_angular = 0.0;
+            let mut kick_force = 0.0;
+            let mut chip_force = 0.0;
+            let mut dribble = 0;
 
             if robot_id == 0 {
                 const PL: f32 = 0.40;
                 const PW: f32 = 0.80;
-                v_tan  = PL * ((tx - x) * w.cos() + (ty - y) * w.sin());
-                v_norm = PL * ((ty - y) * w.cos() + (tx - x) * w.sin());
-                v_ang  = PW * (tw - w);
-                kick_x = 4.0;
-                kick_z = 0.0;
-                spin = 1;
+                v_tangent  = PL * ((tx - x) * w.cos() + (ty - y) * w.sin());
+                v_normal   = PL * ((ty - y) * w.cos() + (tx - x) * w.sin());
+                v_angular  = PW * (tw - w);
+                kick_force = 4.0;
+                chip_force = 0.0;
+                dribble = 1;
             }
 
-            writeln!(output, "{} {} {} {} {} {}", v_tan, v_norm, v_ang, kick_x, kick_z, spin).unwrap();
+            writeln!(output, "{} {} {} {} {} {}", v_tangent, v_normal, v_angular, kick_force, chip_force, dribble).unwrap();
         }
 
         output.flush().unwrap();

@@ -71,21 +71,21 @@ while True:
     print(counter)
 
     for robot_id in ids:
-        v_tan = 0.0
-        v_norm = 0.0
-        v_ang = 0.0
-        kick_x = 0.0
-        kick_z = 0.0
-        spin = 0
+        v_tangent = 0.0
+        v_normal = 0.0
+        v_angular = 0.0
+        kick_force = 0.0
+        chip_force = 0.0
+        dribble = 0
 
         if robot_id == 0:
             PL = 0.40
             PW = 0.80
-            v_tan  = PL * ((tx - x) * cos(w) + (ty - y) * sin(w))
-            v_norm = PL * ((ty - y) * cos(w) - (tx - x) * sin(w))
-            v_ang  = PW * (tw - w)
-            kick_x = 4.0
-            kick_z = 0.0
-            spin = 1
+            v_tangent  = PL * ((tx - x) * cos(w) + (ty - y) * sin(w))
+            v_normal   = PL * ((ty - y) * cos(w) - (tx - x) * sin(w))
+            v_angular  = PW * (tw - w)
+            kick_force = 4.0
+            chip_force = 0.0
+            dribble = 1
 
-        print(v_tan, v_norm, v_ang, kick_x, kick_z, spin)
+        print(v_tangent, v_normal, v_angular, kick_force, chip_force, dribble)

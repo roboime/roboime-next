@@ -1,6 +1,12 @@
 // This file is generated. Do not edit
 // @generated
 
+// https://github.com/Manishearth/rust-clippy/issues/702
+#![allow(unknown_lints)]
+#![allow(clippy)]
+
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
@@ -62,7 +68,7 @@ impl Log_Frame {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_frame<'a>(&'a mut self) -> &'a mut super::messages_robocup_ssl_detection::SSL_DetectionFrame {
+    pub fn mut_frame(&mut self) -> &mut super::messages_robocup_ssl_detection::SSL_DetectionFrame {
         if self.frame.is_none() {
             self.frame.set_default();
         };
@@ -74,7 +80,7 @@ impl Log_Frame {
         self.frame.take().unwrap_or_else(|| super::messages_robocup_ssl_detection::SSL_DetectionFrame::new())
     }
 
-    pub fn get_frame<'a>(&'a self) -> &'a super::messages_robocup_ssl_detection::SSL_DetectionFrame {
+    pub fn get_frame(&self) -> &super::messages_robocup_ssl_detection::SSL_DetectionFrame {
         self.frame.as_ref().unwrap_or_else(|| super::messages_robocup_ssl_detection::SSL_DetectionFrame::default_instance())
     }
 
@@ -95,7 +101,7 @@ impl Log_Frame {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_refbox_cmd<'a>(&'a mut self) -> &'a mut ::std::string::String {
+    pub fn mut_refbox_cmd(&mut self) -> &mut ::std::string::String {
         if self.refbox_cmd.is_none() {
             self.refbox_cmd.set_default();
         };
@@ -107,7 +113,7 @@ impl Log_Frame {
         self.refbox_cmd.take().unwrap_or_else(|| ::std::string::String::new())
     }
 
-    pub fn get_refbox_cmd<'a>(&'a self) -> &'a str {
+    pub fn get_refbox_cmd(&self) -> &str {
         match self.refbox_cmd.as_ref() {
             Some(v) => &v,
             None => "",
@@ -177,11 +183,11 @@ impl ::protobuf::Message for Log_Frame {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
@@ -298,7 +304,7 @@ impl Refbox_Log {
     }
 
     // Mutable pointer to the field.
-    pub fn mut_log<'a>(&'a mut self) -> &'a mut ::protobuf::RepeatedField<Log_Frame> {
+    pub fn mut_log(&mut self) -> &mut ::protobuf::RepeatedField<Log_Frame> {
         &mut self.log
     }
 
@@ -307,7 +313,7 @@ impl Refbox_Log {
         ::std::mem::replace(&mut self.log, ::protobuf::RepeatedField::new())
     }
 
-    pub fn get_log<'a>(&'a self) -> &'a [Log_Frame] {
+    pub fn get_log(&self) -> &[Log_Frame] {
         &self.log
     }
 }
@@ -359,11 +365,11 @@ impl ::protobuf::Message for Refbox_Log {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 

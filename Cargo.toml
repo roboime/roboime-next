@@ -16,6 +16,6 @@ default = []
 unstable = []
 
 [dependencies]
-net2 = "0.2"
-time = "0.1"
 roboime-next-protocol = { path = "protocol" }
+net2 = "0.2"
+log = "0.3"

@@ -14,21 +14,30 @@
 //! ```no_run
 //! use std::sync::mpsc::channel;
 //! use std::process::Command;
-//! use roboime_next::{SharedGameState, ChildAi, GrSimInterface, InterfaceHandle};
+//! use roboime_next::prelude::*;
+//! use roboime_next::{game, ai, grsim};
 //!
-//! let game_state = SharedGameState::new();
-//! let (tx, rx) = channel();
+//! let state = game::State::new();
 //!
-//! let grsim = GrSimInterface::new()
+//! let mut grsim = grsim::Interface::new()
 //!     .vision_addr("224.5.23.2:11002").unwrap()
 //!     .grsim_addr("127.0.0.1:20011").unwrap()
-//!     .spawn(game_state.clone(), rx).unwrap();
+//!     .spawn().unwrap();
 //!
-//! let ai= ChildAi::new(Command::new("./demo-ai"))
+//! let mut ai = ai::Interface::new(Command::new("./demo-ai"))
 //!     .is_yellow(true)
-//!     .spawn(game_state.clone(), tx).unwrap();
+//!     .spawn().unwrap();
 //!
-//! (ai, grsim).join().unwrap();
+//! grsim.wait_for_geom(&mut state).unwrap();
+//! ai.push_init(&state).unwrap();
+//!
+//! loop {
+//!     grsim.recv_to_state(&mut state).unwrap();
+//!     ai.push_state(&state).unwrap();
+//!     let cmd = ai.read_command(&state).unwrap();
+//!     grsim.send_command(cmd).unwrap();
+//! }
+//!
 //! ```
 //!
 //! To see that in action you will need a __demo-ai__ (there's one in this project which needs
@@ -37,16 +46,19 @@
 
 extern crate roboime_next_protocol as protocol;
 extern crate net2;
-extern crate time;
+#[macro_use] extern crate log;
 
 pub use error::{Result, Error, ErrorKind};
-pub use state::{GameState, RobotState, BallState, Position, Pose, SharedGameState};
 pub use interface::InterfaceHandle;
-pub use child_ai::ChildAi;
-pub use grsim::GrSimInterface;
 
 mod error;
-mod state;
 mod interface;
-mod child_ai;
-mod grsim;
+pub mod game;
+pub mod ai;
+pub mod grsim;
+pub mod sim;
+pub mod prelude {
+    pub use ::InterfaceHandle;
+    pub use ::game::{Position, Pose};
+    pub use ::ai::CommandAiExt;
+}
