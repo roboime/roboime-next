@@ -7,6 +7,7 @@ const FIELD_LENGTH: f32    = 9.010;
 const CENTER_DIAMETER: f32 = 1.000;
 const DEFENSE_RADIUS: f32  = 1.000;
 const ROBOT_RADIUS: f32    = 0.090;
+const ROBOT_MOUTH: f32     = 0.500;
 const BALL_RADIUS: f32     = 0.023;
 const BALL_FRICT_LOSS: f32 = 1.000;
 
@@ -35,6 +36,11 @@ impl Robot {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Id(pub Color, pub u8);
+
+impl Id {
+    pub fn color(self) -> Color { self.0 }
+    pub fn id(self) -> u8 { self.1 }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct State {
@@ -118,57 +124,74 @@ impl State {
 
     pub fn step(&mut self, command: game::Command, timestep: f32) {
         self.timestamp += timestep;
-        let color = Color::yellow(command.is_yellow);
         let &mut State { ref mut ball, ref mut robots, .. } = self;
         let mut d_time_ball = timestep;
+        let d_time = timestep;
 
         // XXX: overly simplified physics ahead
-        for (id, robot_command) in command.robots {
-            let robot_id = &Id(color, id);
-            if let Some(mut robot) = robots.get_mut(robot_id) {
-                let d_time = timestep;
+        for (robot_id, robot) in robots.iter_mut() {
+            let robot_command = {
+                if robot_id.color() == Color::yellow(command.is_yellow) {
+                    command.robots.get(&robot_id.id())
+                } else {
+                    None
+                }
+            };
 
+            if let Some(robot_command) = robot_command {
                 let v_tangent = robot_command.v_tangent;
                 let v_normal  = robot_command.v_normal;
                 let v_angular = robot_command.v_angular;
-
                 robot.vel = Vec2d(v_tangent, v_normal).rotate(-robot.w);
                 robot.vw = v_angular;
+            }
 
-                // detect collision with ball
-                {
-                    let r = ROBOT_RADIUS + BALL_RADIUS;
+            // detect collision with ball
+            let r = ROBOT_RADIUS + BALL_RADIUS;
 
-                    // Bhāskara:
-                    let a = (robot.vel - ball.vel).norm2();
-                    let b = 2.0 * ((robot.pos - ball.pos) * (robot.vel - ball.vel));
-                    let c = (robot.pos - ball.pos).norm2() - r * r;
-                    let delta = b * b - 4.0 * a * c;
+            // Bhāskara:
+            let a = (robot.vel - ball.vel).norm2();
+            let b = 2.0 * ((robot.pos - ball.pos) * (robot.vel - ball.vel));
+            let c = (robot.pos - ball.pos).norm2() - r * r;
+            let delta = b * b - 4.0 * a * c;
 
-                    if delta >= 0.0 && a != 0.0 {
-                        let tc = (-b - delta.sqrt()) * 0.5 / a;
-                        if 0.0 <= tc && tc <= timestep {
-                            use std::f32::consts::PI;
+            if delta >= 0.0 && a != 0.0 {
+                let tc = (-b - delta.sqrt()) * 0.5 / a;
+                if 0.0 <= tc && tc <= timestep {
+                    use std::f32::consts::PI;
 
-                            debug!("collision: ball and robot {:?}", robot_id);
+                    debug!("collision: ball and robot {:?}", robot_id);
 
-                            ball.pos += ball.vel * tc;
-                            let robot_pos = robot.pos + robot.vel * tc;
-                            let dir = ball.pos - robot_pos ;
-                            let vel = ball.vel - robot.vel;
-                            let w = vel.angle() - PI;
-                            ball.vel = robot.vel + Vec2d(vel.norm(), 0.0).rotate(2.0 * dir.angle() - w);
+                    ball.pos += ball.vel * tc;
+                    let robot_pos = robot.pos + robot.vel * tc;
+                    let cw = (ball.pos - robot_pos).angle();
+                    let vel = ball.vel - robot.vel;
+                    let vw = vel.angle() - PI;
+                    ball.vel = robot.vel + Vec2d(vel.norm(), 0.0).rotate(2.0 * cw - vw);
 
-                            d_time_ball -= tc;
+                    let rw = robot.w + robot.vw * tc;
+                    if rw.abs_sub(cw) < ROBOT_MOUTH {
+                        if let Some(robot_command) = robot_command {
+                            use ::game::RobotAction::*;
+                            if let Kick(force) = robot_command.action {
+                                ball.vel += Vec2d(force, 0.0).rotate(rw);
+                            }
+                            if let ChipKick(force) = robot_command.action {
+                                // TODO: z force
+                                ball.vel += Vec2d(force, 0.0).rotate(rw);
+                            }
+                            // TODO: dribble effect
                         }
                     }
+
+                    d_time_ball -= tc;
                 }
-
-                robot.pos += robot.vel * d_time;
-                robot.w   += robot.vw  * d_time;
-
-                // TODO: effect of robot_command.action
             }
+
+            robot.pos += robot.vel * d_time;
+            robot.w   += robot.vw  * d_time;
+
+            // TODO: effect of robot_command.action
         }
 
         // update ball pos
