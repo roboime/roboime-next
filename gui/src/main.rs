@@ -21,6 +21,7 @@ fn main_loop() -> Result<(), Box<Error>> {
     use std::process::Command;
     use roboime_next::prelude::*;
     use roboime_next::{game, sim, ai};
+    use roboime_next::base::{TeamSide, Side, Color, Vec2d};
     use clap::{Arg, App, AppSettings};
     use glium::{glutin, DisplayBuild, Surface};
     use log::LogLevelFilter;
@@ -154,7 +155,7 @@ fn main_loop() -> Result<(), Box<Error>> {
         }
     };
 
-    let mut sim_state = sim::State::new(sim::TeamSide(sim::Color::yellow(is_yellow), sim::Side::left(is_left)));
+    let mut sim_state = sim::State::new(TeamSide(Color::yellow(is_yellow), Side::left(is_left)));
     let mut draw_game = try!(draw::Game::new(&display)); draw_game.team_side(&display, team_side);
     let mut game_state = game::State::new();
     let mut ai = try!(ai_cfg.spawn());
@@ -220,10 +221,8 @@ fn main_loop() -> Result<(), Box<Error>> {
                 }
                 KeyboardInput(Pressed, _, Some(VirtualKeyCode::R)) => {
                     // reset ball position and speed
-                    sim_state.ball.pos.x = 0.0;
-                    sim_state.ball.pos.y = 0.0;
-                    sim_state.ball.vel.x = 0.0;
-                    sim_state.ball.vel.y = 0.0;
+                    sim_state.ball.pos = Vec2d(0.0, 0.0);
+                    sim_state.ball.vel = Vec2d(0.0, 0.0);
                 }
                 _ => ()
             }

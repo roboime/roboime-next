@@ -55,6 +55,7 @@ mod error;
 mod interface;
 pub mod game;
 pub mod ai;
+pub mod base;
 pub mod grsim;
 pub mod sim;
 pub mod prelude {
