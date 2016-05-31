@@ -163,6 +163,9 @@ fn main_loop() -> Result<(), Box<Error>> {
     let mut step_clock = previous_clock;
     let mut step_counter = 0;
 
+    let mut key_meta = false;
+    let mut key_ctrl = false;
+
     // init the AI
     debug!("Wait for AI to start...");
     sim_state.update_game(&mut game_state);
@@ -206,27 +209,42 @@ fn main_loop() -> Result<(), Box<Error>> {
         for event in display.poll_events() {
             use glium::glutin::Event::*;
             use glium::glutin::ElementState::*;
-            use glium::glutin::VirtualKeyCode;
+            use glium::glutin::VirtualKeyCode::*;
 
             match event {
-                KeyboardInput(_, _, Some(VirtualKeyCode::Escape)) |
-                Closed => {
-                    break 'main;
-                }
-                KeyboardInput(Pressed, _, Some(VirtualKeyCode::P)) => {
+
+                // close on Ctrl+Q, Cmd+Q, Win+Q, Esc, window X button
+                KeyboardInput(Pressed, _, Some(Q)) if key_meta || key_ctrl => break 'main,
+                KeyboardInput(Pressed, _, Some(Escape)) | Closed => break 'main,
+
+                // modifier keys
+                KeyboardInput(Pressed,  _, Some(LWin)) |
+                KeyboardInput(Pressed,  _, Some(RWin)) => { key_meta = true; }
+                KeyboardInput(Released, _, Some(LWin)) |
+                KeyboardInput(Released, _, Some(RWin)) => { key_meta = false; }
+                KeyboardInput(Pressed,  _, Some(LControl)) |
+                KeyboardInput(Pressed,  _, Some(RControl)) => { key_ctrl = true; }
+                KeyboardInput(Released, _, Some(LControl)) |
+                KeyboardInput(Released, _, Some(RControl)) => { key_ctrl = false; }
+
+                // some actions
+                KeyboardInput(Pressed, _, Some(P)) => {
                     is_paused = !is_paused;
                 }
-                KeyboardInput(Pressed, _, Some(VirtualKeyCode::RBracket)) => {
+                KeyboardInput(Pressed, _, Some(RBracket)) => {
                     single_shot = Shot::Fwd;
                 }
-                KeyboardInput(Pressed, _, Some(VirtualKeyCode::LBracket)) => {
+                KeyboardInput(Pressed, _, Some(LBracket)) => {
                     single_shot = Shot::Bkw;
                 }
-                KeyboardInput(Pressed, _, Some(VirtualKeyCode::R)) => {
+                KeyboardInput(Pressed, _, Some(R)) => {
                     // reset ball position and speed
                     sim_state.ball.pos = Vec2d(0.0, 0.0);
                     sim_state.ball.vel = Vec2d(0.0, 0.0);
                     sim_state.update_game(&mut game_state);
+                }
+                KeyboardInput(..) => {
+                    debug!("{:?}", event);
                 }
                 _ => ()
             }
