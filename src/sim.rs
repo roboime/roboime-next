@@ -147,15 +147,17 @@ impl State {
 
                     if delta >= 0.0 && a != 0.0 {
                         let tc = (-b - delta.sqrt()) * 0.5 / a;
-                        if tc >= 0.0 && tc <= timestep {
+                        if 0.0 <= tc && tc <= timestep {
                             use std::f32::consts::PI;
 
                             debug!("collision: ball and robot {:?}", robot_id);
 
                             ball.pos += ball.vel * tc;
                             let robot_pos = robot.pos + robot.vel * tc;
-                            let w = (ball.pos - robot_pos).angle();
-                            ball.vel = robot.vel + (ball.vel - robot.vel).rotate(2.0 * w - PI);
+                            let dir = ball.pos - robot_pos ;
+                            let vel = ball.vel - robot.vel;
+                            let w = vel.angle() - PI;
+                            ball.vel = robot.vel + Vec2d(vel.norm(), 0.0).rotate(2.0 * dir.angle() - w);
 
                             d_time_ball -= tc;
                         }

@@ -11,8 +11,8 @@ impl Vec2d {
     #[inline] pub fn angle(self) -> f32 { self.1.atan2(self.0) }
     #[inline] pub fn norm(self) -> f32 { self.norm2().sqrt() }
     #[inline] pub fn norm2(self) -> f32 { self.0 * self.0 + self.1 * self.1 }
-    #[inline] pub fn rotate(self, w: f32) -> Vec2d {
-        let (sin, cos) = w.sin_cos();
+    #[inline] pub fn rotate(self, angle: f32) -> Vec2d {
+        let (sin, cos) = angle.sin_cos();
         Vec2d(self.0 * cos - self.1 * sin, self.0 * sin + self.1 * cos)
     }
 }
