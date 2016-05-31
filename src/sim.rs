@@ -213,30 +213,35 @@ impl State {
                     let vby = ball.vel.y;
 
                     // Bhāskara:
-                    let a = (vry - vby) * (vry - vby) + (vrx - vbx) * (vrx - vbx);
+                    let a = (vrx - vbx) * (vrx - vbx) + (vry - vby) * (vry - vby);
                     let b = 2.0 * ((xr - xb) * (vrx - vbx) + (yr - yb) * (vry - vby));
                     let c = (xr - xb) * (xr - xb) + (yr - yb) * (yr - yb) - (rr + rb) * (rr + rb);
+                    let delta = b * b - 4.0 * a * c;
 
-                    if c > 0.0 && a != 0.0 {
-                        //debug!("there may be a collision");
-                        let tc = (-b - (b * b - 4.0 * a * c).sqrt()) * (0.5 / a);
+                    if delta >= 0.0 && a != 0.0 {
+                        let tc = (-b - delta.sqrt()) * 0.5 / a;
                         if tc >= 0.0 && tc <= timestep {
                             use std::f32::consts::PI;
+
+                            debug!("collision: ball and robot {:?}", robot_id);
 
                             let xbc = xb + tc * vbx;
                             let ybc = yb + tc * vby;
                             let xrc = xr + tc * vrx;
                             let yrc = yr + tc * vry;
-                            debug!("there is a collision, with robot {:?} at {},{}_{},{}", robot_id, xrc, yrc, xbc, ybc);
-                            // TODO: dummy collision
                             ball.pos.x = xbc;
                             ball.pos.y = ybc;
+
                             let wc = (ybc - yrc).atan2(xbc - xrc);
-                            let wb = vby.atan2(vbx);
-                            let v = (vbx * vbx + vby * vby).sqrt();
-                            let w = PI + wc - wb;
-                            ball.vel.x = v * w.cos() + 2.0 * vrx;
-                            ball.vel.y = v * w.sin() + 2.0 * vry;
+                            let vdx = vbx - vrx;
+                            let vdy = vby - vry;
+                            let wd = vdy.atan2(vdx);
+                            let v = (vdx * vdx + vdy * vdy).sqrt();
+                            let w = 2.0 * wc - PI + wd;
+                            let (sin, cos) = w.sin_cos();
+                            ball.vel.x = v * cos + vrx;
+                            ball.vel.y = v * sin + vry;
+
                             d_time_ball -= tc;
                         }
                     }
@@ -256,11 +261,11 @@ impl State {
         {
             ball.pos.x += d_time_ball * ball.vel.x;
             ball.pos.y += d_time_ball * ball.vel.y;
-            ball.pos.z += d_time_ball * ball.vel.z;
+            //ball.pos.z += d_time_ball * ball.vel.z;
             let r = 1.0 - BALL_FRICT_LOSS * timestep;
             ball.vel.x *= r;
             ball.vel.y *= r;
-            ball.vel.z *= r;
+            //ball.vel.z *= r;
         }
     }
 }
