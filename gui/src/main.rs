@@ -47,9 +47,14 @@ fn main_loop() -> Result<(), Box<Error>> {
              .long("right")
              .help("Play on the right side."))
         .arg(Arg::with_name("left")
+             .conflicts_with("right")
              .short("l")
              .long("left")
              .help("Play on the left side. (default)"))
+        .arg(Arg::with_name("pause")
+             .short("p")
+             .long("pause")
+             .help("Start the simulator paused."))
         .arg(Arg::with_name("v")
              .short("v")
              .multiple(true)
@@ -121,6 +126,14 @@ fn main_loop() -> Result<(), Box<Error>> {
         left
     };
 
+    let mut is_paused = {
+        let mut pause = false;
+        if matches.is_present("pause") { pause = true; };
+        pause
+    };
+
+    let mut single_shot = false;
+
     let mut ai_cfg = {
         let ai_cmd: Vec<&str> = matches.values_of("AI").unwrap().collect();
         let (ai_program, ai_args) = (ai_cmd[0], &ai_cmd[1..]);
@@ -153,6 +166,7 @@ fn main_loop() -> Result<(), Box<Error>> {
 
     // init the AI
     debug!("Wait for AI to start...");
+    sim_state.update_game(&mut game_state);
     try!(ai.push_init(&game_state));
 
     //drop(try!(rx.recv()));
@@ -189,38 +203,70 @@ fn main_loop() -> Result<(), Box<Error>> {
 
         // polling and handling the events received by the window
         for event in display.poll_events() {
+            use glium::glutin::Event::*;
+            use glium::glutin::ElementState::*;
+            use glium::glutin::VirtualKeyCode;
+
             match event {
-                glutin::Event::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape)) |
-                glutin::Event::Closed => break 'main,
+                KeyboardInput(_, _, Some(VirtualKeyCode::Escape)) |
+                Closed => {
+                    break 'main;
+                }
+                KeyboardInput(Pressed, _, Some(VirtualKeyCode::P)) => {
+                    is_paused = !is_paused;
+                }
+                KeyboardInput(Pressed, _, Some(VirtualKeyCode::RBracket)) => {
+                    single_shot = true;
+                }
+                KeyboardInput(Pressed, _, Some(VirtualKeyCode::R)) => {
+                    // reset ball position and speed
+                    sim_state.ball.pos.x = 0.0;
+                    sim_state.ball.pos.y = 0.0;
+                    sim_state.ball.vel.x = 0.0;
+                    sim_state.ball.vel.y = 0.0;
+                }
                 _ => ()
             }
         }
 
+        const FIXED_TIME_STEP: u64 = 16666667;
+
         let now = clock_ticks::precise_time_ns();
-        accumulator += now - previous_clock;
+        if !is_paused {
+            accumulator += now - previous_clock;
+
+            while accumulator >= FIXED_TIME_STEP {
+                accumulator -= FIXED_TIME_STEP;
+                let now = clock_ticks::precise_time_ns();
+                let delta = now - step_clock;
+                if delta >= 1_000_000_000 {
+                    // expect ~60 steps per second
+                    info!("{:2} steps in {:.03} seconds", step_counter, delta as f32 * 1.0e-9);
+                    step_counter = 0;
+                    step_clock = now;
+                }
+
+                // game step
+                try!(ai.push_state(&game_state));
+                let cmd = try!(ai.read_command(&game_state));
+                sim_state.step(cmd, FIXED_TIME_STEP as f32 * 1.0e-9);
+                sim_state.update_game(&mut game_state);
+                step_counter += 1;
+            }
+        }
         previous_clock = now;
 
-        const FIXED_TIME_STAMP: u64 = 16666667;
-        while accumulator >= FIXED_TIME_STAMP {
-            accumulator -= FIXED_TIME_STAMP;
-            let now = clock_ticks::precise_time_ns();
-            let delta = now - step_clock;
-            if delta >= 1_000_000_000 {
-                // expect ~60 steps per second
-                info!("{:2} steps in {:.03} seconds", step_counter, delta as f32 * 1.0e-9);
-                step_counter = 0;
-                step_clock = now;
-            }
-            step_counter += 1;
-
+        if single_shot {
+            // XXX: is there a simple way to no duplicade this?
             // game step
             try!(ai.push_state(&game_state));
             let cmd = try!(ai.read_command(&game_state));
-            sim_state.step(cmd, FIXED_TIME_STAMP as f32 * 1.0e-9);
+            sim_state.step(cmd, FIXED_TIME_STEP as f32 * 1.0e-9);
             sim_state.update_game(&mut game_state);
+            single_shot = false;
         }
 
-        thread::sleep(Duration::from_millis(((FIXED_TIME_STAMP - accumulator) / 1_000_000) as u64));
+        thread::sleep(Duration::from_millis(((FIXED_TIME_STEP - accumulator) / 1_000_000) as u64));
     }
 
     try!(ai.quit());
