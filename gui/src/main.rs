@@ -133,8 +133,6 @@ fn main_loop() -> Result<(), Box<Error>> {
         pause
     };
 
-    let mut single_shot = false;
-
     let mut ai_cfg = {
         let ai_cmd: Vec<&str> = matches.values_of("AI").unwrap().collect();
         let (ai_program, ai_args) = (ai_cmd[0], &ai_cmd[1..]);
@@ -183,6 +181,8 @@ fn main_loop() -> Result<(), Box<Error>> {
 
     // the main loop
     'main: loop {
+        #[derive(Copy, Clone, PartialEq, Eq)] enum Shot { No, Fwd, Bkw, }
+        let mut single_shot = Shot::No;
 
         // render the game state
         let view = view_matrix(&[0.0, 0.0, 10.0], &[0.0, 0.0, -1.0], &[0.0, 1.0, 0.0]);
@@ -217,7 +217,10 @@ fn main_loop() -> Result<(), Box<Error>> {
                     is_paused = !is_paused;
                 }
                 KeyboardInput(Pressed, _, Some(VirtualKeyCode::RBracket)) => {
-                    single_shot = true;
+                    single_shot = Shot::Fwd;
+                }
+                KeyboardInput(Pressed, _, Some(VirtualKeyCode::LBracket)) => {
+                    single_shot = Shot::Bkw;
                 }
                 KeyboardInput(Pressed, _, Some(VirtualKeyCode::R)) => {
                     // reset ball position and speed
@@ -256,14 +259,15 @@ fn main_loop() -> Result<(), Box<Error>> {
         }
         previous_clock = now;
 
-        if single_shot {
+        if single_shot != Shot::No {
             // XXX: is there a simple way to no duplicade this?
             // game step
             try!(ai.push_state(&game_state));
             let cmd = try!(ai.read_command(&game_state));
-            sim_state.step(cmd, FIXED_TIME_STEP as f32 * 1.0e-9);
+            let mut timestep = FIXED_TIME_STEP as f32 * 1.0e-9;
+            if single_shot == Shot::Bkw { timestep = -timestep; }
+            sim_state.step(cmd, timestep);
             sim_state.update_game(&mut game_state);
-            single_shot = false;
         }
 
         thread::sleep(Duration::from_millis(((FIXED_TIME_STEP - accumulator) / 1_000_000) as u64));
