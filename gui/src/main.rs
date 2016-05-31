@@ -223,6 +223,7 @@ fn main_loop() -> Result<(), Box<Error>> {
                     // reset ball position and speed
                     sim_state.ball.pos = Vec2d(0.0, 0.0);
                     sim_state.ball.vel = Vec2d(0.0, 0.0);
+                    sim_state.update_game(&mut game_state);
                 }
                 _ => ()
             }
