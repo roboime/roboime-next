@@ -43,11 +43,47 @@ impl Id {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct State {
-    pub timestamp: f32,
-    pub ball: Ball,
-    pub robots: BTreeMap<Id, Robot>,
-    pub team_side: TeamSide,
+pub enum Referee {
+    Halt,
+    Stop,
+    Normal,
+    PreKickoff(Color),
+    Kickoff(Color),
+    PrePenalty(Color),
+    Penalty(Color),
+    DirectFree(Color),
+    IndirectFree(Color),
+    Timeout(Color),
+    Goal(Color),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum RefereeState {
+    Idle,
+    PlacingBall(f32),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TeamInfo {
+    name: String,
+    score: u8,
+    goalie: u8,
+    //yellow_card_times: BTreeMap<u8, f32>,
+    //yellow_cards: BTreeMap<u8, u8>,
+    //red_cards: BTreeMap<u8, u8>,
+}
+
+impl Default for TeamInfo {
+    fn default() -> TeamInfo {
+        TeamInfo {
+            name: "".to_string(),
+            score: 0,
+            goalie: 0,
+            //yellow_card_times: BTreeMap::new(),
+            //yellow_cards: BTreeMap::new(),
+            //red_cards: BTreeMap::new(),
+        }
+    }
 }
 
 trait BTreeMapSimExt {
@@ -75,6 +111,19 @@ impl BTreeMapSimExt for BTreeMap<Id, Robot> {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct State {
+    pub timestamp: f32,
+    pub ball: Ball,
+    pub robots: BTreeMap<Id, Robot>,
+    pub last_ball_touch: Option<Id>,
+    pub team_side: TeamSide,
+    pub referee: Referee,
+    pub referee_state: RefereeState,
+    pub info_yellow: TeamInfo,
+    pub info_blue: TeamInfo,
+}
+
 impl State {
     pub fn new(team_side: TeamSide) -> State {
         let mut robots = BTreeMap::new();
@@ -90,7 +139,12 @@ impl State {
             //ball: Ball { pos: Vec2d(0.0, 0.0), vel: Vec2d(0.0, 0.0) },
             ball: Ball { pos: Vec2d(0.0, 0.05), vel: Vec2d(-4.0, 0.0) },
             robots: robots,
+            last_ball_touch: None,
             team_side: team_side,
+            referee: Referee::Normal,
+            referee_state: RefereeState::Idle,
+            info_yellow: Default::default(),
+            info_blue: Default::default(),
         }
     }
 
@@ -124,7 +178,12 @@ impl State {
 
     pub fn step(&mut self, command: game::Command, timestep: f32) {
         self.timestamp += timestep;
-        let &mut State { ref mut ball, ref mut robots, .. } = self;
+        let &mut State {
+            ref mut ball,
+            ref mut robots,
+            ref mut last_ball_touch,
+            ..
+        } = self;
         let mut d_time_ball = timestep;
         let d_time = timestep;
 
@@ -161,6 +220,7 @@ impl State {
                     use std::f32::consts::PI;
 
                     debug!("collision: ball and robot {:?}", robot_id);
+                    *last_ball_touch = Some(*robot_id);
 
                     ball.pos += ball.vel * tc;
                     let robot_pos = robot.pos + robot.vel * tc;
