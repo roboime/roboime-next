@@ -20,28 +20,27 @@ impl CommandAiExt for Command {
 }
 
 /// Builder for a subprocess (child) AI
-pub struct Interface {
+pub struct Builder {
     command: Command,
-    is_yellow: bool,
+    color: Color,
 }
 
-impl Interface {
-    pub fn new(command: Command) -> Interface {
-        Interface {
+impl Builder {
+    pub fn new(command: Command) -> Builder {
+        Builder {
             command: command,
-            is_yellow: true,
+            color: Default::default(),
         }
     }
 
     /// Whether the AI will play with the yellow team, blue otherwise.
-    pub fn is_yellow(&mut self, is_yellow: bool) -> &mut Interface {
-        self.is_yellow = is_yellow;
+    pub fn color(&mut self, color: Color) -> &mut Builder {
+        self.color = color;
         self
     }
 
-    /// Spawn a thread which spawns a child subprocess
-    pub fn spawn(&mut self) -> Result<AiHandle> {
-        debug!("AI is playing as {} with: {:?}", if self.is_yellow { "yellow" } else { "blue" }, self.command);
+    pub fn build(&mut self) -> Result<InitialState> {
+        debug!("AI is playing as {:?} with: {:?}", self.color, self.command);
 
         let mut child = try!(self.command.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn());
 
@@ -52,23 +51,39 @@ impl Interface {
         let child_out = try!(child.stdout.take().ok_or_else(|| Error::new(ErrorKind::Io, "missing stdout from child")));
         let child_err = try!(child.stderr.take().ok_or_else(|| Error::new(ErrorKind::Io, "missing stderr from child")));
 
-        Ok(AiHandle {
-            subproc_handle: child,
-            is_yellow: self.is_yellow,
-            input: BufWriter::new(child_in),
-            output: BufReader::new(child_out).lines(),
+        Ok(InitialState {
+            inner: State {
+                _child: child,
+                color: self.color,
+                input: BufWriter::new(child_in),
+                output: BufReader::new(child_out).lines(),
+            },
             debug: Some(BufReader::new(child_err).lines()),
         })
     }
 }
 
 // TODO: be generic over the used interfaces instead of using BufWriter, Lines, BufReader...
-pub struct AiHandle {
-    subproc_handle: Child,
-    is_yellow: bool,
+struct State {
+    _child: Child,
+    color: Color,
     input: BufWriter<ChildStdin>,
     output: Lines<BufReader<ChildStdout>>,
+}
+
+pub struct InitialState {
+    inner: State,
     pub debug: Option<Lines<BufReader<ChildStderr>>>,
+}
+
+pub struct PushState {
+    inner: State,
+}
+
+pub struct PullState {
+    inner: State,
+    counter: u64,
+    ids: Vec<u8>,
 }
 
 macro_rules! throw_err {
@@ -77,16 +92,18 @@ macro_rules! throw_err {
     }}
 }
 
-impl AiHandle {
-    pub fn push_init(&mut self, state: &game::State) -> Result<()> {
+impl InitialState {
+    pub fn init<'a, S: game::State<'a>>(self, state: &'a S) -> Result<PushState> {
+        let InitialState { mut inner, .. } = self;
+
         let version = 1;
-        try!(writeln!(self.input, "ROBOIME_AI_PROTOCOL {}", version));
+        try!(writeln!(inner.input, "ROBOIME_AI_PROTOCOL {}", version));
 
         // flush to child stdin
-        try!(self.input.flush());
+        try!(inner.input.flush());
 
         {
-            let line = try!(match self.output.next() {
+            let line = try!(match inner.output.next() {
                 Some(thing) => thing,
                 None => throw_err!("expected a line"),
             });
@@ -98,7 +115,7 @@ impl AiHandle {
             }
         }
 
-        let geom = state.get_field_geom();
+        let geom = state.geometry();
 
         // FIELD_LENGTH
         // FIELD_WIDTH
@@ -106,41 +123,30 @@ impl AiHandle {
         // CENTER_CIRCLE_RADIUS
         // DEFENSE_RADIUS
         // DEFENSE_STRETCH
-        // FREE_KICK_FROM_DEFENSE_DIST
-        // PENALTY_SPOT_FROM_FIELD_LINE_DIST
-        // PENALTY_LINE_FROM_SPOT_DIST
-        try!(writeln!(self.input, "{:.03} {:.03} {:.03} {:.03} {:.03} {:.03} {:.03} {:.03} {:.03}",
-            geom.field_length,
-            geom.field_width,
-            geom.goal_width,
-            geom.center_circle_radius,
-            geom.defense_radius,
-            geom.defense_stretch,
-            0.7, //geom.free_kick_from_defense_dist,
-            geom.penalty_spot_from_field_line_dist,
-            geom.penalty_line_from_spot_dist,
+        try!(writeln!(inner.input, "{:.03} {:.03} {:.03} {:.03} {:.03} {:.03}",
+            geom.field_length(),
+            geom.field_width(),
+            geom.goal_width(),
+            geom.center_circle_radius(),
+            geom.defense_radius(),
+            geom.defense_stretch(),
         ));
 
         // flush to child stdin
-        try!(self.input.flush());
+        try!(inner.input.flush());
 
-        Ok(())
+        Ok(PushState { inner: inner })
     }
+}
 
-    pub fn push_state(&mut self, state: &game::State) -> Result<()> {
-        let timestamp = state.get_timestamp();
-        let counter = state.get_counter();
-        //debug!("{:#?}", state);
+impl PushState {
+    pub fn push<'a, S: game::State<'a>>(self, state: &'a S) -> Result<PullState> {
+        let PushState { mut inner } = self;
 
-        let (robots_player, robots_opponent) = {
-            let robots_yellow = state.get_robots_yellow();
-            let robots_blue = state.get_robots_blue();
-            if self.is_yellow {
-                (robots_yellow, robots_blue)
-            } else {
-                (robots_blue, robots_yellow)
-            }
-        };
+        let timestamp = state.timestamp();
+        let counter = state.counter();
+
+        let color = inner.color;
 
         // COUNTER
         // TIMESTAMP
@@ -150,9 +156,7 @@ impl AiHandle {
         // SCORE_OPPONENT
         // GOALIE_ID_PLAYER
         // GOALIE_ID_OPPONENT
-        // ROBOT_COUNT_PLAYER
-        // ROBOT_COUNT_OPPONENT
-        try!(writeln!(self.input, "{} {} {} {} {} {} {} {} {} {}",
+        try!(writeln!(inner.input, "{} {} {} {} {} {} {} {}",
             counter,
             timestamp,
             'N', // TODO: REFEREE_STATE
@@ -161,74 +165,106 @@ impl AiHandle {
             0, //   TODO: SCORE_OPPONENT
             0, //   TODO: GOALIE_ID_PLAYER
             0, //   TODO: GOALIE_ID_OPPONENT
-            robots_player.len(),
-            robots_opponent.len(),
         ));
 
-        let ball = state.get_ball();
+        {
+            let ball = state.ball();
+            let pos = ball.pos();
+            let vel = ball.vel();
 
-        // BALL_X
-        // BALL_Y
-        // BALL_VX
-        // BALL_VY
-        try!(writeln!(self.input, "{:.04} {:.04} {:.04} {:.04}",
-            ball.get_x(),
-            ball.get_y(),
-            ball.get_vx(),
-            ball.get_vy(),
-        ));
-
-        // ROBOT_COUNT_PLAYER x
-        for (robot_id, robot) in robots_player {
-            // ROBOT_ID
-            // ROBOT_X
-            // ROBOT_Y
-            // ROBOT_W
-            // ROBOT_VX
-            // ROBOT_VY
-            // ROBOT_VW
-            try!(writeln!(self.input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
-                robot_id,
-                robot.get_x(),
-                robot.get_y(),
-                robot.get_w(),
-                robot.get_vx(),
-                robot.get_vy(),
-                robot.get_vw(),
+            // BALL_X
+            // BALL_Y
+            // BALL_VX
+            // BALL_VY
+            try!(writeln!(inner.input, "{:.04} {:.04} {:.04} {:.04}",
+                pos.x(),
+                pos.y(),
+                vel.x(),
+                vel.y(),
             ));
         }
 
-        // ROBOT_COUNT_OPPONENT x
-        for (robot_id, robot) in robots_opponent {
-            // ROBOT_ID
-            // ROBOT_X
-            // ROBOT_Y
-            // ROBOT_W
-            // ROBOT_VX
-            // ROBOT_VY
-            // ROBOT_VW
-            try!(writeln!(self.input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
-                robot_id,
-                robot.get_x(),
-                robot.get_y(),
-                robot.get_w(),
-                robot.get_vx(),
-                robot.get_vy(),
-                robot.get_vw(),
-             ));
+        let mut ids;
+        {
+            let robots_player = state.robots_team(color);
+
+            // ROBOT_COUNT_PLAYER
+            let len = robots_player.len();
+            try!(writeln!(inner.input, "{}", len));
+            ids = Vec::with_capacity(len);
+
+            // ROBOT_COUNT_PLAYER x
+            for robot in robots_player {
+                let robot_id = robot.id();
+                let pos = robot.pos();
+                let vel = robot.vel();
+                // ROBOT_ID
+                // ROBOT_X
+                // ROBOT_Y
+                // ROBOT_W
+                // ROBOT_VX
+                // ROBOT_VY
+                // ROBOT_VW
+                try!(writeln!(inner.input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
+                    robot_id.id(),
+                    pos.x(),
+                    pos.y(),
+                    robot.w(),
+                    vel.x(),
+                    vel.y(),
+                    robot.vw(),
+                ));
+                ids.push(robot_id.id());
+            }
+        }
+
+        {
+            let robots_opponent = state.robots_team(!color);
+
+            // ROBOT_COUNT_OPPONENT
+            try!(writeln!(inner.input, "{}", robots_opponent.len()));
+
+            // ROBOT_COUNT_OPPONENT x
+            for robot in robots_opponent {
+                let robot_id = robot.id();
+                let pos = robot.pos();
+                let vel = robot.vel();
+                // ROBOT_ID
+                // ROBOT_X
+                // ROBOT_Y
+                // ROBOT_W
+                // ROBOT_VX
+                // ROBOT_VY
+                // ROBOT_VW
+                try!(writeln!(inner.input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
+                    robot_id.id(),
+                    pos.x(),
+                    pos.y(),
+                    robot.w(),
+                    vel.x(),
+                    vel.y(),
+                    robot.vw(),
+                ));
+            }
         }
 
         // flush to child stdin
-        try!(self.input.flush());
+        try!(inner.input.flush());
 
-        Ok(())
+        Ok(PullState {
+            inner: inner,
+            counter: counter,
+            ids: ids,
+        })
     }
+}
 
-    pub fn read_command(&mut self, state: &game::State) -> Result<game::Command> {
-        let counter = state.get_counter();
+impl PullState {
+    pub fn pull(self) -> Result<(PushState, game::Command)> {
+        let PullState { mut inner, counter, ids } = self;
 
         {
-            let line = try!(match self.output.next() {
+            let line = try!(match inner.output.next() {
                 Some(thing) => thing,
                 None => throw_err!("expected a line"),
             });
@@ -239,21 +275,14 @@ impl AiHandle {
             }
         }
 
-        let robots_player = if self.is_yellow {
-            state.get_robots_yellow()
-        } else {
-            state.get_robots_blue()
-        };
-
-        let mut command = game::Command::new(self.is_yellow);
+        let mut command = game::Command::new(inner.color);
         command.robots.clear();
         {
             let mut robot_commands = &mut command.robots;
 
             // ROBOT_COUNT_PLAYER x
-            for (robot_id, _) in robots_player {
-
-                let line = try!(match self.output.next() {
+            for robot_id in ids {
+                let line = try!(match inner.output.next() {
                     Some(thing) => thing,
                     None => throw_err!("expected a line"),
                 });
@@ -277,7 +306,7 @@ impl AiHandle {
                 let chip_force: f32 = try!(vars[4].parse());
                 let dribble:   bool = try!(vars[5].parse::<i32>()) == 1;
 
-                robot_commands.insert(*robot_id, game::RobotCommand {
+                robot_commands.insert(robot_id, game::RobotCommand {
                     v_tangent: v_tangent,
                     v_normal: v_normal,
                     v_angular: v_angular,
@@ -294,32 +323,6 @@ impl AiHandle {
             }
         }
 
-        Ok(command)
-    }
-}
-
-impl InterfaceHandle for AiHandle {
-    fn join(self) -> Result<()> {
-        let AiHandle {
-            subproc_handle: mut child,
-            //debug_handle: debug_thread,
-            //child_handle: child_thread,
-            ..
-        } = self;
-        //let child_result = try!(child_thread.join());
-        //let debug_result = try!(debug_thread.join());
-        let exit_status = try!(child.wait());
-        //try!(child_result);
-        //try!(debug_result);
-        if exit_status.success() {
-            Ok(())
-        } else {
-            Err(Error::new(ErrorKind::Io, "child AI exited with failure"))
-        }
-    }
-
-    fn quit(&mut self) -> Result<()> {
-        try!(self.subproc_handle.kill());
-        Ok(())
+        Ok((PushState { inner: inner }, command))
     }
 }

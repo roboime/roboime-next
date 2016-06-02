@@ -1,11 +1,43 @@
+//! A built-in simulator, with referee support.
+//!
+//! ```no_run
+//! use std::process::Command;
+//! use roboime_next::prelude::*;
+//! use roboime_next::{ai, sim};
+//!
+//! let mut sim = sim::Builder::new()
+//!     .initial_formation(true)
+//!     .build();
+//!
+//! let ai = ai::Builder::new(Command::new("./demo-ai"))
+//!     .color(Yellow)
+//!     .build().unwrap();
+//!
+//! let mut ai = ai.init(&sim).unwrap();
+//!
+//! loop {
+//!     let ai2 = ai.push(&sim).unwrap();
+//!     let (ai3, cmd) = ai2.pull().unwrap();
+//!     sim.step(cmd, 0.016_666_667);
+//!     ai = ai3;
+//!     // sleep maybe
+//! }
+//! ```
 use std::collections::BTreeMap;
+use std::collections::btree_map;
 use ::prelude::*;
-use ::base::*;
 use ::game;
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct Geometry {
+}
+
 const FIELD_LENGTH: f32    = 9.010;
+const FIELD_WIDTH: f32     = 6.010;
 const CENTER_DIAMETER: f32 = 1.000;
 const DEFENSE_RADIUS: f32  = 1.000;
+const DEFENSE_STRETCH: f32 = 0.500;
+const GOAL_WIDTH: f32      = 1.000;
 const ROBOT_RADIUS: f32    = 0.090;
 const ROBOT_MOUTH: f32     = 0.500;
 const BALL_RADIUS: f32     = 0.023;
@@ -32,14 +64,6 @@ impl Robot {
     pub fn new() -> Robot {
         Robot { pos: Vec2d(0.0, 0.0), w: 0.0, vel: Vec2d(0.0, 0.0), vw: 0.0 }
     }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Id(pub Color, pub u8);
-
-impl Id {
-    pub fn color(self) -> Color { self.0 }
-    pub fn id(self) -> u8 { self.1 }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -111,8 +135,63 @@ impl BTreeMapSimExt for BTreeMap<Id, Robot> {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Builder {
+    team_side: TeamSide,
+    initial_formation: bool,
+}
+
+impl Builder {
+    pub fn new() -> Builder {
+        Builder {
+            team_side: Default::default(),
+            initial_formation: false,
+        }
+    }
+
+    pub fn team_side(&mut self, team_side: TeamSide) -> &mut Builder {
+        self.team_side = team_side;
+        self
+    }
+
+    pub fn initial_formation(&mut self, initial_formation: bool) -> &mut Builder {
+        self.initial_formation = initial_formation;
+        self
+    }
+
+    pub fn build(&self) -> State {
+        let mut robots = BTreeMap::new();
+        if self.initial_formation {
+            if self.team_side.yellow_is_left() {
+                robots.initial_formation(6, Yellow, Left);
+                robots.initial_formation(6, Blue, Right);
+            } else {
+                robots.initial_formation(6, Yellow, Right);
+                robots.initial_formation(6, Blue, Left);
+            }
+        }
+        State {
+            initial_timestamp: 0.0, // TODO
+            counter: 0,
+            timestamp: 0.0,
+            //ball: Ball { pos: Vec2d(0.0, 0.0), vel: Vec2d(0.0, 0.0) },
+            ball: Ball { pos: Vec2d(0.0, 0.05), vel: Vec2d(-4.0, 0.0) },
+            robots: robots,
+            last_ball_touch: None,
+            team_side: self.team_side,
+            referee: Referee::Normal,
+            referee_state: RefereeState::Idle,
+            info_yellow: Default::default(),
+            info_blue: Default::default(),
+            geometry: Geometry {}
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct State {
+    pub initial_timestamp: f64,
+    pub counter: u64,
     pub timestamp: f32,
     pub ball: Ball,
     pub robots: BTreeMap<Id, Robot>,
@@ -122,61 +201,12 @@ pub struct State {
     pub referee_state: RefereeState,
     pub info_yellow: TeamInfo,
     pub info_blue: TeamInfo,
+    pub geometry: Geometry,
 }
 
 impl State {
-    pub fn new(team_side: TeamSide) -> State {
-        let mut robots = BTreeMap::new();
-        if team_side.yellow_is_left() {
-            robots.initial_formation(6, Yellow, Left);
-            robots.initial_formation(6, Blue, Right);
-        } else {
-            robots.initial_formation(6, Yellow, Right);
-            robots.initial_formation(6, Blue, Left);
-        }
-        State {
-            timestamp: 0.0,
-            //ball: Ball { pos: Vec2d(0.0, 0.0), vel: Vec2d(0.0, 0.0) },
-            ball: Ball { pos: Vec2d(0.0, 0.05), vel: Vec2d(-4.0, 0.0) },
-            robots: robots,
-            last_ball_touch: None,
-            team_side: team_side,
-            referee: Referee::Normal,
-            referee_state: RefereeState::Idle,
-            info_yellow: Default::default(),
-            info_blue: Default::default(),
-        }
-    }
-
-    pub fn update_game(&self, game_state: &mut game::State) {
-        // ball
-        {
-            let game_ball = game_state.get_ball_mut();
-            game_ball.set_x(self.ball.pos.0);
-            game_ball.set_y(self.ball.pos.1);
-            //game_ball.set_z(self.ball.pos.z);
-            game_ball.set_vx(self.ball.vel.0);
-            game_ball.set_vy(self.ball.vel.1);
-            //game_ball.set_vz(self.ball.vel.z);
-        }
-        // robots
-        for (id, ref robot) in self.robots.iter() {
-            let (robot_id, ref mut robots) = match id {
-                &Id(Blue, i)   => (i, game_state.get_robots_blue_mut()),
-                &Id(Yellow, i) => (i, game_state.get_robots_yellow_mut()),
-            };
-            let game_robot = robots.entry(robot_id).or_insert(game::Robot::new(robot_id));
-            game_robot.set_x(robot.pos.0);
-            game_robot.set_y(robot.pos.1);
-            game_robot.set_w(robot.w);
-            game_robot.set_vx(robot.vel.0);
-            game_robot.set_vy(robot.vel.1);
-            game_robot.set_vw(robot.vw);
-        }
-        game_state.inc_counter();
-    }
-
     pub fn step(&mut self, command: game::Command, timestep: f32) {
+        self.counter += 1;
         self.timestamp += timestep;
         let &mut State {
             ref mut ball,
@@ -190,7 +220,7 @@ impl State {
         // XXX: overly simplified physics ahead
         for (robot_id, robot) in robots.iter_mut() {
             let robot_command = {
-                if robot_id.color() == Color::yellow(command.is_yellow) {
+                if robot_id.color() == command.color {
                     command.robots.get(&robot_id.id())
                 } else {
                     None
@@ -258,4 +288,93 @@ impl State {
         ball.pos += ball.vel * d_time_ball ;
         ball.vel *= 1.0 - BALL_FRICT_LOSS * timestep;
     }
+}
+
+impl<'a> game::State<'a> for State {
+    type Ball = &'a Ball;
+    type Robot = (Id, &'a Robot);
+    type Robots = Iter<'a>;
+    type Geometry = &'a Geometry;
+
+    fn counter(&self) -> u64 {
+        self.counter
+    }
+
+    fn timestamp(&self) -> f64 {
+        self.initial_timestamp + self.timestamp as f64
+    }
+
+    fn ball(&'a self) -> Self::Ball {
+        &self.ball
+    }
+
+    fn robot(&'a self, id: Id) -> Option<Self::Robot> {
+        self.robots.get(&id).map(|r| (id, r))
+    }
+
+    fn robots(&'a self) -> Self::Robots {
+        Iter {
+            filter: None,
+            robots: self.robots.iter()
+        }
+    }
+
+    fn robots_team(&'a self, color: Color) -> Self::Robots {
+        Iter {
+            filter: Some(color),
+            robots: self.robots.iter()
+        }
+    }
+
+    fn geometry(&'a self) -> Self::Geometry {
+        &self.geometry
+    }
+}
+
+pub struct Iter<'a> {
+    filter: Option<Color>,
+    robots: btree_map::Iter<'a, Id, Robot>,
+}
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = (Id, &'a Robot);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        (match self.filter {
+            None => self.robots.next(),
+            Some(color) => self.robots.find(|&(&id, _)| id.color() == color),
+        }).map(|(id, robot)| (*id, robot))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = match self.filter {
+            None => self.robots.len(),
+            Some(color) => self.robots.clone().filter(|&(&id, _)| id.color() == color).count(),
+        };
+        (len, Some(len))
+    }
+}
+
+impl<'a> ExactSizeIterator for Iter<'a> {}
+
+impl<'a> game::Ball for &'a Ball {
+    fn pos(&self) -> Vec2d { self.pos }
+    fn vel(&self) -> Vec2d { self.vel }
+}
+
+impl<'a> game::Robot for (Id, &'a Robot) {
+    fn id(&self) -> Id { self.0 }
+    fn pos(&self) -> Vec2d { self.1.pos }
+    fn vel(&self) -> Vec2d { self.1.vel }
+    fn w(&self) -> f32 { self.1.w }
+    fn vw(&self) -> f32 { self.1.vw }
+}
+
+impl<'a> game::Geometry for &'a Geometry {
+    fn field_length(&self) -> f32 { FIELD_LENGTH }
+    fn field_width(&self) -> f32 { FIELD_WIDTH }
+    fn goal_width(&self) -> f32 { GOAL_WIDTH }
+    fn center_circle_radius(&self) -> f32 { CENTER_DIAMETER / 2.0 }
+    fn defense_radius(&self) -> f32 { DEFENSE_RADIUS }
+    fn defense_stretch(&self) -> f32 { DEFENSE_STRETCH }
 }

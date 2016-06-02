@@ -1,64 +1,14 @@
+use std::slice;
 use std::net::{IpAddr, SocketAddr, UdpSocket, Ipv4Addr, SocketAddrV4, ToSocketAddrs};
 use net2::{UdpBuilder, UdpSocketExt};
 use protocol::{Message, parse_from_bytes};
 use protocol::messages_robocup_ssl_wrapper_legacy::SSL_WrapperPacket;
-use protocol::messages_robocup_ssl_detection::SSL_DetectionFrame;
-use protocol::messages_robocup_ssl_geometry_legacy::SSL_GeometryData;
+use protocol::messages_robocup_ssl_detection::{SSL_DetectionFrame, SSL_DetectionRobot, SSL_DetectionBall};
+use protocol::messages_robocup_ssl_geometry_legacy::SSL_GeometryFieldSize;
 use protocol::grSim_Packet::grSim_Packet;
 use protocol::grSim_Commands::grSim_Robot_Command;
 use ::prelude::*;
 use ::{game, Result, Error, ErrorKind};
-
-impl game::State {
-    fn update_from_ssl_geometry(&mut self, geometry: &SSL_GeometryData) {
-        let geometry = geometry.get_field();
-        let mut geom = self.get_field_geom_mut();
-
-        fn m(x: i32) -> f32 { (x as f32) / 1000.0 }
-
-        geom.field_length = m(geometry.get_field_length());
-        geom.field_width = m(geometry.get_field_width());
-        geom.goal_width = m(geometry.get_goal_width());
-        geom.center_circle_radius = m(geometry.get_center_circle_radius());
-        geom.defense_radius = m(geometry.get_defense_radius());
-        geom.defense_stretch = m(geometry.get_defense_stretch());
-        //geom.free_kick_from_defense_dist = m(geometry.get_free_kick_from_defense_dist());
-        geom.penalty_spot_from_field_line_dist = m(geometry.get_penalty_spot_from_field_line_dist());
-        geom.penalty_line_from_spot_dist = m(geometry.get_penalty_line_from_spot_dist());
-    }
-
-    fn update_from_ssl_detection(&mut self, detection: &SSL_DetectionFrame) {
-        let timestamp = detection.get_t_capture();
-        let dt = timestamp - self.get_timestamp();
-        self.set_timestamp(timestamp);
-
-        fn m(x: f32) -> f32 { x / 1000.0 }
-
-        // TODO: select ball
-        for ball in detection.get_balls() {
-            let ball_state = self.get_ball_mut();
-            ball_state.update_position(m(ball.get_x()), m(ball.get_y()), dt);
-        }
-
-        // TODO: remove missing robots
-        {
-            let blue_robots = self.get_robots_blue_mut();
-            for robot in detection.get_robots_blue() {
-                let id = robot.get_robot_id() as u8;
-                let robot_state = blue_robots.entry(id).or_insert_with(|| game::Robot::new(id));
-                robot_state.update_pose(m(robot.get_x()), m(robot.get_y()), robot.get_orientation(), dt);
-            }
-        }
-        {
-            let yellow_robots = self.get_robots_yellow_mut();
-            for robot in detection.get_robots_yellow() {
-                let id = robot.get_robot_id() as u8;
-                let robot_state = yellow_robots.entry(id).or_insert_with(|| game::Robot::new(id));
-                robot_state.update_pose(m(robot.get_x()), m(robot.get_y()), robot.get_orientation(), dt);
-            }
-        }
-    }
-}
 
 trait UdpSocketExt2 {
     fn recv_ssl_packet(&self, buf: &mut [u8]) -> Result<SSL_WrapperPacket>;
@@ -90,17 +40,16 @@ impl<T: ToSocketAddrs> ToSocketAddrsExt for T {}
 ///
 /// __NOTE:__ currently it will any interface, a future improvement should allow setting which
 /// interface to bind on.
-///
 #[derive(Debug, Clone)]
-pub struct Interface {
+pub struct Builder {
     vision_addr: SocketAddr,
     grsim_addr: SocketAddr,
 }
 
-impl Interface {
+impl Builder {
     /// Instantiate with default values.
-    pub fn new() -> Interface {
-        Interface {
+    pub fn new() -> Builder {
+        Builder {
             vision_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 5, 23, 2)), 10002),
             grsim_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 20011),
         }
@@ -108,13 +57,13 @@ impl Interface {
 
     /// Set the vision address and port used on the simulator, the address is used for
     /// joining the multicast and the port for binding that socket.
-    pub fn vision_addr<A: ToSocketAddrs>(&mut self, addrs: A) -> Result<&mut Interface> {
+    pub fn vision_addr<A: ToSocketAddrs>(&mut self, addrs: A) -> Result<&mut Builder> {
         self.vision_addr = try!(addrs.to_single_socket_addr());
         Ok(self)
     }
 
     /// Set the vision port used on the simulator used for binding the socket.
-    pub fn vision_port(&mut self, port: u16) -> &mut Interface {
+    pub fn vision_port(&mut self, port: u16) -> &mut Builder {
         // TODO: use self.vision_addr.set_port when sockaddr_setters is stable
         self.vision_addr = SocketAddr::new(self.vision_addr.ip(), port);
         self
@@ -122,20 +71,20 @@ impl Interface {
 
     /// Set the grsim address and port used on the simulator, this is used when sending commands to
     /// grSim.
-    pub fn grsim_addr<A: ToSocketAddrs>(&mut self, addrs: A) -> Result<&mut Interface> {
+    pub fn grsim_addr<A: ToSocketAddrs>(&mut self, addrs: A) -> Result<&mut Builder> {
         self.grsim_addr = try!(addrs.to_single_socket_addr());
         Ok(self)
     }
 
     /// Set the grsim address to send commands to.  The port is preserved (default if not set).
-    pub fn grsim_ip(&mut self, ip: IpAddr) -> &mut Interface {
+    pub fn grsim_ip(&mut self, ip: IpAddr) -> &mut Builder {
         // TODO: use self.grsim_addr.set_ip when sockaddr_setters is stable
         self.grsim_addr = SocketAddr::new(ip, self.grsim_addr.port());
         self
     }
 
     /// Spawn the necessary threads and start listening to changes and ppushing commands.
-    pub fn spawn(&self) -> Result<GrSimHandle> {
+    pub fn build(&self) -> Result<State> {
         let any_addr = Ipv4Addr::new(0, 0, 0, 0);
         let vision_addr = self.vision_addr.clone();
         let vision_bind = SocketAddrV4::new(any_addr, vision_addr.port());
@@ -156,49 +105,59 @@ impl Interface {
 
         info!("receiving from {}, sending to {}", vision_addr, grsim_addr);
 
-        Ok(GrSimHandle {
+        Ok(State {
             recv_socket: recv_socket,
             send_socket: send_socket,
             grsim_addr: grsim_addr,
             buf: [0; 1024],
+            geometry: SSL_GeometryFieldSize::new(),
+            detection: SSL_DetectionFrame::new(),
+            counter: 0,
+            _data: PersistentData {},
         })
     }
 }
 
-pub struct GrSimHandle {
+struct PersistentData {
+}
+
+pub struct State {
     recv_socket: UdpSocket,
     send_socket: UdpSocket,
     grsim_addr: SocketAddr,
     // 1KB buffer, packets are usually not greater than ~200 bytes
     buf: [u8; 1024],
+    geometry: SSL_GeometryFieldSize,
+    detection: SSL_DetectionFrame,
+    counter: u64,
+    _data: PersistentData,
 }
 
-impl GrSimHandle {
+impl State {
     /// Returns Ok(true) if there was a geometry update.
-    pub fn recv_to_state(&mut self, state: &mut game::State) -> Result<()> {
-        let &mut GrSimHandle { ref mut buf, ref recv_socket, ..  } = self;
+    pub fn recv_state(&mut self) -> Result<()> {
+        let &mut State { ref mut buf, ref recv_socket, ..  } = self;
 
         let packet = try!(recv_socket.recv_ssl_packet(buf));
 
         if packet.has_geometry() {
-            state.update_from_ssl_geometry(packet.get_geometry());
+            self.geometry = packet.get_geometry().get_field().clone();
         }
         if packet.has_detection() {
-            state.update_from_ssl_detection(packet.get_detection());
-            state.inc_counter();
+            self.detection = packet.get_detection().clone();
+            self.counter += 1;
         }
 
         Ok(())
     }
 
-    pub fn wait_for_geom(&mut self, state: &mut game::State) -> Result<()> {
-        let &mut GrSimHandle { ref mut buf, ref recv_socket, ..  } = self;
+    pub fn wait_for_geom(&mut self) -> Result<()> {
+        let &mut State { ref mut buf, ref recv_socket, ..  } = self;
 
         loop {
             let packet = try!(recv_socket.recv_ssl_packet(buf));
-
             if packet.has_geometry() {
-                state.update_from_ssl_geometry(packet.get_geometry());
+                self.geometry = packet.get_geometry().get_field().clone();
                 break;
             }
         }
@@ -207,13 +166,13 @@ impl GrSimHandle {
     }
 
     pub fn send_command(&mut self, command: game::Command) -> Result<()> {
-        let &mut GrSimHandle { ref mut send_socket, ref grsim_addr, ..  } = self;
+        let &mut State { ref mut send_socket, ref grsim_addr, ..  } = self;
 
         let mut packet = grSim_Packet::new();
         {
             let commands = packet.mut_commands();
             commands.set_timestamp(0.0); // TODO/XXX/FIXME
-            commands.set_isteamyellow(command.is_yellow);
+            commands.set_isteamyellow(command.color.is_yellow());
             let robot_commands = commands.mut_robot_commands();
 
             for (robot_id, robot_command) in command.robots {
@@ -250,8 +209,118 @@ impl GrSimHandle {
     }
 }
 
-impl InterfaceHandle for GrSimHandle {
-    fn join(self) -> Result<()> {
-        Ok(())
+impl<'a> game::State<'a> for State {
+    type Ball = &'a SSL_DetectionBall;
+    type Robot = (Color, &'a SSL_DetectionRobot);
+    type Robots = Iter<'a>;
+    type Geometry = &'a SSL_GeometryFieldSize;
+
+    fn counter(&self) -> u64 {
+        self.counter
     }
+
+    fn timestamp(&self) -> f64 {
+        self.detection.get_t_capture()
+    }
+
+    fn ball(&'a self) -> Self::Ball {
+        self.detection.get_balls().get(0).unwrap()
+    }
+
+    fn robot(&'a self, id: Id) -> Option<Self::Robot> {
+        match id {
+            Id(Blue, i) => self.detection.get_robots_blue().get(i as usize).map(|r| (Blue, r)),
+            Id(Yellow, i) => self.detection.get_robots_yellow().get(i as usize).map(|r| (Yellow, r)),
+        }
+    }
+
+    fn robots(&'a self) -> Self::Robots {
+        Iter {
+            blue_robots: self.detection.get_robots_blue().iter(),
+            yellow_robots: self.detection.get_robots_yellow().iter(),
+            state: IterState::Both,
+        }
+    }
+
+    fn robots_team(&'a self, color: Color) -> Self::Robots {
+        match color {
+            Blue => Iter {
+                blue_robots: self.detection.get_robots_blue().iter(),
+                yellow_robots: [].iter(),
+                state: IterState::Blue,
+            },
+            Yellow => Iter {
+                blue_robots: [].iter(),
+                yellow_robots: self.detection.get_robots_yellow().iter(),
+                state: IterState::Yellow,
+            },
+        }
+    }
+
+    fn geometry(&'a self) -> Self::Geometry {
+        &self.geometry
+    }
+}
+
+enum IterState {
+    Both,
+    Blue,
+    Yellow,
+}
+
+pub struct Iter<'a> {
+    blue_robots: slice::Iter<'a, SSL_DetectionRobot>,
+    yellow_robots: slice::Iter<'a, SSL_DetectionRobot>,
+    state: IterState,
+}
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = (Color, &'a SSL_DetectionRobot);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.state {
+            IterState::Both => match self.blue_robots.next() {
+                e @ Some(..) => e.map(|r| (Blue, r)),
+                None => {
+                    self.state = IterState::Yellow;
+                    self.yellow_robots.next().map(|r| (Yellow, r))
+                }
+            },
+            IterState::Blue => self.blue_robots.next().map(|r| (Blue, r)),
+            IterState::Yellow => self.yellow_robots.next().map(|r| (Yellow, r)),
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = match self.state {
+            IterState::Both => self.blue_robots.len() + self.yellow_robots.len(),
+            IterState::Blue => self.blue_robots.len(),
+            IterState::Yellow => self.yellow_robots.len(),
+        };
+        (len, Some(len))
+    }
+}
+
+impl<'a> ExactSizeIterator for Iter<'a> {}
+
+impl<'a> game::Ball for &'a SSL_DetectionBall {
+    fn pos(&self) -> Vec2d { Vec2d(self.get_x() / 1000.0, self.get_y() / 1000.0) }
+    fn vel(&self) -> Vec2d { Vec2d(0.0, 0.0) } // TODO
+}
+
+impl<'a> game::Robot for (Color, &'a SSL_DetectionRobot) {
+    fn id(&self) -> Id { Id(self.0, self.1.get_robot_id() as u8) }
+    fn pos(&self) -> Vec2d { Vec2d(self.1.get_x() / 1000.0, self.1.get_y() / 1000.0) }
+    fn vel(&self) -> Vec2d { Vec2d(0.0, 0.0) } // TODO
+    fn w(&self) -> f32 { self.1.get_orientation() }
+    fn vw(&self) -> f32 { 0.0 } // TODO
+}
+
+impl<'a> game::Geometry for &'a SSL_GeometryFieldSize {
+    fn field_length(&self) -> f32 { self.get_field_length() as f32 / 1000.0 }
+    fn field_width(&self) -> f32 { self.get_field_width() as f32 / 1000.0 }
+    fn goal_width(&self) -> f32 { self.get_goal_width() as f32 / 1000.0 }
+    fn center_circle_radius(&self) -> f32 { self.get_center_circle_radius() as f32 / 1000.0 }
+    fn defense_radius(&self) -> f32 { self.get_defense_radius() as f32 / 1000.0 }
+    fn defense_stretch(&self) -> f32 { self.get_defense_stretch() as f32 / 1000.0 }
 }

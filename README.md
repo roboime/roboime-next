@@ -78,9 +78,6 @@ __Line 2__ field data:
 - `CENTER_CIRCLE_RADIUS`: a float.
 - `DEFENSE RADIUS`: a float.
 - `DEFENSE STRETCH`: a float.
-- `FREE_KICK_FROM_DEFENSE_DIST`: a float.
-- `PENALTY_SPOT_FROM_FIELD_LINE_DIST`: a float.
-- `PENALTY_LINE_FROM_SPOT_DIST`: a float.
 
 ### Initialization output
 
@@ -104,8 +101,6 @@ __Line 1__ general play data:
 - `SCORE_OPPONENT`: an integrer, the opponent team score __(not implemented yet currently always `0`)__
 - `GOALIE_ID_PLAYER`: an integrer, the id of your goalkeeper (the robot allowed inside the defense area)
 - `GOALIE_ID_OPPONENT`: an integrer, the id of the opponent team goalkeeper
-- `ROBOT_COUNT_PLAYER`: an integrer, number of robots in your team
-- `ROBOT_COUNT_OPPONENT`: an integrer, number of robots in the opponent team
 
 __Line 2__ ball status data:
 
@@ -113,6 +108,9 @@ __Line 2__ ball status data:
 - `BALL_Y`: a float, ball y position
 - `BALL_VX`: a float, ball x velocity
 - `BALL_VY`: a float, ball y velocity
+
+__Next line__:
+- `ROBOT_COUNT_PLAYER`: an integrer, number of robots in your team
 
 __Next `ROBOT_COUNT_PLAYER` lines__, robots data:
 
@@ -123,6 +121,9 @@ __Next `ROBOT_COUNT_PLAYER` lines__, robots data:
 - `ROBOT_VX`: a float, robot x velocity
 - `ROBOT_VY`: a float, robot y velocity
 - `ROBOT_VW`: a float, robot angular velocity
+
+__Next line__:
+- `ROBOT_COUNT_OPPONENT`: an integrer, number of robots in the opponent team
 
 __Next `ROBOT_COUNT_OPPONENT` lines__, robots data:
 
@@ -167,6 +168,21 @@ The robot diameter is always `0.180`, we'll call it `ROBOT_DIAM` here.
 - `||ROBOT_VX, ROBOT_VY||, ||BALL_VX, BALL_VY|| <= 20.0`
 - `|ROBOT_VW| <= 10.0 * π`
 
+GUI
+---
+
+There is an experimental __GUI__: `roboime-next-gui`.
+
+Main objectives include:
+
+- 3D visualization of the game state
+- Configure child process AIs for both teams
+- Simulate the game state, including the referee
+- Provide an stderr based API for the AI to draw on top of the game state
+
+### Screenshots
+
+![](screenshot-1.png)
 
 License
 -------

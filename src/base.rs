@@ -1,5 +1,6 @@
 pub use self::Side::{Left, Right};
 pub use self::Color::{Yellow, Blue};
+pub use self::TeamSide::{YellowIsLeft, BlueIsLeft};
 
 use std::ops::*;
 
@@ -7,6 +8,8 @@ use std::ops::*;
 pub struct Vec2d(pub f32, pub f32);
 
 impl Vec2d {
+    #[inline] pub fn x(&self) -> f32 { self.0 }
+    #[inline] pub fn y(&self) -> f32 { self.1 }
     #[inline] pub fn set(&mut self, x: f32, y: f32) { self.0 = x; self.1 = y; }
     #[inline] pub fn angle(self) -> f32 { self.1.atan2(self.0) }
     #[inline] pub fn norm(self) -> f32 { self.norm2().sqrt() }
@@ -110,6 +113,21 @@ impl Color {
     #[inline] pub fn blue(is_blue: bool)     -> Color { if is_blue   { Blue   } else { Yellow } }
 }
 
+impl Default for Color {
+    fn default() -> Self { Yellow }
+}
+
+impl Not for Color {
+    type Output = Color;
+    #[inline]
+    fn not(self) -> Color {
+        match self {
+            Yellow => Blue,
+            Blue => Yellow,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Side {
     Left,
@@ -124,16 +142,50 @@ impl Side {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TeamSide(pub Color, pub Side);
+pub enum TeamSide {
+    YellowIsLeft,
+    BlueIsLeft,
+}
+
+impl Default for TeamSide {
+    fn default() -> Self { YellowIsLeft }
+}
 
 impl TeamSide {
-    #[inline]
-    pub fn yellow_is_left(&self) -> bool {
-        match *self {
-            TeamSide(Yellow, Left)  => true,
-            TeamSide(Yellow, Right) => false,
-            TeamSide(Blue,   Right) => true,
-            TeamSide(Blue,   Left)  => false,
+    #[inline] pub fn new(color: Color, side: Side) -> TeamSide {
+        match (color, side) {
+            (Blue,   Left)  => BlueIsLeft,
+            (Blue,   Right) => YellowIsLeft,
+            (Yellow, Left)  => YellowIsLeft,
+            (Yellow, Right) => BlueIsLeft,
         }
     }
+    #[inline] pub fn blue_is_left(self)    -> bool { self == BlueIsLeft }
+    #[inline] pub fn blue_is_right(self)   -> bool { self == YellowIsLeft }
+    #[inline] pub fn yellow_is_left(self)  -> bool { self == YellowIsLeft }
+    #[inline] pub fn yellow_is_right(self) -> bool { self == BlueIsLeft }
+    #[inline] pub fn side(self, color: Color) -> Side {
+        match (self, color) {
+            (BlueIsLeft,   Blue)   => Left,
+            (BlueIsLeft,   Yellow) => Right,
+            (YellowIsLeft, Blue)   => Right,
+            (YellowIsLeft, Yellow) => Left,
+        }
+    }
+    #[inline] pub fn color(self, side: Side) -> Color {
+        match (self, side) {
+            (BlueIsLeft,   Left)  => Blue,
+            (BlueIsLeft,   Right) => Yellow,
+            (YellowIsLeft, Right) => Blue,
+            (YellowIsLeft, Left)  => Yellow,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Id(pub Color, pub u8);
+
+impl Id {
+    pub fn color(self) -> Color { self.0 }
+    pub fn id(self) -> u8 { self.1 }
 }

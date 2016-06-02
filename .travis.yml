@@ -15,12 +15,10 @@ before_script:
 - pip install 'travis-cargo<0.2' --user && export PATH=$HOME/.local/bin:$PATH
 script:
 - travis-cargo build
-- cargo build --verbose --manifest-path cli/Cargo.toml
-- cargo build --verbose --manifest-path gui/Cargo.toml
 - travis-cargo test
 - travis-cargo bench
 - travis-cargo --only stable doc
-- cargo run -q --release --manifest-path cli/Cargo.toml -- --help
+- cargo run -q --release --bin roboime-next-cli -- --help
 after_success:
 - travis-cargo --only stable doc-upload
 - travis-cargo coveralls --no-sudo --verify --exclude-pattern="protocol/"

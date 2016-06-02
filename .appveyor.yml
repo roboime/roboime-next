@@ -17,10 +17,8 @@ install:
 - cargo -vV
 build_script:
 - cargo build --verbose
-- cargo build --verbose --manifest-path cli/Cargo.toml
-- cargo build --verbose --manifest-path gui/Cargo.toml
 test_script:
 - cargo test --verbose
 - cargo bench --verbose
 - cargo doc --verbose
-- cargo run -q --release --manifest-path cli/Cargo.toml -- --help
+- cargo run -q --release --bin roboime-next-cli -- --help
