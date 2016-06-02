@@ -257,8 +257,12 @@ impl State {
                     let vw = vel.angle() - PI;
                     ball.vel = robot.vel + Vec2d(vel.norm(), 0.0).rotate(2.0 * cw - vw);
 
+                    fn angle_abs_sub(a: f32, b: f32) -> f32 {
+                        (((a % PI) - (b % PI)) % PI).abs()
+                    }
+
                     let rw = robot.w + robot.vw * tc;
-                    if rw.abs_sub(cw) < ROBOT_MOUTH {
+                    if angle_abs_sub(rw, cw) < ROBOT_MOUTH / 2.0 {
                         if let Some(robot_command) = robot_command {
                             use ::game::RobotAction::*;
                             if let Kick(force) = robot_command.action {
