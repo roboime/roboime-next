@@ -114,7 +114,7 @@ impl Color {
 }
 
 impl Default for Color {
-    fn default() -> Self { Yellow }
+    fn default() -> Self { Blue }
 }
 
 impl Not for Color {
@@ -122,8 +122,8 @@ impl Not for Color {
     #[inline]
     fn not(self) -> Color {
         match self {
-            Yellow => Blue,
             Blue => Yellow,
+            Yellow => Blue,
         }
     }
 }
@@ -143,12 +143,12 @@ impl Side {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TeamSide {
-    YellowIsLeft,
     BlueIsLeft,
+    YellowIsLeft,
 }
 
 impl Default for TeamSide {
-    fn default() -> Self { YellowIsLeft }
+    fn default() -> Self { BlueIsLeft }
 }
 
 impl TeamSide {

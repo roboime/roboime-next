@@ -16,10 +16,8 @@
 //! let mut ai = ai.init(&sim).unwrap();
 //!
 //! loop {
-//!     let ai2 = ai.push(&sim).unwrap();
-//!     let (ai3, cmd) = ai2.pull().unwrap();
+//!     let cmd = ai.update(&sim).unwrap();
 //!     sim.step(cmd, 0.016_666_667);
-//!     ai = ai3;
 //!     // sleep maybe
 //! }
 //! ```

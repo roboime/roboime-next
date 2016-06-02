@@ -53,7 +53,7 @@ impl Builder {
 
         Ok(InitialState {
             inner: State {
-                _child: child,
+                child: child,
                 color: self.color,
                 input: BufWriter::new(child_in),
                 output: BufReader::new(child_out).lines(),
@@ -65,10 +65,18 @@ impl Builder {
 
 // TODO: be generic over the used interfaces instead of using BufWriter, Lines, BufReader...
 struct State {
-    _child: Child,
+    child: Child,
     color: Color,
     input: BufWriter<ChildStdin>,
     output: Lines<BufReader<ChildStdout>>,
+}
+
+impl Drop for State {
+    fn drop(&mut self) {
+        if let Err(err) = self.child.kill() {
+            warn!("error killing child: {}", err);
+        }
+    }
 }
 
 pub struct InitialState {
@@ -76,12 +84,12 @@ pub struct InitialState {
     pub debug: Option<Lines<BufReader<ChildStderr>>>,
 }
 
-pub struct PushState {
-    inner: State,
+pub struct PushState<'a> {
+    inner: &'a mut State,
 }
 
-pub struct PullState {
-    inner: State,
+pub struct PullState<'a> {
+    inner: &'a mut State,
     counter: u64,
     ids: Vec<u8>,
 }
@@ -93,8 +101,8 @@ macro_rules! throw_err {
 }
 
 impl InitialState {
-    pub fn init<'a, S: game::State<'a>>(self, state: &'a S) -> Result<PushState> {
-        let InitialState { mut inner, .. } = self;
+    pub fn init<'a, 'g, S: game::State<'g>>(&'a mut self, state: &'g S) -> Result<PushState<'a>> {
+        let &mut InitialState { ref mut inner, .. } = self;
 
         let version = 1;
         try!(writeln!(inner.input, "ROBOIME_AI_PROTOCOL {}", version));
@@ -139,8 +147,16 @@ impl InitialState {
     }
 }
 
-impl PushState {
-    pub fn push<'a, S: game::State<'a>>(self, state: &'a S) -> Result<PullState> {
+impl<'a> PushState<'a> {
+    pub fn update<'g, S: game::State<'g>>(&mut self, state: &'g S) -> Result<game::Command> {
+        let &mut PushState { ref mut inner } = self;
+        let s = PushState { inner: inner };
+        let s = try!(s.push(state));
+        let (_, cmd) = try!(s.pull());
+        Ok(cmd)
+    }
+
+    pub fn push<'g, S: game::State<'g>>(self, state: &'g S) -> Result<PullState<'a>> {
         let PushState { mut inner } = self;
 
         let timestamp = state.timestamp();
@@ -259,8 +275,8 @@ impl PushState {
     }
 }
 
-impl PullState {
-    pub fn pull(self) -> Result<(PushState, game::Command)> {
+impl<'a> PullState<'a> {
+    pub fn pull(self) -> Result<(PushState<'a>, game::Command)> {
         let PullState { mut inner, counter, ids } = self;
 
         {

@@ -19,12 +19,12 @@ fn run() -> Result<(), Box<Error>> {
             .arg(Arg::with_name("blue")
                  .short("b")
                  .long("blue")
-                 .help("Play as the blue team"))
+                 .help("Play as the blue team (default)"))
             .arg(Arg::with_name("yellow")
                  .conflicts_with("blue")
                  .short("y")
                  .long("yellow")
-                 .help("Play as the yellow team (default)"))
+                 .help("Play as the yellow team"))
             .arg(Arg::with_name("v")
                  .short("v")
                  .multiple(true)
@@ -128,7 +128,7 @@ fn run() -> Result<(), Box<Error>> {
         try!(grsim.wait_for_geom());
 
         let debug = ai.debug.take().unwrap();
-        let _debugger = thread::spawn(move || {
+        thread::spawn(move || {
             for line in debug {
                 println!("AI> {}", line.unwrap());
             }

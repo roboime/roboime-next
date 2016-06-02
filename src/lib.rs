@@ -30,16 +30,13 @@
 //!
 //! loop {
 //!     grsim.recv_state().unwrap();
-//!     let ai2 = ai.push(&grsim).unwrap();
-//!     let (ai3, cmd) = ai2.pull().unwrap();
+//!     let cmd = ai.update(&grsim).unwrap();
 //!     grsim.send_command(cmd).unwrap();
-//!     ai = ai3;
 //! }
 //! ```
 //!
-//! To see that in action you will need a __demo-ai__ (there's one in this project which needs
-//! Python 3 to run), and a running __grSim__ with matching settings (which could very well be
-//! running on another machine, just change the `grsim_addr`).
+//! To see that in action you will need a __demo-ai__, and a running __grSim__ with matching
+//! settings (which could very well be running on another machine, just change the `grsim_addr`).
 
 extern crate roboime_next_protocol as protocol;
 extern crate net2;

@@ -156,7 +156,7 @@ fn main_loop() -> Result<(), Box<Error>> {
 
     // debugger thread
     let debug = ai.debug.take().unwrap();
-    let debugger = thread::spawn(move || {
+    thread::spawn(move || {
         for line in debug {
             println!("AI> {}", line.unwrap());
         }
@@ -164,7 +164,7 @@ fn main_loop() -> Result<(), Box<Error>> {
 
     // init the AI
     debug!("Wait for AI to start...");
-    let mut ai = try!(ai.init(&sim_state));
+    let mut ai_state = try!(ai.init(&sim_state));
 
     //drop(try!(rx.recv()));
     debug!("AI started, going on...");
@@ -250,11 +250,9 @@ fn main_loop() -> Result<(), Box<Error>> {
                 }
 
                 // game step
-                let ai2 = try!(ai.push(&sim_state));
-                let (ai3, cmd) = try!(ai2.pull());
+                let cmd = try!(ai_state.update(&sim_state));
                 sim_state.step(cmd, FIXED_TIME_STEP as f32 * 1.0e-9);
                 step_counter += 1;
-                ai = ai3;
             }
         }
         previous_clock = now;
@@ -262,21 +260,16 @@ fn main_loop() -> Result<(), Box<Error>> {
         if single_shot != Shot::No {
             // XXX: is there a simple way to no duplicade this?
             // game step
-            let ai2 = try!(ai.push(&sim_state));
-            let (ai3, cmd) = try!(ai2.pull());
+            let cmd = try!(ai_state.update(&sim_state));
             let mut timestep = FIXED_TIME_STEP as f32 * 1.0e-9;
             if single_shot == Shot::Bkw { timestep = -timestep; }
             sim_state.step(cmd, timestep);
-            ai = ai3;
         }
 
         thread::sleep(Duration::from_millis(((FIXED_TIME_STEP - accumulator) / 1_000_000) as u64));
     }
 
-    drop(ai);
-    let _ = debugger.join();
     info!("Bye!");
-
     Ok(())
 }
 
