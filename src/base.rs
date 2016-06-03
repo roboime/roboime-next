@@ -12,7 +12,7 @@ impl Vec2d {
     #[inline] pub fn y(&self) -> f32 { self.1 }
     #[inline] pub fn set(&mut self, x: f32, y: f32) { self.0 = x; self.1 = y; }
     #[inline] pub fn angle(self) -> f32 { self.1.atan2(self.0) }
-    #[inline] pub fn norm(self) -> f32 { self.norm2().sqrt() }
+    #[inline] pub fn norm(self) -> f32 { self.0.hypot(self.1) }
     #[inline] pub fn norm2(self) -> f32 { self.0 * self.0 + self.1 * self.1 }
     #[inline] pub fn rotate(self, angle: f32) -> Vec2d {
         let (sin, cos) = angle.sin_cos();
@@ -139,6 +139,17 @@ impl Side {
     #[inline] pub fn is_left(&self)  -> bool { *self == Left }
     #[inline] pub fn right(is_right: bool) -> Side { if is_right { Right } else { Left  } }
     #[inline] pub fn left(is_left: bool)   -> Side { if is_left  { Left  } else { Right } }
+}
+
+impl Not for Side {
+    type Output = Side;
+    #[inline]
+    fn not(self) -> Side {
+        match self {
+            Left => Right,
+            Right => Left,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]

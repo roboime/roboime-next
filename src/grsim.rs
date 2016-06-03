@@ -214,6 +214,7 @@ impl<'a> game::State<'a> for State {
     type Robot = (Color, &'a SSL_DetectionRobot);
     type Robots = Iter<'a>;
     type Geometry = &'a SSL_GeometryFieldSize;
+    type TeamInfo = ();
 
     fn counter(&self) -> u64 {
         self.counter
@@ -260,6 +261,8 @@ impl<'a> game::State<'a> for State {
     fn geometry(&'a self) -> Self::Geometry {
         &self.geometry
     }
+
+    fn team_info(&'a self, _color: Color) -> Self::TeamInfo { () }
 }
 
 enum IterState {

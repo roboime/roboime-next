@@ -20,6 +20,21 @@ pub trait Robot {
     fn vw(&self) -> f32;
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Referee {
+    Halt,
+    Stop,
+    Normal,
+    PreKickoff(Color),
+    Kickoff(Color),
+    PrePenalty(Color),
+    Penalty(Color),
+    DirectFree(Color),
+    IndirectFree(Color),
+    Timeout(Color),
+    Goal(Color),
+}
+
 /// Specifications of the field geometry
 ///
 /// This specifications intend to be minimal, some fields that are available from the vision are
@@ -33,12 +48,21 @@ pub trait Geometry {
     fn defense_stretch(&self) -> f32;
 }
 
+pub trait TeamInfo {
+    fn name<'a>(&'a self) -> &'a str { "" }
+    fn score(&self) -> u8 { 0 }
+    fn goalie(&self) -> u8 { 0 }
+}
+
+impl TeamInfo for () {}
+
 /// What is needed for a game step.
 pub trait State<'a> {
     type Ball: 'a + Ball;
     type Robot: 'a + Robot;
     type Robots: 'a + ExactSizeIterator<Item=Self::Robot>;
     type Geometry: 'a + Geometry;
+    type TeamInfo: 'a + TeamInfo;
 
     fn counter(&self) -> u64;
     fn timestamp(&self) -> f64;
@@ -47,6 +71,8 @@ pub trait State<'a> {
     fn robots(&'a self) -> Self::Robots;
     fn robots_team(&'a self, color: Color) -> Self::Robots;
     fn geometry(&'a self) -> Self::Geometry;
+    fn referee(&self) -> Referee { Referee::Normal }
+    fn team_info(&'a self, color: Color) -> Self::TeamInfo;
 }
 
 #[derive(Clone, Debug)]

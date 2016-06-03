@@ -147,6 +147,28 @@ impl InitialState {
     }
 }
 
+impl game::Referee {
+    fn to_char(self, team: Color) -> char {
+        use game::Referee::*;
+        match self {
+            Normal => 'N',
+            PreKickoff(color) if color == team => 'p',
+            Kickoff(color) if color == team => 'k',
+            PrePenalty(color) if color == team => 'x',
+            Penalty(color) if color == team => 'y',
+            DirectFree(color) if color == team => 'd',
+            IndirectFree(color) if color == team => 'i',
+            PreKickoff(color) if color != team => 'P',
+            Kickoff(color) if color != team => 'K',
+            PrePenalty(color) if color != team => 'X',
+            Penalty(color) if color != team => 'Y',
+            DirectFree(color) if color != team => 'D',
+            IndirectFree(color) if color != team => 'I',
+            _ => 'S',
+        }
+    }
+}
+
 impl<'a> PushState<'a> {
     pub fn update<'g, S: game::State<'g>>(&mut self, state: &'g S) -> Result<game::Command> {
         let &mut PushState { ref mut inner } = self;
@@ -161,8 +183,18 @@ impl<'a> PushState<'a> {
 
         let timestamp = state.timestamp();
         let counter = state.counter();
+        let referee = state.referee();
 
         let color = inner.color;
+
+        let (score_player, goalie_player) = {
+            let team_info = state.team_info(color);
+            (team_info.score(), team_info.goalie())
+        };
+        let (score_opponent, goalie_opponent) = {
+            let team_info = state.team_info(!color);
+            (team_info.score(), team_info.goalie())
+        };
 
         // COUNTER
         // TIMESTAMP
@@ -175,12 +207,12 @@ impl<'a> PushState<'a> {
         try!(writeln!(inner.input, "{} {} {} {} {} {} {} {}",
             counter,
             timestamp,
-            'N', // TODO: REFEREE_STATE
+            referee.to_char(color),
             -1, //  TODO: REFEREE_TIME_LEFT
-            0, //   TODO: SCORE_PLAYER
-            0, //   TODO: SCORE_OPPONENT
-            0, //   TODO: GOALIE_ID_PLAYER
-            0, //   TODO: GOALIE_ID_OPPONENT
+            score_player,
+            score_opponent,
+            goalie_player,
+            goalie_opponent,
         ));
 
         {
@@ -221,7 +253,8 @@ impl<'a> PushState<'a> {
                 // ROBOT_VX
                 // ROBOT_VY
                 // ROBOT_VW
-                try!(writeln!(inner.input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
+                //try!(writeln!(inner.input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
+                try!(writeln!(inner.input, "{} {:.04} {:.04} {} {:.04} {:.04} {}",
                     robot_id.id(),
                     pos.x(),
                     pos.y(),
@@ -252,7 +285,8 @@ impl<'a> PushState<'a> {
                 // ROBOT_VX
                 // ROBOT_VY
                 // ROBOT_VW
-                try!(writeln!(inner.input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
+                //try!(writeln!(inner.input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
+                try!(writeln!(inner.input, "{} {:.04} {:.04} {} {:.04} {:.04} {}",
                     robot_id.id(),
                     pos.x(),
                     pos.y(),

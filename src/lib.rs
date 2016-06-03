@@ -51,7 +51,7 @@ pub mod base;
 pub mod grsim;
 pub mod sim;
 pub mod prelude {
-    pub use ::game::{Ball, Robot, Geometry, State};
+    pub use ::game::{Ball, Robot, Geometry, State, TeamInfo};
     pub use ::base::*;
     pub use ::ai::CommandAiExt;
 }
