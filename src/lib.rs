@@ -21,7 +21,7 @@
 //!     .grsim_addr("127.0.0.1:20011").unwrap()
 //!     .build().unwrap();
 //!
-//! let ai = ai::Builder::new(Command::new("./demo-ai"))
+//! let mut ai = ai::Builder::new(Command::new("./demo-ai"))
 //!     .color(Yellow)
 //!     .build().unwrap();
 //!

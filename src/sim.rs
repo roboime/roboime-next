@@ -9,7 +9,7 @@
 //!     .initial_formation(true)
 //!     .build();
 //!
-//! let ai = ai::Builder::new(Command::new("./demo-ai"))
+//! let mut ai = ai::Builder::new(Command::new("./demo-ai"))
 //!     .color(Yellow)
 //!     .build().unwrap();
 //!
