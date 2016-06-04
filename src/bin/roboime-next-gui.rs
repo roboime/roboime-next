@@ -5,6 +5,9 @@ extern crate clock_ticks;
 //extern crate image;
 extern crate env_logger;
 #[macro_use] extern crate log;
+extern crate rusttype;
+//extern crate arrayvec;
+extern crate unicode_normalization;
 
 use std::error::Error;
 
@@ -100,14 +103,9 @@ fn main_loop() -> Result<(), Box<Error>> {
         .with_dimensions(1041, 741)
         .with_depth_buffer(24)
         .with_gl(glutin::GlRequest::Latest)
-        .with_multisampling(2)
+        .with_multisampling(4)
         .with_vsync()
         .build_glium());
-
-    let perspective = {
-        let (width, height) = display.get_window().unwrap().get_inner_size_points().unwrap();
-        perspective_matrix(width as f32, height as f32)
-    };
 
     let color = {
         let mut color = Default::default();
@@ -174,6 +172,8 @@ fn main_loop() -> Result<(), Box<Error>> {
         #[derive(Copy, Clone, PartialEq, Eq)] enum Shot { No, Fwd, Bkw, }
         let mut single_shot = Shot::No;
 
+        draw_game.update(&display, &sim_state);
+
         // render the game state
         let view = view_matrix(&[0.0, 0.0, 10.0], &[0.0, 0.0, -1.0], &[0.0, 1.0, 0.0]);
         //let view = view_matrix(&[-4.0, -4.0, 4.0], &[1.0, 1.0, -1.0], &[0.0, 0.0, 1.0]);
@@ -184,8 +184,10 @@ fn main_loop() -> Result<(), Box<Error>> {
         //let view = view_matrix(&[-5.0, -0.7, 1.6], &[0.2, 0.2, -0.6], &[0.0, 0.0, 1.0]);
         //let view = view_matrix(&[4.0, 0.7, 1.6], &[0.2, -0.2, -0.6], &[0.0, 0.0, 1.0]);
         //let view = view_matrix(&[5.0, -0.7, 1.6], &[-0.2, 0.2, -0.6], &[0.0, 0.0, 1.0]);
+        //let view = view_matrix(&[0.0, 0.0, 0.6], &[0.0, 0.0, -1.0], &[0.0, 1.0, 0.0]);
         let mut target = display.draw();
-        try!(draw_game.draw_to(&mut target, &sim_state, perspective, view));
+        let view_port = display.get_window().unwrap().get_inner_size_points().unwrap();
+        try!(draw_game.draw_to(&mut target, &sim_state, view_port, view));
         try!(target.finish());
 
         // polling and handling the events received by the window

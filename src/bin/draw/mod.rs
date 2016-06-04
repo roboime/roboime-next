@@ -1,10 +1,13 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 use roboime_next::prelude::*;
 use roboime_next::game;
 use glium::program::{Program, ProgramChooserCreationError};
 use glium::backend::Facade;
-use glium::draw_parameters;
+use glium::{texture, draw_parameters, index, uniforms};
 use glium::{Surface, DrawError, Depth, DrawParameters, VertexBuffer, IndexBuffer};
+use rusttype::{FontCollection, Font};
+use rusttype::gpu_cache::{Cache};
 pub use self::utils::*;
 pub use self::models::*;
 
@@ -12,11 +15,25 @@ pub mod colors;
 mod models;
 mod utils;
 
+#[derive(Copy, Clone)]
+struct GlyphVertex {
+    position: [f32; 2],
+    tex_coords: [f32; 2],
+    colour: [f32; 4]
+}
+implement_vertex!(GlyphVertex, position, tex_coords, colour);
+
 pub struct Game<'a> {
     program: Program,
     simple_program: Program,
+    texture_program: Program,
     params: DrawParameters<'a>,
     simple_params: DrawParameters<'a>,
+    texture_params: DrawParameters<'a>,
+    font: Font<'a>,
+    dpi_factor: f32,
+    cache: Cache,
+    cache_tex: texture::Texture2d,
     light: [f32; 3],
     bg_color: (f32, f32, f32, f32),
     field: (VertexBuffer<Vertex>, IndexBuffer<u16>),
@@ -24,10 +41,32 @@ pub struct Game<'a> {
     ball: (VertexBuffer<RichVertex>, IndexBuffer<u16>),
     yellow_robots: HashMap<u8, (VertexBuffer<RichVertex>, IndexBuffer<u16>)>,
     blue_robots: HashMap<u8, (VertexBuffer<RichVertex>, IndexBuffer<u16>)>,
+    score_text_vertex: Option<VertexBuffer<GlyphVertex>>,
+    team_side: TeamSide,
+    score: (u8, u8),
 }
 
 impl<'a> Game<'a> {
     pub fn new<F: Facade>(display: &F) -> Result<Game, ProgramChooserCreationError> {
+        let font_data = include_bytes!("fonts/SourceCodePro-Light.ttf");
+        let font = FontCollection::from_bytes(font_data as &[u8]).into_font().unwrap();
+
+        //let dpi_factor = display.get_window().unwrap().hidpi_factor();
+        let dpi_factor = 1.0; // FIXME
+        let (cache_width, cache_height) = (2048 * dpi_factor as u32, 2048 * dpi_factor as u32);
+        let cache = Cache::new(cache_width, cache_height, 0.1, 0.1);
+        let cache_tex = texture::Texture2d::with_format(
+            display,
+            texture::RawImage2d {
+                data: Cow::Owned(vec![128u8; cache_width as usize * cache_height as usize]),
+                width: cache_width,
+                height: cache_height,
+                format: texture::ClientFormat::U8
+            },
+            texture::UncompressedFloatFormat::U8,
+            texture::MipmapsOption::NoMipmap
+        ).unwrap();
+
         // compiling shaders and linking them together
         let program = try!(program!(display,
             150 => {
@@ -40,6 +79,14 @@ impl<'a> Game<'a> {
             150 => {
                 vertex: include_str!("vertex_simple.glsl"),
                 fragment: include_str!("fragment_simple.glsl"),
+                outputs_srgb: true
+            },
+        ));
+
+        let texture_program = try!(program!(display,
+            150 => {
+                vertex: include_str!("vertex_texture.glsl"),
+                fragment: include_str!("fragment_texture.glsl"),
                 outputs_srgb: true
             },
         ));
@@ -60,6 +107,11 @@ impl<'a> Game<'a> {
                 .. Default::default()
             },
             .. params.clone()
+        };
+
+        let texture_params = DrawParameters {
+            blend: draw_parameters::Blend::alpha_blending(),
+            .. Default::default()
         };
 
         //let normal_map = {
@@ -99,8 +151,14 @@ impl<'a> Game<'a> {
         Ok(Game {
             program: program,
             simple_program: simple_program,
+            texture_program: texture_program,
             params: params,
             simple_params: simple_params,
+            texture_params: texture_params,
+            font: font,
+            dpi_factor: dpi_factor,
+            cache: cache,
+            cache_tex: cache_tex,
             light: light,
             bg_color: bg_color,
             field: field,
@@ -108,24 +166,131 @@ impl<'a> Game<'a> {
             ball: ball,
             yellow_robots: yellow_robots,
             blue_robots: blue_robots,
+            score_text_vertex: None,
+            team_side: team_side,
+            score: (0, 0),
         })
     }
 
     pub fn team_side<F: Facade>(&mut self, display: &F, team_side: TeamSide) {
-        let field = field(display, team_side);
-        let goals = goals(display, team_side);
-        self.field = field;
-        self.goals = goals;
+        if team_side != self.team_side {
+            let field = field(display, team_side);
+            let goals = goals(display, team_side);
+            self.field = field;
+            self.goals = goals;
+            self.team_side = team_side;
+        }
     }
 
-    pub fn draw_to<'g, S: Surface, G: game::State<'g>>(&self, target: &mut S, game_state: &'g G, perspective: [[f32; 4]; 4], view: [[f32; 4]; 4]) -> Result<(), DrawError> {
+    pub fn update<'g, F: Facade, G: game::State<'g>>(&mut self, display: &F, game_state: &'g G) {
+        let score_blue = game_state.team_info(Blue).score();
+        let score_yellow = game_state.team_info(Yellow).score();
+        let score = self.team_side.sort_side(score_blue, score_yellow);
+        if score != self.score {
+            self.score = score;
+            self.set_score_text(display, score);
+        }
+    }
+
+    pub fn set_score_text<F: Facade>(&mut self, display: &F, score: (u8, u8)) {
+        use glium::{Rect as GRect};
+        use rusttype::{Rect, Scale, point, vector};
+
+        let &mut Game {
+            ref font,
+            dpi_factor,
+            ref mut cache,
+            ref mut cache_tex,
+            ref mut score_text_vertex,
+            ..
+        } = self;
+
+        let (score_left, score_right) = score;
+        let text_left = format!("{}", score_left);
+        let text_center = format!("×");
+        let text_right = format!("{}", score_right);
+
+        let zoom = 200.0;
+        //let _corrected_width = (width * zoom) as u32;
+        let glyphs = layout_align(font, Scale::uniform(72.0 * dpi_factor), &text_left, &text_center, &text_right);
+        for glyph in &glyphs {
+            cache.queue_glyph(0, glyph.clone());
+        }
+        cache.cache_queued(|rect, data| {
+            cache_tex.main_level().write(GRect {
+                left: rect.min.x,
+                bottom: rect.min.y,
+                width: rect.width(),
+                height: rect.height()
+            }, texture::RawImage2d {
+                data: Cow::Borrowed(data),
+                width: rect.width(),
+                height: rect.height(),
+                format: texture::ClientFormat::U8
+            });
+        }).unwrap();
+        let vertex_buffer = {
+            let colour = [0.0, 0.0, 0.0, 1.0];
+            let origin = point(0.0, 0.0);
+            let vertices: Vec<GlyphVertex> = glyphs.iter().flat_map(|g| {
+                if let Ok(Some((uv_rect, screen_rect))) = cache.rect_for(0, g) {
+                    let gl_rect = Rect {
+                        min: origin + vector(screen_rect.min.x as f32, -screen_rect.min.y as f32) / zoom,
+                        max: origin + vector(screen_rect.max.x as f32, -screen_rect.max.y as f32) / zoom,
+                    };
+                    vec![
+                        GlyphVertex {
+                            position: [gl_rect.min.x, gl_rect.max.y],
+                            tex_coords: [uv_rect.min.x, uv_rect.max.y],
+                            colour: colour
+                        },
+                        GlyphVertex {
+                            position: [gl_rect.min.x,  gl_rect.min.y],
+                            tex_coords: [uv_rect.min.x, uv_rect.min.y],
+                            colour: colour
+                        },
+                        GlyphVertex {
+                            position: [gl_rect.max.x,  gl_rect.min.y],
+                            tex_coords: [uv_rect.max.x, uv_rect.min.y],
+                            colour: colour
+                        },
+                        GlyphVertex {
+                            position: [gl_rect.max.x,  gl_rect.min.y],
+                            tex_coords: [uv_rect.max.x, uv_rect.min.y],
+                            colour: colour },
+                        GlyphVertex {
+                            position: [gl_rect.max.x, gl_rect.max.y],
+                            tex_coords: [uv_rect.max.x, uv_rect.max.y],
+                            colour: colour
+                        },
+                        GlyphVertex {
+                            position: [gl_rect.min.x, gl_rect.max.y],
+                            tex_coords: [uv_rect.min.x, uv_rect.max.y],
+                            colour: colour
+                        },
+                    ]
+                } else {
+                    vec![]
+                }
+            }).collect();
+
+            VertexBuffer::new(display, &vertices).unwrap()
+        };
+
+        *score_text_vertex = Some(vertex_buffer);
+    }
+
+    pub fn draw_to<'g, S: Surface, G: game::State<'g>>(&self, target: &mut S, game_state: &'g G, view_port: (u32, u32), view: [[f32; 4]; 4]) -> Result<(), DrawError> {
         use roboime_next::prelude::{Id, Blue, Yellow, Robot, State};
 
         let &Game {
             ref program,
             ref simple_program,
+            ref texture_program,
             ref params,
             ref simple_params,
+            ref texture_params,
+            ref cache_tex,
             light,
             bg_color,
             field: (ref field_vb, ref field_ib),
@@ -133,10 +298,14 @@ impl<'a> Game<'a> {
             ball: (ref ball_vb, ref ball_ib),
             ref yellow_robots,
             ref blue_robots,
+            ref score_text_vertex,
             ..
         } = self;
 
         target.clear_color_srgb_and_depth(bg_color, 1.0);
+
+        let (width, height) = view_port;
+        let perspective = perspective_matrix(width as f32, height as f32);
 
         try!(target.draw(field_vb, field_ib, simple_program, &uniform! {
             model: [
@@ -148,6 +317,29 @@ impl<'a> Game<'a> {
             view: view,
             perspective: perspective,
         }, simple_params));
+
+        if let &Some(ref vertex_buffer) = score_text_vertex {
+            use self::models::FIELD_WIDTH;
+            let x = 0.0;
+            let y = FIELD_WIDTH / 2.0 + 0.050;
+            try!(target.draw(
+                vertex_buffer,
+                index::NoIndices(index::PrimitiveType::TrianglesList),
+                texture_program,
+                &uniform! {
+                    model: [
+                        [1.0, 0.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0, 0.0],
+                        [0.0, 0.0, 1.0, 0.0],
+                        [ x ,  y , 0.0, 1.0f32]
+                    ],
+                    view: view,
+                    tex: cache_tex.sampled().magnify_filter(uniforms::MagnifySamplerFilter::Nearest),
+                    perspective: perspective,
+                },
+                texture_params
+            ));
+        }
 
         try!(target.draw(goals_vb, goals_ib, program, &uniform! {
             model: [

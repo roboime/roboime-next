@@ -1,5 +1,6 @@
 use roboime_next::prelude::*;
 use roboime_next::game;
+use rusttype::{Font, Scale, PositionedGlyph};
 
 pub fn ball_model_matrix<B: game::Ball>(ball: &B) -> [[f32; 4]; 4] {
     use super::BALL_RADIUS;
@@ -77,4 +78,119 @@ pub fn perspective_matrix(width: f32, height: f32) -> [[f32; 4]; 4] {
         [  0.0  ,   0.0  ,  (zfar+znear)/(zfar-znear)    ,   1.0],
         [  0.0  ,   0.0  , -(2.0*zfar*znear)/(zfar-znear),   0.0],
     ]
+}
+
+#[allow(dead_code)]
+pub fn layout_paragraph<'a>(font: &'a Font, scale: Scale, width: u32, text: &str) -> Vec<PositionedGlyph<'a>> {
+    use unicode_normalization::UnicodeNormalization;
+    use rusttype::point;
+
+    let mut result = Vec::new();
+    let v_metrics = font.v_metrics(scale);
+    let advance_height = v_metrics.ascent - v_metrics.descent + v_metrics.line_gap;
+    let mut caret = point(0.0, v_metrics.ascent);
+    let mut last_glyph_id = None;
+    for c in text.nfc() {
+        if c.is_control() {
+            match c {
+                '\r' => {
+                    caret = point(0.0, caret.y + advance_height);
+                }
+                '\n' => {},
+                _ => {}
+            }
+            continue;
+        }
+        let base_glyph = if let Some(glyph) = font.glyph(c) {
+            glyph
+        } else {
+            continue;
+        };
+        if let Some(id) = last_glyph_id.take() {
+            caret.x += font.pair_kerning(scale, id, base_glyph.id());
+        }
+        last_glyph_id = Some(base_glyph.id());
+        let mut glyph = base_glyph.scaled(scale).positioned(caret);
+        if let Some(bb) = glyph.pixel_bounding_box() {
+            if bb.max.x > width as i32 {
+                caret = point(0.0, caret.y + advance_height);
+                glyph = glyph.into_unpositioned().positioned(caret);
+                last_glyph_id = None;
+            }
+        }
+        caret.x += glyph.unpositioned().h_metrics().advance_width;
+        result.push(glyph);
+    }
+    result
+}
+
+pub fn layout_align<'a>(font: &'a Font, scale: Scale, text_left: &str, text_center: &str, text_right: &str) -> Vec<PositionedGlyph<'a>> {
+    use unicode_normalization::UnicodeNormalization;
+    use rusttype::point;
+
+    let mut result = Vec::new();
+    let mut caret = point(0.0, 0.0);
+    let mut last_glyph_id = None;
+
+    for c in text_left.nfc() {
+        if c.is_control() { continue; }
+        let base_glyph = if let Some(glyph) = font.glyph(c) { glyph } else { continue; };
+        if let Some(id) = last_glyph_id.take() {
+            caret.x += font.pair_kerning(scale, id, base_glyph.id());
+        }
+        last_glyph_id = Some(base_glyph.id());
+        let glyph = base_glyph.scaled(scale).positioned(caret);
+        caret.x += glyph.unpositioned().h_metrics().advance_width;
+        result.push(glyph);
+    }
+
+    let offset = -caret.x;
+
+    for glyph in result.iter_mut() {
+        let g = glyph.clone();
+        let mut position = g.position();
+        position.x += offset;
+        *glyph = g.into_unpositioned().positioned(position);
+    }
+
+    // reset caret
+    caret.x = 0.0;
+
+    let x0 = caret.x;
+    for c in text_center.nfc() {
+        if c.is_control() { continue; }
+        let base_glyph = if let Some(glyph) = font.glyph(c) { glyph } else { continue; };
+        if let Some(id) = last_glyph_id.take() {
+            caret.x += font.pair_kerning(scale, id, base_glyph.id());
+        }
+        last_glyph_id = Some(base_glyph.id());
+        let glyph = base_glyph.scaled(scale).positioned(caret);
+        caret.x += glyph.unpositioned().h_metrics().advance_width;
+        result.push(glyph);
+    }
+    let x1 = caret.x;
+    let length = x1 - x0;
+    let offset = -length / 2.0;
+
+    // TODO/FIXME/XXX: deduplicade this code:
+    for c in text_right.nfc() {
+        if c.is_control() { continue; }
+        let base_glyph = if let Some(glyph) = font.glyph(c) { glyph } else { continue; };
+        if let Some(id) = last_glyph_id.take() {
+            caret.x += font.pair_kerning(scale, id, base_glyph.id());
+        }
+        last_glyph_id = Some(base_glyph.id());
+        let glyph = base_glyph.scaled(scale).positioned(caret);
+        caret.x += glyph.unpositioned().h_metrics().advance_width;
+        result.push(glyph);
+    }
+
+    for glyph in result.iter_mut() {
+        let g = glyph.clone();
+        let mut position = g.position();
+        position.x += offset;
+        *glyph = g.into_unpositioned().positioned(position);
+    }
+
+    result
 }

@@ -191,6 +191,12 @@ impl TeamSide {
             (YellowIsLeft, Left)  => Yellow,
         }
     }
+    #[inline] pub fn sort_side<T>(self, blue: T, yellow: T) -> (T, T) {
+        match self {
+            BlueIsLeft => (blue, yellow),
+            YellowIsLeft => (yellow, blue),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
