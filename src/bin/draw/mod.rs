@@ -19,9 +19,9 @@ mod utils;
 struct GlyphVertex {
     position: [f32; 2],
     tex_coords: [f32; 2],
-    colour: [f32; 4]
+    color: [f32; 4]
 }
-implement_vertex!(GlyphVertex, position, tex_coords, colour);
+implement_vertex!(GlyphVertex, position, tex_coords, color);
 
 pub struct Game<'a> {
     program: Program,
@@ -188,11 +188,22 @@ impl<'a> Game<'a> {
         let score = self.team_side.sort_side(score_blue, score_yellow);
         if score != self.score {
             self.score = score;
-            self.set_score_text(display, score);
+            let color = { let (r, g, b) = colors::WHITE; [r, g, b, 1.0] };
+            //let color = {
+            //    let (r, g, b) = if score_blue > score_yellow {
+            //        colors::PATTERN_BLUE
+            //    } else if score_yellow > score_blue {
+            //        colors::PATTERN_YELLOW
+            //    } else {
+            //        colors::WHITE
+            //    };
+            //    [r, g, b, 1.0]
+            //};
+            self.set_score_text(display, score, color);
         }
     }
 
-    pub fn set_score_text<F: Facade>(&mut self, display: &F, score: (u8, u8)) {
+    pub fn set_score_text<F: Facade>(&mut self, display: &F, score: (u8, u8), color: [f32; 4]) {
         use glium::{Rect as GRect};
         use rusttype::{Rect, Scale, point, vector};
 
@@ -230,7 +241,6 @@ impl<'a> Game<'a> {
             });
         }).unwrap();
         let vertex_buffer = {
-            let colour = [0.0, 0.0, 0.0, 1.0];
             let origin = point(0.0, 0.0);
             let vertices: Vec<GlyphVertex> = glyphs.iter().flat_map(|g| {
                 if let Ok(Some((uv_rect, screen_rect))) = cache.rect_for(0, g) {
@@ -242,31 +252,31 @@ impl<'a> Game<'a> {
                         GlyphVertex {
                             position: [gl_rect.min.x, gl_rect.max.y],
                             tex_coords: [uv_rect.min.x, uv_rect.max.y],
-                            colour: colour
+                            color: color
                         },
                         GlyphVertex {
                             position: [gl_rect.min.x,  gl_rect.min.y],
                             tex_coords: [uv_rect.min.x, uv_rect.min.y],
-                            colour: colour
+                            color: color
                         },
                         GlyphVertex {
                             position: [gl_rect.max.x,  gl_rect.min.y],
                             tex_coords: [uv_rect.max.x, uv_rect.min.y],
-                            colour: colour
+                            color: color
                         },
                         GlyphVertex {
                             position: [gl_rect.max.x,  gl_rect.min.y],
                             tex_coords: [uv_rect.max.x, uv_rect.min.y],
-                            colour: colour },
+                            color: color },
                         GlyphVertex {
                             position: [gl_rect.max.x, gl_rect.max.y],
                             tex_coords: [uv_rect.max.x, uv_rect.max.y],
-                            colour: colour
+                            color: color
                         },
                         GlyphVertex {
                             position: [gl_rect.min.x, gl_rect.max.y],
                             tex_coords: [uv_rect.min.x, uv_rect.max.y],
-                            colour: colour
+                            color: color
                         },
                     ]
                 } else {
