@@ -168,7 +168,10 @@ int main() {
                 tw = atan2(ball.y - robot->y, ball.x - robot->x);
                 action = GotoAndKick;
             } else switch (referee_state) {
-                case 'N':
+                case 'k': // KICKOFF
+                case 'i': // INDIRECT
+                case 'd': // DIRECT
+                case 'N': // NORMAL
                     if (id == first_to_ball) {
                         float kx = field_length / 2;
                         float ky = 0.0;
@@ -188,7 +191,12 @@ int main() {
                         action = Goto;
                         break;
                     }
-                case 'S':
+                case 'p': // PRE_KICKOFF
+                case 'P': // OPPONENT_PRE_KICKOFF
+                case 'K': // OPPONENT_KICKOFF
+                case 'I': // OPPONENT_INDIRECT
+                case 'D': // OPPONENT_DIRECT
+                case 'S': // STOP
                     if (id == first_to_ball || id == second_to_ball) {
                         float px = -field_length / 2;
                         float py = 0.0;
@@ -269,6 +277,10 @@ int main() {
                         action = Goto;
                     }
                     break;
+                case 'x': // PRE_PENALTY
+                case 'y': // PENALTY
+                case 'X': // OPPONENT_PRE_PENALTY
+                case 'Y': // OPPONENT_PENALTY
                 default:
                     break;
             }
