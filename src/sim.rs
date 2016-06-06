@@ -73,19 +73,20 @@ impl Robot {
 #[derive(Clone, Debug, PartialEq)]
 pub enum RefereeState {
     Idle,
+    WaitForKick(f32),
     WaitingToAct(f32, RefereeAction),
-    PlacingBall(f32),
+    PlacingBall(f32, game::Referee),
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum RefereeAction {
-    PlaceBall(Vec2d),
+    PlaceBall(Vec2d, game::Referee),
 }
 
 impl RefereeState {
     fn ignore_ball(&self) -> bool {
         match *self {
-            PlacingBall(_) => true,
+            PlacingBall(..) => true,
             _ => false,
         }
     }
@@ -338,47 +339,81 @@ impl State {
                         let score_yellow = info_yellow.score;
                         debug!("Goal! {:?} team scores!! (B: {}, Y: {})", scoring_team, score_blue, score_yellow);
                         *referee = game::Referee::Goal(scoring_team);
-                        next_referee_state = Some(WaitingToAct(REACTION_TIME, PlaceBall(Vec2d(0.0, 0.0))));
+                        next_referee_state = Some(WaitingToAct(REACTION_TIME, PlaceBall(Vec2d(0.0, 0.0), game::Referee::PreKickoff(!scoring_team))));
                     }
-                    GoalLine(place, side) => {
+                    GoalLine(place_out, side) => {
                         // NOTE: last_ball_touch may be None!!
-                        let team = last_ball_touch.map(|id| !id.color());
-                        if team == Some(team_side.color(side)) {
-                            debug!("Out! Goal kick {:?}", team);
+                        let maybe_team = last_ball_touch.map(|id| !id.color());
+                        let place = if let Some(team) = maybe_team {
+                            if team == team_side.color(side) {
+                                debug!("Out! Goal kick {:?}", team);
+                                Vec2d(place_out.x().signum() * (FIELD_LENGTH / 2.0 - 0.500), place_out.y().signum() * (FIELD_WIDTH / 2.0 - 0.100))
+                            } else {
+                                debug!("Out! Corner kick {:?}", team);
+                                Vec2d(place_out.x().signum() * (FIELD_LENGTH / 2.0 - 0.100), place_out.y().signum() * (FIELD_WIDTH / 2.0 - 0.100))
+                            }
                         } else {
-                            debug!("Out! Corner kick {:?}", team);
+                            Vec2d(0.0, 0.0)
+                        };
+                        *referee = game::Referee::Stop;
+                        if let Some(team) = maybe_team {
+                            next_referee_state = Some(WaitingToAct(REACTION_TIME, PlaceBall(place, game::Referee::DirectFree(team))));
+                        } else {
+                            // TODO: indicate force start
+                            next_referee_state = Some(WaitingToAct(REACTION_TIME, PlaceBall(place, game::Referee::Normal)));
                         }
-                        *referee = game::Referee::Stop;
-                        next_referee_state = Some(WaitingToAct(REACTION_TIME, PlaceBall(place)));
                     }
-                    ThrowIn(place) => {
-                        let team = last_ball_touch.map(|id| !id.color());
-                        debug!("Out! Throw in {:?}", team);
+                    TouchLine(place) => {
+                        let maybe_team = last_ball_touch.map(|id| !id.color());
                         *referee = game::Referee::Stop;
-                        next_referee_state = Some(WaitingToAct(REACTION_TIME, PlaceBall(place)));
+                        if let Some(team) = maybe_team {
+                            debug!("Out! Throw in {:?}", team);
+                            next_referee_state = Some(WaitingToAct(REACTION_TIME, PlaceBall(place, game::Referee::IndirectFree(team))));
+                        } else {
+                            // TODO: indicate force start
+                            next_referee_state = Some(WaitingToAct(REACTION_TIME, PlaceBall(place, game::Referee::Normal)));
+                        }
                     }
                     InPlay => (),
                 }
-            },
+            }
+            WaitForKick(ref mut time_left) => {
+                if *time_left <= 0.0 {
+                    // TODO: issue a warning for taking too long
+                    debug!("Took too long! Force start!");
+                    *referee = game::Referee::Normal;
+                    next_referee_state = Some(Idle)
+                } else {
+                    // TODO: detect kicking
+                    *time_left -= timestep;
+                }
+            }
             WaitingToAct(ref mut time_left, ref action) => {
                 if *time_left <= 0.0 {
                     match *action {
-                        PlaceBall(place) => {
+                        PlaceBall(place, next_referee) => {
                             ball.pos = place;
                             ball.vel = Vec2d(0.0, 0.0);
-                            next_referee_state = Some(PlacingBall(REACTION_TIME));
+                            next_referee_state = Some(PlacingBall(REACTION_TIME, next_referee));
                         }
                     }
                 } else {
                     *time_left -= timestep;
                 }
             }
-            PlacingBall(ref mut time_left) => {
+            PlacingBall(ref mut time_left, next_referee) => {
                 if *time_left <= 0.0 {
-                    next_referee_state = Some(Idle);
-                    *referee = game::Referee::Normal;
-                    debug!("Go!");
+                    // TODO: issue a warning for taking too long
+                    *referee = next_referee;
+                    next_referee_state = if next_referee == game::Referee::Normal {
+                        debug!("Go!");
+                        Some(Idle)
+                    } else {
+                        debug!("Kick!");
+                        Some(WaitForKick(REACTION_TIME))
+                    };
                 } else {
+                    // TODO: detect retreat
                     *time_left -= timestep;
                 }
             }
@@ -533,7 +568,7 @@ fn test_line_cross_y() {
 
 enum BallInPlay {
     InPlay,
-    ThrowIn(Vec2d),
+    TouchLine(Vec2d),
     GoalLine(Vec2d, Side),
     MaybeGoal(Side),
 }
@@ -557,9 +592,9 @@ fn ball_in_play(p0: Vec2d, p1: Vec2d) -> BallInPlay {
         }
     }
     if let Some(point) = line_cross_y(p0, p1, FIELD_WIDTH * 0.5 + BALL_RADIUS) {
-        ThrowIn(point - Vec2d(0.0, BALL_RADIUS * 2.0 + THROW_IN_MARGIN))
+        TouchLine(point - Vec2d(0.0, BALL_RADIUS * 2.0 + THROW_IN_MARGIN))
     } else if let Some(point) = line_cross_y(p0, p1, -FIELD_WIDTH * 0.5 - BALL_RADIUS) {
-        ThrowIn(point + Vec2d(0.0, BALL_RADIUS * 2.0 + THROW_IN_MARGIN))
+        TouchLine(point + Vec2d(0.0, BALL_RADIUS * 2.0 + THROW_IN_MARGIN))
     } else {
         InPlay
     }
