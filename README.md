@@ -95,10 +95,24 @@ __Line 1__ general play data:
 
 - `COUNTER`: an integrer, counter for the number of received packets
 - `TIMESTAMP`: a float, the time elapsed since the play started
-- `REFEREE_STATE`: a char, indicates the referee state in a list of possible states __(not implemented yet currently always `'N'`)__
+- `REFEREE_STATE`: a char, indicates the referee state, one of the following:
+  - `S`: STOP, stay at least 0.5m away from the ball
+  - `N`: NORMAL, go wild, score goals
+  - `p`: PRE_KICKOFF, return to your field, you will kickoff shortly
+  - `k`: KICKOFF, you're authorized to kickoff now
+  - `i`: INDIRECT, kick the ball to resume the game, no double touches or direct goals allowed
+  - `d`: DIRECT, kick the ball to resume the game, no double touches allowed
+  - `x`: PRE_PENALTY, get your robots behind the "penalty line", wait for the order to shoot
+  - `y`: PENALTY, you may shoot the penalty, and you better score it
+  - `P`: OPPONENT_PRE_KICKOFF, return to your field, the opponent will kickoff shortly
+  - `K`: OPPONENT_KICKOFF, the opponent is authorized to kickoff, you must still stay away from the ball until the state returns to normal
+  - `I`: OPPONENT_INDIRECT, the opponent must kick the ball to resume the play, wait for the normal state to approach the ball
+  - `D`: OPPONENT_DIRECT, the opponent must kick the ball to resume the play, wait for the normal state as per above
+  - `X`: OPPONENT_PRE_PENALTY, get your robots ready, the opponent will shoot a penalty shortly
+  - `Y`: OPPONENT_PENALTY, the opponent may shoot now, save it
 - `REFEREE_TIME_LEFT`: a float, time left to finish the round __(not implemented yet always `-1`)__
-- `SCORE_PLAYER`: an integrer, your team score __(not implemented yet currently always `0`)__
-- `SCORE_OPPONENT`: an integrer, the opponent team score __(not implemented yet currently always `0`)__
+- `SCORE_PLAYER`: an integrer, your team score
+- `SCORE_OPPONENT`: an integrer, the opponent team score
 - `GOALIE_ID_PLAYER`: an integrer, the id of your goalkeeper (the robot allowed inside the defense area)
 - `GOALIE_ID_OPPONENT`: an integrer, the id of the opponent team goalkeeper
 
