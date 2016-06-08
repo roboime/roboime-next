@@ -73,6 +73,7 @@ pub trait State<'a> {
     fn geometry(&'a self) -> Self::Geometry;
     fn referee(&self) -> Referee { Referee::Normal }
     fn team_info(&'a self, color: Color) -> Self::TeamInfo;
+    fn team_side(&self) -> TeamSide;
 }
 
 #[derive(Clone, Debug)]

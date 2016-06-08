@@ -486,6 +486,10 @@ impl<'a> game::State<'a> for State {
             Blue => &self.info_blue,
         }
     }
+
+    fn team_side(&self) -> TeamSide {
+        self.team_side
+    }
 }
 
 pub struct Iter<'a> {

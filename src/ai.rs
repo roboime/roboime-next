@@ -169,6 +169,16 @@ impl game::Referee {
     }
 }
 
+impl Side {
+    fn rel_vec(self, pos: Vec2d) -> Vec2d {
+        if self.is_left() { pos } else { -pos }
+    }
+    fn rel_w(self, w: f32) -> f32 {
+        use std::f32::consts::PI;
+        if self.is_left() { w } else { (w + 2.0 * PI) % (2.0 * PI) - PI }
+    }
+}
+
 impl<'a> PushState<'a> {
     pub fn update<'g, S: game::State<'g>>(&mut self, state: &'g S) -> Result<game::Command> {
         let &mut PushState { ref mut inner } = self;
@@ -178,7 +188,7 @@ impl<'a> PushState<'a> {
         Ok(cmd)
     }
 
-    pub fn push<'g, S: game::State<'g>>(self, state: &'g S) -> Result<PullState<'a>> {
+    pub fn push<'g, G: game::State<'g>>(self, state: &'g G) -> Result<PullState<'a>> {
         let PushState { mut inner } = self;
 
         let timestamp = state.timestamp();
@@ -186,6 +196,7 @@ impl<'a> PushState<'a> {
         let referee = state.referee();
 
         let color = inner.color;
+        let side = state.team_side().side(color);
 
         let (score_player, goalie_player) = {
             let team_info = state.team_info(color);
@@ -217,8 +228,8 @@ impl<'a> PushState<'a> {
 
         {
             let ball = state.ball();
-            let pos = ball.pos();
-            let vel = ball.vel();
+            let pos = side.rel_vec(ball.pos());
+            let vel = side.rel_vec(ball.vel());
 
             // BALL_X
             // BALL_Y
@@ -244,8 +255,10 @@ impl<'a> PushState<'a> {
             // ROBOT_COUNT_PLAYER x
             for robot in robots_player {
                 let robot_id = robot.id();
-                let pos = robot.pos();
-                let vel = robot.vel();
+                let pos = side.rel_vec(robot.pos());
+                let vel = side.rel_vec(robot.vel());
+                let w = side.rel_w(robot.w());
+                let vw = robot.vw();
                 // ROBOT_ID
                 // ROBOT_X
                 // ROBOT_Y
@@ -258,10 +271,10 @@ impl<'a> PushState<'a> {
                     robot_id.id(),
                     pos.x(),
                     pos.y(),
-                    robot.w(),
+                    w,
                     vel.x(),
                     vel.y(),
-                    robot.vw(),
+                    vw,
                 ));
                 ids.push(robot_id.id());
             }
@@ -276,8 +289,10 @@ impl<'a> PushState<'a> {
             // ROBOT_COUNT_OPPONENT x
             for robot in robots_opponent {
                 let robot_id = robot.id();
-                let pos = robot.pos();
-                let vel = robot.vel();
+                let pos = side.rel_vec(robot.pos());
+                let vel = side.rel_vec(robot.vel());
+                let w = side.rel_w(robot.w());
+                let vw = robot.vw();
                 // ROBOT_ID
                 // ROBOT_X
                 // ROBOT_Y
@@ -290,10 +305,10 @@ impl<'a> PushState<'a> {
                     robot_id.id(),
                     pos.x(),
                     pos.y(),
-                    robot.w(),
+                    w,
                     vel.x(),
                     vel.y(),
-                    robot.vw(),
+                    vw,
                 ));
             }
         }
@@ -361,8 +376,11 @@ impl<'a> PullState<'a> {
                     v_normal: v_normal,
                     v_angular: v_angular,
                     action: if kick_force > 0.0 {
+                        if chip_force > 0.0 { warn!("CHIP_FORCE shadowed by KICK_FORCE, please specify only one action"); }
+                        if dribble { warn!("DRIBBLE shadowed by KICK_FORCE, please specify only one action"); }
                         game::RobotAction::Kick(kick_force)
                     } else if chip_force > 0.0 {
+                        if dribble { warn!("DRIBBLE shadowed by CHIP_FORCE, please specify only one action"); }
                         game::RobotAction::ChipKick(chip_force)
                     } else if dribble {
                         game::RobotAction::Dribble

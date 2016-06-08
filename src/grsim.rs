@@ -263,6 +263,9 @@ impl<'a> game::State<'a> for State {
     }
 
     fn team_info(&'a self, _color: Color) -> Self::TeamInfo { () }
+
+    // in grSim, blue is always left
+    fn team_side(&self) -> TeamSide { BlueIsLeft }
 }
 
 enum IterState {

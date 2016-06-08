@@ -297,7 +297,8 @@ int main() {
                 case GotoAndKick:
                     kick_force = 7.0f;
                 case GotoAndChip:
-                    chip_force = 7.0f;
+                    if (kick_force == 0.0)
+                        chip_force = 7.0f;
                 case Goto:
                     //fprintf(stderr, "w: %f\n", w);
                     v_tangent = ((tx - robot->x) * cos(robot->w) + (ty - robot->y) * sin(robot->w)) * PL;
