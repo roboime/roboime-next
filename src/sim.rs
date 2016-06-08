@@ -405,12 +405,21 @@ impl State {
                 if *time_left <= 0.0 {
                     // TODO: issue a warning for taking too long
                     *referee = next_referee;
-                    next_referee_state = if next_referee == game::Referee::Normal {
-                        debug!("Go!");
-                        Some(Idle)
-                    } else {
-                        debug!("Kick!");
-                        Some(WaitForKick(REACTION_TIME))
+                    next_referee_state = match next_referee {
+                        game::Referee::Normal => {
+                            debug!("Go!");
+                            Some(Idle)
+                        }
+                        game::Referee::PreKickoff(team) => {
+                            Some(PlacingBall(REACTION_TIME, game::Referee::Kickoff(team)))
+                        }
+                        game::Referee::PrePenalty(team) => {
+                            Some(PlacingBall(REACTION_TIME, game::Referee::Penalty(team)))
+                        }
+                        _ => {
+                            debug!("Kick!");
+                            Some(WaitForKick(REACTION_TIME))
+                        }
                     };
                 } else {
                     // TODO: detect retreat
@@ -467,6 +476,7 @@ impl<'a> game::State<'a> for State {
     }
 
     fn referee(&self) -> game::Referee {
+        // TODO: convert referee_state and get rid of self.referee
         self.referee
     }
 

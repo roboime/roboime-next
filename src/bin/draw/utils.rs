@@ -2,6 +2,39 @@ use roboime_next::prelude::*;
 use roboime_next::game;
 use rusttype::{Font, Scale, PositionedGlyph};
 
+pub static IDENT: [[f32; 4]; 4] = [
+    [1.0, 0.0, 0.0, 0.0],
+    [0.0, 1.0, 0.0, 0.0],
+    [0.0, 0.0, 1.0, 0.0],
+    [0.0, 0.0, 0.0, 1.0],
+];
+
+pub static INVXY: [[f32; 4]; 4] = [
+    [-1.0,  0.0, 0.0, 0.0],
+    [ 0.0, -1.0, 0.0, 0.0],
+    [ 0.0,  0.0, 1.0, 0.0],
+    [ 0.0,  0.0, 0.0, 1.0],
+];
+
+pub fn xyz_matrix(x: f32, y: f32, z: f32) -> [[f32; 4]; 4] {
+    [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [ x ,  y ,  z , 1.0],
+    ]
+}
+
+pub fn xyzw_matrix(x: f32, y: f32, z: f32, w: f32) -> [[f32; 4]; 4] {
+    let (s, c) = w.sin_cos();
+    [
+        [ c ,  s , 0.0, 0.0],
+        [-s ,  c , 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [ x ,  y ,  z , 1.0],
+    ]
+}
+
 pub fn ball_model_matrix<B: game::Ball>(ball: &B) -> [[f32; 4]; 4] {
     use super::BALL_RADIUS;
 
@@ -9,12 +42,7 @@ pub fn ball_model_matrix<B: game::Ball>(ball: &B) -> [[f32; 4]; 4] {
     let x = pos.x();
     let y = pos.y();
     let z = ball.z().unwrap_or(BALL_RADIUS);
-    [
-        [1.0, 0.0, 0.0, 0.0],
-        [0.0, 1.0, 0.0, 0.0],
-        [0.0, 0.0, 1.0, 0.0],
-        [ x ,  y ,  z , 1.0]
-    ]
+    xyz_matrix(x, y, z)
 }
 
 pub fn robot_model_matrix<R: game::Robot>(robot: &R) -> [[f32; 4]; 4] {
@@ -26,7 +54,7 @@ pub fn robot_model_matrix<R: game::Robot>(robot: &R) -> [[f32; 4]; 4] {
         [ w.cos(),  w.sin(), 0.0, 0.0],
         [-w.sin(),  w.cos(), 0.0, 0.0],
         [   0.0  ,    0.0  , 1.0, 0.0],
-        [    x   ,     y   , 0.0, 1.0]
+        [    x   ,     y   , 0.0, 1.0],
     ]
 }
 

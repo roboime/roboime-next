@@ -10,6 +10,8 @@ pub const LINE_WIDTH: f32      = 0.010;
 pub const CENTER_DIAMETER: f32 = 1.000;
 pub const DEFENSE_RADIUS: f32  = 1.000;
 pub const DEFENSE_STRETCH: f32 = 0.500;
+pub const DEFENSE_MARGIN: f32  = 0.200;
+pub const PENALTY_MARGIN: f32  = 0.400;
 pub const FIELD_MARGIN: f32    = 0.300;
 //pub const REFEREE_MARGIN: f32  = 0.700;
 pub const GOAL_WIDTH: f32      = 1.000;
@@ -20,6 +22,7 @@ pub const BALL_RADIUS: f32     = 0.023;
 pub const ROBOT_RADIUS: f32    = 0.090;
 pub const ROBOT_HEIGHT: f32    = 0.150;
 pub const ROBOT_FRONT_CUT: f32 = 0.060;
+pub const KICK_RADIUS: f32     = 0.050;
 pub const PATTERN_CENTER_DIAM: f32 = 0.050;
 pub const PATTERN_CORNER_DIAM: f32 = 0.040;
 
@@ -83,20 +86,20 @@ pub fn ball<F: Facade>(display: &F) -> (VertexBuffer<RichVertex>, IndexBuffer<u1
 /// This maps an id to a bitmap with the order of the colors.
 ///
 /// - 1 means magenta, 0 green
-/// - bits used are: [_, _, _, _, front_left, back_left, back_right, front_right]
+/// - bits used are: [front_left, back_left, back_right, front_right]
 static ID_MAP: [u8; 12] = [
-    0b_0000_1011,
-    0b_0000_0011,
-    0b_0000_0010,
-    0b_0000_1010,
-    0b_0000_1101,
-    0b_0000_0101,
-    0b_0000_0100,
-    0b_0000_1100,
-    0b_0000_0000,
-    0b_0000_1111,
-    0b_0000_1001,
-    0b_0000_0110,
+    0b_1011,
+    0b_0011,
+    0b_0010,
+    0b_1010,
+    0b_1101,
+    0b_0101,
+    0b_0100,
+    0b_1100,
+    0b_0000,
+    0b_1111,
+    0b_1001,
+    0b_0110,
 ];
 
 /// returns (front_right, back_right, back_left, front_left) from a u8 above
@@ -421,6 +424,191 @@ pub fn goals<F: Facade>(display: &F, team_side: TeamSide) -> (VertexBuffer<RichV
             indices.extend(&[
                 lb, lt, ltp, lb, ltp, lbp,
                 rb, rt, rtp, rb, rtp, rbp,
+            ]);
+        }
+    }
+
+    // building the vertex buffer, which contains all the vertices that we will draw
+    let vertex_buffer = VertexBuffer::new(display, &vertices).unwrap();
+
+    // building the index buffer
+    let index_buffer = IndexBuffer::new(display, PrimitiveType::TrianglesList, &indices).unwrap();
+
+    (vertex_buffer, index_buffer)
+}
+
+pub fn dotted_circle<F: Facade>(display: &F) -> (VertexBuffer<Vertex>, IndexBuffer<u16>) {
+    let white = { let (r, g, b) = colors::WHITE; [r, g, b] };
+    dotted_circle_cfg(display, CENTER_DIAMETER / 2.0, LINE_WIDTH, 144, (2, 4), white)
+}
+
+fn dotted_circle_cfg<F: Facade>(display: &F, radius: f32, width: f32, subdivisions: u16, pattern: (u16, u16), color: [f32; 3]) -> (VertexBuffer<Vertex>, IndexBuffer<u16>) {
+    use std::f32::consts::PI;
+
+    let (a, b) = pattern;
+
+    let mut vertices = Vec::with_capacity(2 * subdivisions as usize);
+    let mut indices = Vec::with_capacity((6 * subdivisions * a / (a + b)) as usize);
+
+    let r_in = radius;
+    let r_out = r_in + width;
+
+    let step = 2.0 * PI / subdivisions as f32;
+    for i in 0..subdivisions {
+        let w = i as f32 * step;
+        let (s, c) = w.sin_cos();
+        vertices.extend(&[
+            Vertex { position: [ r_in * c,  r_in * s, 0.0], color: color },
+            Vertex { position: [r_out * c, r_out * s, 0.0], color: color },
+        ]);
+        let pi = if i == 0 { subdivisions - 1 } else { i - 1 };
+        if i % (a + b) < a {
+            let ii = 2 * i;
+            let ij = ii + 1;
+            let ik = 2 * pi;
+            let il = ik + 1;
+            indices.extend(&[
+                ii, ij, il,
+                ii, il, ik
+            ]);
+        }
+    }
+
+    // building the vertex buffer, which contains all the vertices that we will draw
+    let vertex_buffer = VertexBuffer::new(display, &vertices).unwrap();
+
+    // building the index buffer
+    let index_buffer = IndexBuffer::new(display, PrimitiveType::TrianglesList, &indices).unwrap();
+
+    (vertex_buffer, index_buffer)
+}
+
+pub fn dotted_line<F: Facade>(display: &F) -> (VertexBuffer<Vertex>, IndexBuffer<u16>) {
+    use std::f32::consts::PI;
+    let white = { let (r, g, b) = colors::WHITE; [r, g, b] };
+    let w_step = 2.0 * PI / 144 as f32;
+    let subdivisions = {
+        let l = w_step * (CENTER_DIAMETER / 2.0 + LINE_WIDTH / 2.0);
+        (FIELD_WIDTH / l).trunc() as u16
+    };
+    dotted_line_cfg(display, -FIELD_LENGTH / 2.0 + DEFENSE_RADIUS + PENALTY_MARGIN, LINE_WIDTH, subdivisions, (2, 4), white)
+}
+
+fn dotted_line_cfg<F: Facade>(display: &F, x: f32, width: f32, subdivisions: u16, pattern: (u16, u16), color: [f32; 3]) -> (VertexBuffer<Vertex>, IndexBuffer<u16>) {
+    let (a, b) = pattern;
+
+    let mut vertices = Vec::with_capacity(2 * (subdivisions + 1) as usize);
+    let mut indices = Vec::with_capacity((6 * subdivisions * a / (a + b)) as usize);
+
+    let step = FIELD_WIDTH / subdivisions as f32;
+    let x0 = x;
+    let x1 = x + width;
+    for i in 0..(subdivisions + 1) {
+        let y = -FIELD_WIDTH / 2.0 + step * i as f32;
+        let i0 = vertices.len() as u16;
+        vertices.extend(&[
+            Vertex { position: [x0, y, 0.0], color: color },
+            Vertex { position: [x1, y, 0.0], color: color },
+        ]);
+        if i > 0 && (i - 1) % (a + b) < a {
+            let i1 = i0 + 1;
+            let k0 = i0 - 2;
+            let k1 = i0 - 1;
+            indices.extend(&[
+                i0, i1, k1,
+                i0, k1, k0,
+            ]);
+        }
+    }
+
+    // building the vertex buffer, which contains all the vertices that we will draw
+    let vertex_buffer = VertexBuffer::new(display, &vertices).unwrap();
+
+    // building the index buffer
+    let index_buffer = IndexBuffer::new(display, PrimitiveType::TrianglesList, &indices).unwrap();
+
+    (vertex_buffer, index_buffer)
+}
+
+pub fn circle<F: Facade>(display: &F, color: [f32; 3]) -> (VertexBuffer<Vertex>, IndexBuffer<u16>) {
+    circle_cfg(display, KICK_RADIUS, 60, color)
+}
+
+fn circle_cfg<F: Facade>(display: &F, radius: f32, subdivisions: u16, color: [f32; 3]) -> (VertexBuffer<Vertex>, IndexBuffer<u16>) {
+    use std::f32::consts::PI;
+
+    let mut vertices = Vec::with_capacity((1 + subdivisions) as usize);
+    let mut indices = Vec::with_capacity(3 * subdivisions as usize);
+
+    vertices.push(Vertex { position: [0.0, 0.0, 0.0], color: color });
+
+    let step = 2.0 * PI / subdivisions as f32;
+    for i in 0..subdivisions {
+        let w = i as f32 * step;
+        let (s, c) = w.sin_cos();
+        vertices.push(Vertex { position: [radius * c, radius * s, 0.0], color: color });
+        let pi = if i == 0 { subdivisions - 1 } else { i - 1 };
+        indices.extend(&[0, i + 1, pi + 1]);
+    }
+
+    // building the vertex buffer, which contains all the vertices that we will draw
+    let vertex_buffer = VertexBuffer::new(display, &vertices).unwrap();
+
+    // building the index buffer
+    let index_buffer = IndexBuffer::new(display, PrimitiveType::TrianglesList, &indices).unwrap();
+
+    (vertex_buffer, index_buffer)
+}
+
+pub fn exclusion_zone<F: Facade>(display: &F) -> (VertexBuffer<Vertex>, IndexBuffer<u16>) {
+    let white = { let (r, g, b) = colors::WHITE; [r, g, b] };
+    exclusion_zone_cfg(display, DEFENSE_RADIUS + DEFENSE_MARGIN, DEFENSE_STRETCH, LINE_WIDTH, 348, (2, 4), white)
+}
+
+fn exclusion_zone_cfg<F: Facade>(display: &F, radius: f32, stretch: f32, width: f32,  subdivisions: u16, pattern: (u16, u16), color: [f32; 3]) -> (VertexBuffer<Vertex>, IndexBuffer<u16>) {
+    use std::f32::consts::{PI, FRAC_PI_2};
+
+    let (a, b) = pattern;
+
+    let r_in = radius;
+    let r_out = r_in + width;
+
+    let w_step = 2.0 * PI / subdivisions as f32;
+    let (l_subs, l_step) = {
+        let l = w_step * (radius + width / 2.0);
+        let n = (stretch / l).trunc();
+        (n as u16, DEFENSE_STRETCH / n)
+    };
+
+    let mut vertices = Vec::with_capacity(2 * (subdivisions / 2 + l_subs + 1) as usize);
+    let mut indices  = Vec::with_capacity((6 * (subdivisions / 2 + l_subs + 1) * a / (a + b)) as usize);
+
+    for i in 0..(subdivisions / 2 + l_subs) {
+        let cy = if i < subdivisions / 4 { -DEFENSE_STRETCH / 2.0 } else { DEFENSE_STRETCH / 2.0 };
+        let cx = -FIELD_LENGTH / 2.0;
+        let (x0, y0, x1, y1) = if i < subdivisions / 4 || i >= subdivisions / 4 + l_subs {
+            let w = if i < subdivisions / 4 { i } else { i - l_subs } as f32 * w_step - FRAC_PI_2;
+            let (s, c) = w.sin_cos();
+            ( r_in * c + cx,  r_in * s + cy,
+             r_out * c + cx, r_out * s + cy)
+        } else {
+            let k = i - subdivisions / 4;
+            let h = -DEFENSE_STRETCH / 2.0 + k as f32 * l_step;
+            (-FIELD_LENGTH / 2.0 + r_in,  h,
+             -FIELD_LENGTH / 2.0 + r_out, h)
+        };
+        let i0 = vertices.len() as u16;
+        vertices.extend(&[
+            Vertex { position: [x0, y0, 0.0], color: color },
+            Vertex { position: [x1, y1, 0.0], color: color },
+        ]);
+        if i > 0 && (i + 1) % (a + b) < a {
+            let i1 = i0 + 1;
+            let k0 = i0 - 2;
+            let k1 = i0 - 1;
+            indices.extend(&[
+                i1, k0, i0,
+                i0, k1, k0,
             ]);
         }
     }

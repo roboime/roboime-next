@@ -29,6 +29,7 @@ pub struct Game<'a> {
     texture_program: Program,
     params: DrawParameters<'a>,
     simple_params: DrawParameters<'a>,
+    simple_alpha_params: DrawParameters<'a>,
     texture_params: DrawParameters<'a>,
     font: Font<'a>,
     dpi_factor: f32,
@@ -37,6 +38,10 @@ pub struct Game<'a> {
     light: [f32; 3],
     bg_color: (f32, f32, f32, f32),
     field: (VertexBuffer<Vertex>, IndexBuffer<u16>),
+    exclusion_zone: (VertexBuffer<Vertex>, IndexBuffer<u16>),
+    circles: [(VertexBuffer<Vertex>, IndexBuffer<u16>); 2],
+    dotted_circle: (VertexBuffer<Vertex>, IndexBuffer<u16>),
+    dotted_line: (VertexBuffer<Vertex>, IndexBuffer<u16>),
     goals: (VertexBuffer<RichVertex>, IndexBuffer<u16>),
     ball: (VertexBuffer<RichVertex>, IndexBuffer<u16>),
     yellow_robots: HashMap<u8, (VertexBuffer<RichVertex>, IndexBuffer<u16>)>,
@@ -109,6 +114,21 @@ impl<'a> Game<'a> {
             .. params.clone()
         };
 
+        let simple_alpha_params = {
+            use glium::{Blend, BlendingFunction, LinearBlendingFactor};
+            DrawParameters {
+                blend: Blend {
+                    color: BlendingFunction::Addition {
+                        source: LinearBlendingFactor::ConstantAlpha,
+                        destination: LinearBlendingFactor::OneMinusConstantAlpha,
+                    },
+                    alpha: BlendingFunction::AlwaysReplace,
+                    constant_value: (0.0, 0.0, 0.0, 0.5),
+                },
+                .. simple_params.clone()
+            }
+        };
+
         let texture_params = DrawParameters {
             blend: draw_parameters::Blend::alpha_blending(),
             .. Default::default()
@@ -124,9 +144,16 @@ impl<'a> Game<'a> {
         //let light = [-1.0, 0.4, -0.9];
         let light = [-0.2, 2.0, -1.0];
         let bg_color = { let (r, g, b) = colors::DARK_GREEN; (r, g, b, 1.0) };
+        let blue = { let (r, g, b) = colors::PATTERN_BLUE; [r, g, b] };
+        let yellow = { let (r, g, b) = colors::PATTERN_YELLOW; [r, g, b] };
 
         let team_side = Default::default();
         let field = field(display, team_side);
+        let exclusion_zone = exclusion_zone(display);
+        let dotted_circle = dotted_circle(display);
+        let dotted_line = dotted_line(display);
+        let circle_blue   = circle(display, blue);
+        let circle_yellow = circle(display, yellow);
         let goals = goals(display, team_side);
         let ball  = ball(display);
         let (yellow_robots, blue_robots) = {
@@ -154,6 +181,7 @@ impl<'a> Game<'a> {
             texture_program: texture_program,
             params: params,
             simple_params: simple_params,
+            simple_alpha_params: simple_alpha_params,
             texture_params: texture_params,
             font: font,
             dpi_factor: dpi_factor,
@@ -162,6 +190,10 @@ impl<'a> Game<'a> {
             light: light,
             bg_color: bg_color,
             field: field,
+            exclusion_zone: exclusion_zone,
+            circles: [circle_blue, circle_yellow],
+            dotted_circle: dotted_circle,
+            dotted_line: dotted_line,
             goals: goals,
             ball: ball,
             yellow_robots: yellow_robots,
@@ -292,6 +324,7 @@ impl<'a> Game<'a> {
 
     pub fn draw_to<'g, S: Surface, G: game::State<'g>>(&self, target: &mut S, game_state: &'g G, view_port: (u32, u32), view: [[f32; 4]; 4]) -> Result<(), DrawError> {
         use roboime_next::prelude::{Id, Blue, Yellow, Robot, State};
+        use roboime_next::game::Referee::*;
 
         let &Game {
             ref program,
@@ -299,11 +332,16 @@ impl<'a> Game<'a> {
             ref texture_program,
             ref params,
             ref simple_params,
+            ref simple_alpha_params,
             ref texture_params,
             ref cache_tex,
             light,
             bg_color,
             field: (ref field_vb, ref field_ib),
+            exclusion_zone: (ref exclusion_vb, ref exclusion_ib),
+            ref circles,
+            dotted_circle: (ref dotted_vb, ref dotted_ib),
+            dotted_line: (ref dotted_line_vb, ref dotted_line_ib),
             goals: (ref goals_vb, ref goals_ib),
             ball: (ref ball_vb, ref ball_ib),
             ref yellow_robots,
@@ -316,33 +354,91 @@ impl<'a> Game<'a> {
 
         let (width, height) = view_port;
         let perspective = perspective_matrix(width as f32, height as f32);
+        let timestamp = game_state.timestamp();
 
         try!(target.draw(field_vb, field_ib, simple_program, &uniform! {
-            model: [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0f32]
-            ],
+            model: IDENT,
             view: view,
             perspective: perspective,
         }, simple_params));
 
+        let referee = game_state.referee();
+
+        match referee {
+            DirectFree(_) |
+            IndirectFree(_) |
+            Stop => {
+                try!(target.draw(exclusion_vb, exclusion_ib, simple_program, &uniform! {
+                    model: IDENT,
+                    view: view,
+                    perspective: perspective,
+                }, simple_alpha_params));
+                try!(target.draw(exclusion_vb, exclusion_ib, simple_program, &uniform! {
+                    model: INVXY,
+                    view: view,
+                    perspective: perspective,
+                }, simple_alpha_params));
+            }
+            PrePenalty(_) |
+            Penalty(_) => {
+                try!(target.draw(dotted_line_vb, dotted_line_ib, simple_program, &uniform! {
+                    model: IDENT,
+                    view: view,
+                    perspective: perspective,
+                }, simple_alpha_params));
+                try!(target.draw(dotted_line_vb, dotted_line_ib, simple_program, &uniform! {
+                    model: INVXY,
+                    view: view,
+                    perspective: perspective,
+                }, simple_alpha_params));
+            }
+            _ => ()
+        }
+
+        match referee {
+            PreKickoff(_) |
+            Kickoff(_) |
+            DirectFree(_) |
+            IndirectFree(_) |
+            Goal(_) |
+            Stop => {
+                let Vec2d(x, y) = game_state.ball().pos();
+                let w = timestamp as f32 * 0.5;
+                try!(target.draw(dotted_vb, dotted_ib, simple_program, &uniform! {
+                    model: xyzw_matrix(x, y, 0.0, w),
+                    view: view,
+                    perspective: perspective,
+                }, simple_alpha_params));
+            }
+            _ => ()
+        }
+
+        match referee {
+            //PreKickoff(color) |
+            Kickoff(color) |
+            //PrePenalty(color) |
+            Penalty(color) |
+            DirectFree(color) |
+            IndirectFree(color) => {
+                let Vec2d(x, y) = game_state.ball().pos();
+                let &(ref circle_vb, ref circle_ib) = if color.is_blue() { &circles[0] } else { &circles[1] };
+                try!(target.draw(circle_vb, circle_ib, simple_program, &uniform! {
+                    model: xyz_matrix(x, y, 0.0),
+                    view: view,
+                    perspective: perspective,
+                }, simple_alpha_params));
+            }
+            _ => ()
+        }
+
         if let &Some(ref vertex_buffer) = score_text_vertex {
             use self::models::FIELD_WIDTH;
-            let x = 0.0;
-            let y = FIELD_WIDTH / 2.0 + 0.050;
             try!(target.draw(
                 vertex_buffer,
                 index::NoIndices(index::PrimitiveType::TrianglesList),
                 texture_program,
                 &uniform! {
-                    model: [
-                        [1.0, 0.0, 0.0, 0.0],
-                        [0.0, 1.0, 0.0, 0.0],
-                        [0.0, 0.0, 1.0, 0.0],
-                        [ x ,  y , 0.0, 1.0f32]
-                    ],
+                    model: xyz_matrix(0.0, FIELD_WIDTH / 2.0 + 0.050, 0.0),
                     view: view,
                     tex: cache_tex.sampled().magnify_filter(uniforms::MagnifySamplerFilter::Nearest),
                     perspective: perspective,
@@ -352,12 +448,7 @@ impl<'a> Game<'a> {
         }
 
         try!(target.draw(goals_vb, goals_ib, program, &uniform! {
-            model: [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0f32]
-            ],
+            model: IDENT,
             view: view,
             perspective: perspective,
             u_light: light,
