@@ -53,7 +53,7 @@ pub struct Game<'a> {
 
 impl<'a> Game<'a> {
     pub fn new<F: Facade>(display: &F) -> Result<Game, ProgramChooserCreationError> {
-        let font_data = include_bytes!("fonts/SourceCodePro-Light.ttf");
+        let font_data = include_bytes!("fonts/Roboto-Light.ttf");
         let font = FontCollection::from_bytes(font_data as &[u8]).into_font().unwrap();
 
         //let dpi_factor = display.get_window().unwrap().hidpi_factor();
@@ -250,12 +250,12 @@ impl<'a> Game<'a> {
 
         let (score_left, score_right) = score;
         let text_left = format!("{}", score_left);
-        let text_center = format!("×");
+        let text_center = format!(" ― ");
         let text_right = format!("{}", score_right);
 
         let zoom = 200.0;
         //let _corrected_width = (width * zoom) as u32;
-        let glyphs = layout_align(font, Scale::uniform(72.0 * dpi_factor), &text_left, &text_center, &text_right);
+        let glyphs = layout_align(font, Scale::uniform(60.0 * dpi_factor), &text_left, &text_center, &text_right);
         for glyph in &glyphs {
             cache.queue_glyph(0, glyph.clone());
         }

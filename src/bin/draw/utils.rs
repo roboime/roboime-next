@@ -160,58 +160,30 @@ pub fn layout_align<'a>(font: &'a Font, scale: Scale, text_left: &str, text_cent
     let mut caret = point(0.0, 0.0);
     let mut last_glyph_id = None;
 
-    for c in text_left.nfc() {
-        if c.is_control() { continue; }
-        let base_glyph = if let Some(glyph) = font.glyph(c) { glyph } else { continue; };
-        if let Some(id) = last_glyph_id.take() {
-            caret.x += font.pair_kerning(scale, id, base_glyph.id());
-        }
-        last_glyph_id = Some(base_glyph.id());
-        let glyph = base_glyph.scaled(scale).positioned(caret);
-        caret.x += glyph.unpositioned().h_metrics().advance_width;
-        result.push(glyph);
-    }
-
-    let offset = -caret.x;
-
-    for glyph in result.iter_mut() {
-        let g = glyph.clone();
-        let mut position = g.position();
-        position.x += offset;
-        *glyph = g.into_unpositioned().positioned(position);
-    }
-
-    // reset caret
-    caret.x = 0.0;
-
-    let x0 = caret.x;
-    for c in text_center.nfc() {
-        if c.is_control() { continue; }
-        let base_glyph = if let Some(glyph) = font.glyph(c) { glyph } else { continue; };
-        if let Some(id) = last_glyph_id.take() {
-            caret.x += font.pair_kerning(scale, id, base_glyph.id());
-        }
-        last_glyph_id = Some(base_glyph.id());
-        let glyph = base_glyph.scaled(scale).positioned(caret);
-        caret.x += glyph.unpositioned().h_metrics().advance_width;
-        result.push(glyph);
-    }
-    let x1 = caret.x;
-    let length = x1 - x0;
-    let offset = -length / 2.0;
-
-    // TODO/FIXME/XXX: deduplicade this code:
-    for c in text_right.nfc() {
-        if c.is_control() { continue; }
-        let base_glyph = if let Some(glyph) = font.glyph(c) { glyph } else { continue; };
-        if let Some(id) = last_glyph_id.take() {
-            caret.x += font.pair_kerning(scale, id, base_glyph.id());
-        }
-        last_glyph_id = Some(base_glyph.id());
-        let glyph = base_glyph.scaled(scale).positioned(caret);
-        caret.x += glyph.unpositioned().h_metrics().advance_width;
-        result.push(glyph);
-    }
+    let offset = {
+        let mut flush_text = |text: &str| {
+            for c in text.nfc() {
+                if c.is_control() { continue; }
+                let base_glyph = if let Some(glyph) = font.glyph(c) { glyph } else { continue; };
+                if let Some(id) = last_glyph_id.take() {
+                    caret.x += font.pair_kerning(scale, id, base_glyph.id());
+                }
+                last_glyph_id = Some(base_glyph.id());
+                let glyph = base_glyph.scaled(scale).positioned(caret);
+                caret.x += glyph.unpositioned().h_metrics().advance_width;
+                result.push(glyph);
+            }
+            caret
+        };
+        let caret = flush_text(text_left);
+        let offset_left = -caret.x;
+        let x0 = caret.x;
+        let caret = flush_text(text_center);
+        let x1 = caret.x;
+        let offset_center = -(x1 - x0) * 0.5;
+        flush_text(text_right);
+        offset_left + offset_center
+    };
 
     for glyph in result.iter_mut() {
         let g = glyph.clone();
