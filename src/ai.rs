@@ -152,6 +152,8 @@ impl game::Referee {
         use game::Referee::*;
         match self {
             Normal => 'N',
+            Avoid(Id(color, _)) if color == team => 'A',
+            Avoid(..) => 'N',
             PreKickoff(color) if color == team => 'p',
             Kickoff(color) if color == team => 'k',
             PrePenalty(color) if color == team => 'x',
@@ -165,6 +167,13 @@ impl game::Referee {
             DirectFree(color) if color != team => 'D',
             IndirectFree(color) if color != team => 'I',
             _ => 'S',
+        }
+    }
+    fn more_info(self, team: Color) -> i32 {
+        use game::Referee::*;
+        match self {
+            Avoid(Id(color, id)) if color == team => id as i32,
+            _ => -1,
         }
     }
 }
@@ -210,7 +219,7 @@ impl<'a> PushState<'a> {
         // COUNTER
         // TIMESTAMP
         // REFEREE_STATE
-        // REFEREE_TIME_LEFT
+        // REFEREE_MORE_INFO
         // SCORE_PLAYER
         // SCORE_OPPONENT
         // GOALIE_ID_PLAYER
@@ -219,7 +228,7 @@ impl<'a> PushState<'a> {
             counter,
             timestamp,
             referee.to_char(color),
-            -1, //  TODO: REFEREE_TIME_LEFT
+            referee.more_info(color),
             score_player,
             score_opponent,
             goalie_player,

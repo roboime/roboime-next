@@ -96,21 +96,22 @@ __Line 1__ general play data:
 - `COUNTER`: an integrer, counter for the number of received packets
 - `TIMESTAMP`: a float, the time elapsed since the play started
 - `REFEREE_STATE`: a char, indicates the referee state, one of the following:
-  - `S`: STOP, stay at least 0.5m away from the ball
-  - `N`: NORMAL, go wild, score goals
-  - `p`: PRE_KICKOFF, return to your field, you will kickoff shortly
-  - `k`: KICKOFF, you're authorized to kickoff now
-  - `i`: INDIRECT, kick the ball to resume the game, no double touches or direct goals allowed
-  - `d`: DIRECT, kick the ball to resume the game, no double touches allowed
-  - `x`: PRE_PENALTY, get your robots behind the "penalty line", wait for the order to shoot
-  - `y`: PENALTY, you may shoot the penalty, and you better score it
-  - `P`: OPPONENT_PRE_KICKOFF, return to your field, the opponent will kickoff shortly
-  - `K`: OPPONENT_KICKOFF, the opponent is authorized to kickoff, you must still stay away from the ball until the state returns to normal
-  - `I`: OPPONENT_INDIRECT, the opponent must kick the ball to resume the play, wait for the normal state to approach the ball
-  - `D`: OPPONENT_DIRECT, the opponent must kick the ball to resume the play, wait for the normal state as per above
-  - `X`: OPPONENT_PRE_PENALTY, get your robots ready, the opponent will shoot a penalty shortly
-  - `Y`: OPPONENT_PENALTY, the opponent may shoot now, save it
-- `REFEREE_TIME_LEFT`: a float, time left to finish the round __(not implemented yet always `-1`)__
+  - `S`: __STOP__, stay at least 0.5m away from the ball
+  - `N`: __NORMAL__, go wild, score goals
+  - `A`: __AVOID__, go wild, score goals, except the indicated robot must not touch the ball
+  - `p`: __PRE\_KICKOFF__, return to your field, you will kickoff shortly
+  - `k`: __KICKOFF__, you're authorized to kickoff now
+  - `i`: __INDIRECT__, kick the ball to resume the game, no double touches or direct goals allowed
+  - `d`: __DIRECT__, kick the ball to resume the game, no double touches allowed
+  - `x`: __PRE\_PENALTY__, get your robots behind the "penalty line", wait for the order to shoot
+  - `y`: __PENALTY__, you may shoot the penalty, and you better score it
+  - `P`: __OPPONENT\_PRE_KICKOFF__, return to your field, the opponent will kickoff shortly
+  - `K`: __OPPONENT\_KICKOFF__, the opponent is authorized to kickoff, you must still stay away from the ball until the state returns to normal
+  - `I`: __OPPONENT\_INDIRECT__, the opponent must kick the ball to resume the play, wait for the normal state to approach the ball
+  - `D`: __OPPONENT\_DIRECT__, the opponent must kick the ball to resume the play, wait for the normal state as per above
+  - `X`: __OPPONENT\_PRE_PENALTY__, get your robots ready, the opponent will shoot a penalty shortly
+  - `Y`: __OPPONENT\_PENALTY__, the opponent may shoot now, save it
+- `REFEREE_MORE_INFO`: an integer, when `REFEREE_STATE` is __AVOID__ this will be the id of the robot, for all other cases it's -1
 - `SCORE_PLAYER`: an integrer, your team score
 - `SCORE_OPPONENT`: an integrer, the opponent team score
 - `GOALIE_ID_PLAYER`: an integrer, the id of your goalkeeper (the robot allowed inside the defense area)
@@ -185,7 +186,7 @@ The robot diameter is always `0.180`, we'll call it `ROBOT_DIAM` here.
 GUI
 ---
 
-There is an experimental __GUI__: `roboime-next-gui`.
+There is a __GUI__: `roboime-next-gui`.
 
 Main objectives include:
 

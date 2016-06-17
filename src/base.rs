@@ -18,6 +18,10 @@ impl Vec2d {
         let (sin, cos) = angle.sin_cos();
         Vec2d(self.0 * cos - self.1 * sin, self.0 * sin + self.1 * cos)
     }
+    #[inline] pub fn renorm(self, new_norm: f32) -> Vec2d {
+        let norm = self.norm();
+        if norm > 0.0 { self * (new_norm / norm) } else { self }
+    }
 }
 
 impl Add for Vec2d {

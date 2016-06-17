@@ -70,6 +70,7 @@ int main() {
     struct Ball ball;
     // stabilize the solution
     int previous_first_to_ball = -2;
+    int id_avoid = -1;
 
     while (1) {
         int ids_player[6], ids_opponent[6];
@@ -78,19 +79,22 @@ int main() {
         int counter;
         float timestamp;
         char referee_state;
-        float referee_time_left;
+        int referee_more_info;
         int score_player, score_opponent;
         int goalie_id_player, goalie_id_opponent;
-        scanf("%i %f %c %f %i %i %i %i",
+        scanf("%i %f %c %i %i %i %i %i",
             &counter,
             &timestamp,
             &referee_state,
-            &referee_time_left,
+            &referee_more_info,
             &score_player,
             &score_opponent,
             &goalie_id_player,
             &goalie_id_opponent
         );
+        if (referee_state == 'A') {
+            id_avoid = referee_more_info;
+        }
         scanf("%f %f %f %f", &ball.x, &ball.y, &ball.vx, &ball.vy);
 
         int robot_count_player;
@@ -133,7 +137,7 @@ int main() {
                 int id = ids_player[i];
                 if (id == goalie_id_player) continue;
                 float d2 = distance2(robots_player[id].x, robots_player[id].y, ball.x, ball.y);
-                if (d2 < distance2_to_ball) {
+                if (d2 < distance2_to_ball && id != id_avoid) {
                     if (distance2_to_ball < distance2_to_ball2) {
                         distance2_to_ball2 = distance2_to_ball;
                         second_to_ball = first_to_ball;
@@ -172,6 +176,7 @@ int main() {
                 case 'i': // INDIRECT
                 case 'd': // DIRECT
                 case 'N': // NORMAL
+                case 'A': // AVOID
                     if (id == first_to_ball) {
                         float kx = field_length / 2;
                         float ky = 0.0;

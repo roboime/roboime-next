@@ -39,7 +39,7 @@ pub struct Game<'a> {
     bg_color: (f32, f32, f32, f32),
     field: (VertexBuffer<Vertex>, IndexBuffer<u16>),
     exclusion_zone: (VertexBuffer<Vertex>, IndexBuffer<u16>),
-    circles: [(VertexBuffer<Vertex>, IndexBuffer<u16>); 2],
+    circles: [(VertexBuffer<Vertex>, IndexBuffer<u16>); 3],
     dotted_circle: (VertexBuffer<Vertex>, IndexBuffer<u16>),
     dotted_line: (VertexBuffer<Vertex>, IndexBuffer<u16>),
     goals: (VertexBuffer<RichVertex>, IndexBuffer<u16>),
@@ -146,6 +146,7 @@ impl<'a> Game<'a> {
         let bg_color = { let (r, g, b) = colors::DARK_GREEN; (r, g, b, 1.0) };
         let blue = { let (r, g, b) = colors::PATTERN_BLUE; [r, g, b] };
         let yellow = { let (r, g, b) = colors::PATTERN_YELLOW; [r, g, b] };
+        let white = { let (r, g, b) = colors::WHITE; [r, g, b] };
 
         let team_side = Default::default();
         let field = field(display, team_side);
@@ -154,6 +155,7 @@ impl<'a> Game<'a> {
         let dotted_line = dotted_line(display);
         let circle_blue   = circle(display, blue);
         let circle_yellow = circle(display, yellow);
+        let circle_white = circle(display, white);
         let goals = goals(display, team_side);
         let ball  = ball(display);
         let (yellow_robots, blue_robots) = {
@@ -191,7 +193,7 @@ impl<'a> Game<'a> {
             bg_color: bg_color,
             field: field,
             exclusion_zone: exclusion_zone,
-            circles: [circle_blue, circle_yellow],
+            circles: [circle_blue, circle_yellow, circle_white],
             dotted_circle: dotted_circle,
             dotted_line: dotted_line,
             goals: goals,
@@ -400,7 +402,6 @@ impl<'a> Game<'a> {
             Kickoff(_) |
             DirectFree(_) |
             IndirectFree(_) |
-            Goal(_) |
             Stop => {
                 let Vec2d(x, y) = game_state.ball().pos();
                 let w = timestamp as f32 * 0.5;
@@ -413,22 +414,18 @@ impl<'a> Game<'a> {
             _ => ()
         }
 
-        match referee {
-            //PreKickoff(color) |
-            Kickoff(color) |
-            //PrePenalty(color) |
-            Penalty(color) |
-            DirectFree(color) |
-            IndirectFree(color) => {
-                let Vec2d(x, y) = game_state.ball().pos();
-                let &(ref circle_vb, ref circle_ib) = if color.is_blue() { &circles[0] } else { &circles[1] };
-                try!(target.draw(circle_vb, circle_ib, simple_program, &uniform! {
-                    model: xyz_matrix(x, y, 0.0),
-                    view: view,
-                    perspective: perspective,
-                }, simple_alpha_params));
-            }
-            _ => ()
+        if let Some((Vec2d(x, y), maybe_color)) = game_state.ball_positioning() {
+            //let Vec2d(x, y) = game_state.ball().pos();
+            let &(ref circle_vb, ref circle_ib) = match maybe_color {
+                Some(Blue) => &circles[0],
+                Some(Yellow) => &circles[1],
+                None => &circles[2],
+            };
+            try!(target.draw(circle_vb, circle_ib, simple_program, &uniform! {
+                model: xyz_matrix(x, y, 0.0),
+                view: view,
+                perspective: perspective,
+            }, simple_alpha_params));
         }
 
         if let &Some(ref vertex_buffer) = score_text_vertex {

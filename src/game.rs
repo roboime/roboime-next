@@ -22,17 +22,28 @@ pub trait Robot {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Referee {
-    Halt,
+    /// All robots must stay away from the ball by at least 0.5m.
     Stop,
+    /// This is the normal game play.
     Normal,
+    /// After some types of kicks the kicker robot cannot touch the ball before it touches another
+    /// robot, this state indicates which robot is it.  The state will change to normal when this
+    /// restriction is lifted.
+    Avoid(Id),
+    /// All robots must go to their respective side of the field, while also staying away from the
+    /// ball (by at least 0.5m). A kickoff for the team with the given color will follow soon.
     PreKickoff(Color),
+    /// The team with the given color is allowed to kickoff.
     Kickoff(Color),
+    /// All robots must go to the penalty positions (better described by the rules). A penalty for
+    /// the team with the given color will follow.
     PrePenalty(Color),
+    /// The team with the given color is allowed to kick the penalty.
     Penalty(Color),
+    /// The team with the given color is allowed to kick the free direct kick.
     DirectFree(Color),
+    /// The team with the given color is allowed to kick the free indirect kick.
     IndirectFree(Color),
-    Timeout(Color),
-    Goal(Color),
 }
 
 /// Specifications of the field geometry
@@ -74,6 +85,7 @@ pub trait State<'a> {
     fn referee(&self) -> Referee { Referee::Normal }
     fn team_info(&'a self, color: Color) -> Self::TeamInfo;
     fn team_side(&self) -> TeamSide;
+    fn ball_positioning(&self) -> Option<(Vec2d, Option<Color>)> { None }
 }
 
 #[derive(Clone, Debug)]
