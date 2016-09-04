@@ -104,7 +104,7 @@ pub enum PlaceState {
 impl Referee {
     fn initial() -> Referee {
         // TODO: maybe change to FreePlay?
-        Normal
+        PreKickoff(Blue, HasPlaced(STOP_PATIENCE))
     }
 
     fn ignore_ball(&self) -> bool {
@@ -231,9 +231,9 @@ impl Builder {
             initial_timestamp: 0.0, // TODO
             counter: 0,
             timestamp: 0.0,
-            //ball: Ball { pos: Vec2d(0.0, 0.0), vel: Vec2d(0.0, 0.0) },
+            ball: Ball { pos: Vec2d(0.0, 0.0), vel: Vec2d(0.0, 0.0) },
             //ball: Ball { pos: Vec2d(0.0, 0.05), vel: Vec2d(-4.0, 0.0) },
-            ball: Ball { pos: Vec2d(0.0, -0.05), vel: Vec2d(-4.0, 0.0) },
+            //ball: Ball { pos: Vec2d(0.0, -0.05), vel: Vec2d(-4.0, 0.0) },
             robots: robots,
             last_ball_touch: None,
             team_side: self.team_side,
@@ -261,7 +261,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn step(&mut self, command: game::Command, timestep: f32) {
+    pub fn step(&mut self, commands: &[game::Command], timestep: f32) {
         use std::f32::consts::PI;
 
         self.counter += 1;
@@ -282,15 +282,17 @@ impl State {
         let mut kicker = None;
         let mut toucher = None;
 
+        let mut robot_commands = BTreeMap::new();
+
+        for command in commands {
+            for (robot_id, robot_command) in command.robots.iter() {
+                robot_commands.insert(Id(command.color, *robot_id), robot_command);
+            }
+        }
+
         // XXX: overly simplified physics ahead
         for (robot_id, robot) in robots.iter_mut() {
-            let robot_command = {
-                if robot_id.color() == command.color {
-                    command.robots.get(&robot_id.id())
-                } else {
-                    None
-                }
-            };
+            let robot_command = robot_commands.get(&robot_id);
 
             if let Some(robot_command) = robot_command {
                 let v_tangent = robot_command.v_tangent;
