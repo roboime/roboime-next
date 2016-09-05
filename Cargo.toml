@@ -16,7 +16,7 @@ default = []
 unstable = []
 
 [dependencies]
-roboime-next-protocol = { path = "protocol" }
+roboime-next-protocol = { path = "protocol", version = "0.1" }
 net2 = "0.2"
 log = "0.3"
 clap = "^2.5.0"
