@@ -14,17 +14,15 @@ Next iteration of [RoboIME][roboime]'s software stack, coded in [Rust][rust].
 Developing
 ----------
 
-Clone the project:
+Install the project:
 
     git clone https://github.com/roboime/roboime-next.git
-
-Go to the `roboime-next-cli` subproject:
-
-    cd roboime-next/cli
+    cd roboime-next
+    cargo install
 
 To run the `demo-ai` bot:
 
-    cargo run python demos/python2/demo.py
+    roboime-next-gui --blue="python demos/python2/demo.py"
 
 This will resolve, download and compile dependencies, and compile the project in debug mode and run it. That's it. Really!
 
@@ -33,9 +31,9 @@ See [the CLI read-me](cli/README.md) for more demos.
 > NOTE: in the near future the cli will be installable via cargo, so only `cargo install roboime-next-cli` instead of all of the above.
 
 If you wish to run your own bot you only have to generate an executable that conforms to the protocol described in the Game I/O section,
-and call `roboime-next-cli` with it:
+and call `roboime-next-gui` with it:
 
-    cargo run ./my-awesome-bot
+    roboime-next-gui --blue="python demos/python2/demo.py"
 
 > NOTE: the `my-awesome-bot` file has to be executable, just make sure it runs without `cargo run` first.
 
