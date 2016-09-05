@@ -108,7 +108,7 @@ fn main_loop() -> Result<(), Box<Error>> {
     // Configs
 
     let ai_blue_cfg = if matches.is_present("blue") {
-        let ai_cmd: Vec<&str> = matches.values_of("blue").unwrap().collect();
+        let ai_cmd: Vec<&str> = matches.values_of("blue").unwrap().collect::<Vec<&str>>()[0].split(" ").collect();
         let (ai_program, ai_args) = (ai_cmd[0], &ai_cmd[1..]);
         let mut ai_command = Command::new(ai_program);
         ai_command.args(ai_args);
@@ -120,7 +120,7 @@ fn main_loop() -> Result<(), Box<Error>> {
     };
 
     let ai_yellow_cfg = if matches.is_present("yellow") {
-        let ai_cmd: Vec<&str> = matches.values_of("yellow").unwrap().collect();
+        let ai_cmd: Vec<&str> = matches.values_of("yellow").unwrap().collect::<Vec<&str>>()[0].split(" ").collect();
         let (ai_program, ai_args) = (ai_cmd[0], &ai_cmd[1..]);
         let mut ai_command = Command::new(ai_program);
         ai_command.args(ai_args);
