@@ -486,7 +486,7 @@ impl State {
                             // wrong color early kicked the ball, redo kickoff
                             PreKickoff(color, WillPlace(REACTION_TIME, Vec2d(0.0, 0.0)))
                         }
-                    } else if ball.pos.norm() > KICK_TOLERANCE2 {
+                    } else if ball.pos.norm2() > KICK_TOLERANCE2 {
                         if let Some(robot_id) = toucher {
                             if robot_id.color() == color {
                                 PostKickoff(robot_id)
@@ -543,6 +543,20 @@ impl State {
                         if robot_id.color() == color {
                             PostDirectKick(robot_id)
                         } else {
+                            // wrong color early kicked the ball
+                            // TODO: verify if this is the correct fault
+                            PreDirectKick(color, WillPlace(REACTION_TIME, place))
+                        }
+                    } else if let Some(robot_id) = toucher {
+                        if robot_id.color() == color {
+                            if (ball.pos - place).norm2() > KICK_TOLERANCE2 {
+                                PostDirectKick(robot_id)
+                            } else {
+                                DirectKick(color, place, next_time_left)
+                            }
+                        } else {
+                            // wrong color early touched the ball
+                            // TODO: verify if this is the correct fault
                             PreDirectKick(color, WillPlace(REACTION_TIME, place))
                         }
                     } else {
@@ -590,6 +604,18 @@ impl State {
                             PostIndirectKick(robot_id)
                         } else {
                             // wrong color early kicked the ball
+                            // TODO: verify if this is the correct fault
+                            PreIndirectKick(color, WillPlace(REACTION_TIME, place))
+                        }
+                    } else if let Some(robot_id) = toucher {
+                        if robot_id.color() == color {
+                            if (ball.pos - place).norm2() > KICK_TOLERANCE2 {
+                                PostIndirectKick(robot_id)
+                            } else {
+                                IndirectKick(color, place, next_time_left)
+                            }
+                        } else {
+                            // wrong color early touched the ball
                             // TODO: verify if this is the correct fault
                             PreIndirectKick(color, WillPlace(REACTION_TIME, place))
                         }
