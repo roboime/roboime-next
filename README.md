@@ -16,9 +16,7 @@ Developing
 
 Install the project:
 
-    git clone https://github.com/roboime/roboime-next.git
-    cd roboime-next
-    cargo install
+    cargo install roboime-next
 
 To run the `demo-ai` bot:
 
