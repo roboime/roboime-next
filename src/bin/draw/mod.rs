@@ -325,7 +325,7 @@ impl<'a> Game<'a> {
     }
 
     pub fn draw_to<'g, S: Surface, G: game::State<'g>>(&self, target: &mut S, game_state: &'g G, view_port: (u32, u32), view: [[f32; 4]; 4]) -> Result<(), DrawError> {
-        use roboime_next::prelude::{Id, Blue, Yellow, Robot, State};
+        use roboime_next::prelude::{Id, Blue, Yellow, Robot};
         use roboime_next::game::Referee::*;
 
         let &Game {

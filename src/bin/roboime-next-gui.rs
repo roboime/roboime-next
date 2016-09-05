@@ -22,7 +22,7 @@ fn main_loop() -> Result<(), Box<Error>> {
     use roboime_next::prelude::*;
     use roboime_next::{sim, ai};
     use clap::{Arg, App, AppSettings};
-    use glium::{glutin, DisplayBuild, Surface};
+    use glium::{glutin, DisplayBuild};
     use log::LogLevelFilter;
     use env_logger::LogBuilder;
     //use image::image::GenericImage;

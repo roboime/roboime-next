@@ -1,6 +1,6 @@
 use std::slice;
 use std::net::{IpAddr, SocketAddr, UdpSocket, Ipv4Addr, SocketAddrV4, ToSocketAddrs};
-use net2::{UdpBuilder, UdpSocketExt};
+use net2::UdpBuilder;
 use protocol::{Message, parse_from_bytes};
 use protocol::messages_robocup_ssl_wrapper_legacy::SSL_WrapperPacket;
 use protocol::messages_robocup_ssl_detection::{SSL_DetectionFrame, SSL_DetectionRobot, SSL_DetectionBall};
