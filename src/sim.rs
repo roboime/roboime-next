@@ -102,9 +102,9 @@ pub enum PlaceState {
 }
 
 impl Referee {
-    fn initial() -> Referee {
+    fn initial(color: Color) -> Referee {
         // TODO: maybe change to FreePlay?
-        PreKickoff(Blue, HasPlaced(STOP_PATIENCE))
+        PreKickoff(color, HasPlaced(STOP_PATIENCE))
     }
 
     fn ignore_ball(&self) -> bool {
@@ -196,6 +196,7 @@ impl BTreeMapSimExt for BTreeMap<Id, Robot> {
 pub struct Builder {
     team_side: TeamSide,
     initial_formation: bool,
+    kickoff_color: Color,
 }
 
 impl Builder {
@@ -203,11 +204,17 @@ impl Builder {
         Builder {
             team_side: Default::default(),
             initial_formation: false,
+            kickoff_color: Blue,
         }
     }
 
     pub fn team_side(&mut self, team_side: TeamSide) -> &mut Builder {
         self.team_side = team_side;
+        self
+    }
+
+    pub fn kickoff_color(&mut self, color: Color) -> &mut Builder {
+        self.kickoff_color = color;
         self
     }
 
@@ -237,7 +244,7 @@ impl Builder {
             robots: robots,
             last_ball_touch: None,
             team_side: self.team_side,
-            referee: Referee::initial(),
+            referee: Referee::initial(self.kickoff_color),
             info_yellow: Default::default(),
             info_blue: Default::default(),
             geometry: Geometry {}

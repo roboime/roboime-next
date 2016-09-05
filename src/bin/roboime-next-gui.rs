@@ -43,6 +43,10 @@ fn main_loop() -> Result<(), Box<Error>> {
              .long("yellow")
              .value_name("YELLOW COMMAND")
              .help("Command to start the yellow AI, accepts arguments."))
+        .arg(Arg::with_name("kickoff-yellow")
+             .short("k")
+             .long("kickoff-yellow")
+             .help("Initial kickoff for yellow (default is blue)."))
         .arg(Arg::with_name("pause")
              .short("p")
              .long("pause")
@@ -103,6 +107,12 @@ fn main_loop() -> Result<(), Box<Error>> {
         team_side
     };
 
+    let kickoff_color = if matches.is_present("kickoff-yellow") {
+        Yellow
+    } else {
+        Blue
+    };
+
     let mut is_paused = {
         let mut pause = false;
         if matches.is_present("pause") { pause = true; };
@@ -142,6 +152,7 @@ fn main_loop() -> Result<(), Box<Error>> {
     let mut sim_state = sim::Builder::new()
         .initial_formation(true)
         .team_side(team_side)
+        .kickoff_color(kickoff_color)
         .build();
     let mut draw_game = try!(Game::new(&display)); draw_game.team_side(&display, team_side);
 
