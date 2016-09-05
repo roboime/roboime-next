@@ -2,6 +2,12 @@
 name = "roboime-next-protocol"
 version = "0.1.0"
 authors = ["Jan Segre <jan@segre.in>"]
+license = "MPL-2.0"
+repository = "https://github.com/roboime/roboime-next/"
+documentation = "http://www.roboime.com/roboime-next/"
+description = """
+Internal dependency for roboime-next.
+"""
 # the build script is not being used right now
 #build = "build.rs"
 
