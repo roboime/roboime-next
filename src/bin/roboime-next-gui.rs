@@ -51,6 +51,10 @@ fn main_loop() -> Result<(), Box<Error>> {
              .short("v")
              .multiple(true)
              .help("Sets the level of verbosity."))
+        .arg(Arg::with_name("fast")
+             .short("f")
+             .multiple(true)
+             .help("Each f doubles the speed."))
         .arg(Arg::with_name("q")
              .conflicts_with("v")
              .long("quiet")
@@ -105,6 +109,8 @@ fn main_loop() -> Result<(), Box<Error>> {
         pause
     };
 
+    let multiplier = 2.0f32.powi(matches.occurrences_of("fast") as i32);
+
     // Configs
 
     let ai_blue_cfg = if matches.is_present("blue") {
@@ -149,7 +155,7 @@ fn main_loop() -> Result<(), Box<Error>> {
         None => None,
     };
 
-    let mut accumulator = 0;
+    let mut accumulator = 0.0;
     let mut previous_clock = clock_ticks::precise_time_ns();
     let mut step_clock = previous_clock;
     let mut step_counter = 0;
@@ -257,11 +263,12 @@ fn main_loop() -> Result<(), Box<Error>> {
             }
         }
 
-        const FIXED_TIME_STEP: u64 = 16_666_667;
+        //const FIXED_TIME_STEP: u64 = 16_666_667;
+        const FIXED_TIME_STEP: f32 = 1_000_000_000.0 / 60.0;
 
         let now = clock_ticks::precise_time_ns();
         if !is_paused {
-            accumulator += now - previous_clock;
+            accumulator += (now - previous_clock) as f32 * multiplier;
 
             while accumulator >= FIXED_TIME_STEP {
                 accumulator -= FIXED_TIME_STEP;
@@ -285,7 +292,7 @@ fn main_loop() -> Result<(), Box<Error>> {
                     cmds.push(try!(ai_state.update(&sim_state)));
                 }
 
-                sim_state.step(&cmds, FIXED_TIME_STEP as f32 * 1.0e-9);
+                sim_state.step(&cmds, FIXED_TIME_STEP * 1.0e-9);
                 step_counter += 1;
             }
         }
@@ -304,12 +311,12 @@ fn main_loop() -> Result<(), Box<Error>> {
                 cmds.push(try!(ai_state.update(&sim_state)));
             }
 
-            let mut timestep = FIXED_TIME_STEP as f32 * 1.0e-9;
+            let mut timestep = FIXED_TIME_STEP * 1.0e-9;
             if single_shot == Shot::Bkw { timestep = -timestep; }
             sim_state.step(&cmds, timestep);
         }
 
-        thread::sleep(Duration::from_millis(((FIXED_TIME_STEP - accumulator) / 1_000_000) as u64));
+        thread::sleep(Duration::from_millis(((FIXED_TIME_STEP - accumulator) / 1_000_000.0) as u64));
     }
 
     info!("Bye!");
