@@ -17,7 +17,7 @@
 //!
 //! loop {
 //!     let cmd = ai.update(&sim).unwrap();
-//!     sim.step(cmd, 0.016_666_667);
+//!     sim.step(&[cmd], 0.016_666_667);
 //!     // sleep maybe
 //! }
 //! ```
