@@ -1,6 +1,6 @@
 MAIN = demo
 OBJS = main.o
-CFLAGS = -O2
+CFLAGS = -O2 -lm
 
 .PHONY: all clean
 
@@ -10,7 +10,7 @@ clean:
 	rm -f $(MAIN) $(OBJS)
 
 $(MAIN): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(CFLAGS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $<
+	$(CC) -c $< $(CFLAGS)

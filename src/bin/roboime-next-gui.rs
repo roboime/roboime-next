@@ -36,21 +36,13 @@ fn main_loop() -> Result<(), Box<Error>> {
         .arg(Arg::with_name("blue")
              .short("b")
              .long("blue")
-             .help("Play as the blue team."))
+             .value_name("BLUE COMMAND")
+             .help("Command to start the blue AI, accepts arguments."))
         .arg(Arg::with_name("yellow")
-             .conflicts_with("blue")
              .short("y")
              .long("yellow")
-             .help("Play as the yellow team. (default)"))
-        .arg(Arg::with_name("right")
-             .short("r")
-             .long("right")
-             .help("Play on the right side. (default for blue)"))
-        .arg(Arg::with_name("left")
-             .conflicts_with("right")
-             .short("l")
-             .long("left")
-             .help("Play on the left side. (default for yellow)"))
+             .value_name("YELLOW COMMAND")
+             .help("Command to start the yellow AI, accepts arguments."))
         .arg(Arg::with_name("pause")
              .short("p")
              .long("pause")
@@ -68,11 +60,6 @@ fn main_loop() -> Result<(), Box<Error>> {
         //     .long("debug")
         //     .short("d")
         //     .help("Enable debug logs."))
-        .arg(Arg::with_name("AI")
-             .required(true)
-             .multiple(true)
-             .value_name("COMMAND")
-             .help("Command to start the AI, accepts arguments."))
         .get_matches();
 
     {
@@ -107,17 +94,8 @@ fn main_loop() -> Result<(), Box<Error>> {
         .with_vsync()
         .build_glium());
 
-    let color = {
-        let mut color = Default::default();
-        if matches.is_present("blue")   { color = Blue; };
-        if matches.is_present("yellow") { color = Yellow; };
-        color
-    };
-
     let team_side = {
-        let mut team_side = Default::default();
-        if matches.is_present("right") { team_side = TeamSide::new(color, Right); };
-        if matches.is_present("left")  { team_side = TeamSide::new(color, Left); };
+        let team_side = Default::default();
         team_side
     };
 
@@ -127,22 +105,49 @@ fn main_loop() -> Result<(), Box<Error>> {
         pause
     };
 
-    let mut ai_cfg = {
-        let ai_cmd: Vec<&str> = matches.values_of("AI").unwrap().collect();
+    // Configs
+
+    let ai_blue_cfg = if matches.is_present("blue") {
+        let ai_cmd: Vec<&str> = matches.values_of("blue").unwrap().collect();
         let (ai_program, ai_args) = (ai_cmd[0], &ai_cmd[1..]);
         let mut ai_command = Command::new(ai_program);
         ai_command.args(ai_args);
         let mut ai_cfg = ai::Builder::new(ai_command);
-        ai_cfg.color(color);
-        ai_cfg
+        ai_cfg.color(Color::Blue);
+        Some(ai_cfg)
+    } else {
+        None
     };
+
+    let ai_yellow_cfg = if matches.is_present("yellow") {
+        let ai_cmd: Vec<&str> = matches.values_of("yellow").unwrap().collect();
+        let (ai_program, ai_args) = (ai_cmd[0], &ai_cmd[1..]);
+        let mut ai_command = Command::new(ai_program);
+        ai_command.args(ai_args);
+        let mut ai_cfg = ai::Builder::new(ai_command);
+        ai_cfg.color(Color::Yellow);
+        Some(ai_cfg)
+    } else {
+        None
+    };
+
+    // States
 
     let mut sim_state = sim::Builder::new()
         .initial_formation(true)
         .team_side(team_side)
         .build();
     let mut draw_game = try!(Game::new(&display)); draw_game.team_side(&display, team_side);
-    let mut ai = try!(ai_cfg.build());
+
+    let mut ai_blue = match ai_blue_cfg {
+        Some(mut ai_cfg) => Some(try!(ai_cfg.build())),
+        None => None,
+    };
+
+    let mut ai_yellow = match ai_yellow_cfg {
+        Some(mut ai_cfg) => Some(try!(ai_cfg.build())),
+        None => None,
+    };
 
     let mut accumulator = 0;
     let mut previous_clock = clock_ticks::precise_time_ns();
@@ -153,16 +158,34 @@ fn main_loop() -> Result<(), Box<Error>> {
     let mut key_ctrl = false;
 
     // debugger thread
-    let debug = ai.debug.take().unwrap();
-    thread::spawn(move || {
-        for line in debug {
-            println!("AI> {}", line.unwrap());
-        }
-    });
+    if let Some(ref mut ai) = ai_blue {
+        let debug = ai.debug.take().unwrap();
+        thread::spawn(move || {
+            for line in debug {
+                println!("Blue> {}", line.unwrap());
+            }
+        });
+    }
+
+    if let Some(ref mut ai) = ai_yellow {
+        let debug = ai.debug.take().unwrap();
+        thread::spawn(move || {
+            for line in debug {
+                println!("Blue> {}", line.unwrap());
+            }
+        });
+    }
 
     // init the AI
     debug!("Wait for AI to start...");
-    let mut ai_state = try!(ai.init(&sim_state));
+    let mut ai_blue_state = match ai_blue {
+        Some(ref mut ai) => Some(try!(ai.init(&sim_state))),
+        None => None,
+    };
+    let mut ai_yellow_state = match ai_yellow {
+        Some(ref mut ai) => Some(try!(ai.init(&sim_state))),
+        None => None,
+    };
 
     //drop(try!(rx.recv()));
     debug!("AI started, going on...");
@@ -252,8 +275,17 @@ fn main_loop() -> Result<(), Box<Error>> {
                 }
 
                 // game step
-                let cmd = try!(ai_state.update(&sim_state));
-                sim_state.step(cmd, FIXED_TIME_STEP as f32 * 1.0e-9);
+                let mut cmds = vec![];
+
+                if let Some(ref mut ai_state) = ai_blue_state {
+                    cmds.push(try!(ai_state.update(&sim_state)));
+                }
+
+                if let Some(ref mut ai_state) = ai_yellow_state {
+                    cmds.push(try!(ai_state.update(&sim_state)));
+                }
+
+                sim_state.step(&cmds, FIXED_TIME_STEP as f32 * 1.0e-9);
                 step_counter += 1;
             }
         }
@@ -262,10 +294,19 @@ fn main_loop() -> Result<(), Box<Error>> {
         if single_shot != Shot::No {
             // XXX: is there a simple way to no duplicade this?
             // game step
-            let cmd = try!(ai_state.update(&sim_state));
+            let mut cmds = vec![];
+
+            if let Some(ref mut ai_state) = ai_blue_state {
+                cmds.push(try!(ai_state.update(&sim_state)));
+            }
+
+            if let Some(ref mut ai_state) = ai_yellow_state {
+                cmds.push(try!(ai_state.update(&sim_state)));
+            }
+
             let mut timestep = FIXED_TIME_STEP as f32 * 1.0e-9;
             if single_shot == Shot::Bkw { timestep = -timestep; }
-            sim_state.step(cmd, timestep);
+            sim_state.step(&cmds, timestep);
         }
 
         thread::sleep(Duration::from_millis(((FIXED_TIME_STEP - accumulator) / 1_000_000) as u64));

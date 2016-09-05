@@ -9,13 +9,13 @@ CC = clang
 all: $(MAIN)
 
 run: $(MAIN)
-	cargo run --bin roboime-next-gui -- -pvv ./$(MAIN)
+	cargo run --bin roboime-next-gui -- -pvv --blue=./$(MAIN)
 
 clean:
 	rm -f $(MAIN) $(OBJS)
 
 $(MAIN): $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $<
+	$(CC) -c $< $(CFLAGS)
