@@ -41,6 +41,7 @@
 extern crate roboime_next_protocol as protocol;
 extern crate net2;
 #[macro_use] extern crate log;
+extern crate libusb;
 
 pub use error::{Result, Error, ErrorKind};
 
@@ -49,6 +50,7 @@ pub mod game;
 pub mod ai;
 pub mod base;
 pub mod grsim;
+pub mod real;
 pub mod sim;
 pub mod prelude {
     pub use ::game::{Ball, Robot, Geometry, State, TeamInfo};
