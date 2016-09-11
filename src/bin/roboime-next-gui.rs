@@ -10,8 +10,15 @@ extern crate rusttype;
 extern crate unicode_normalization;
 
 use std::error::Error;
+use self::GameState::*;
+use roboime_next::{sim, real, ai};
 
 mod draw;
+
+enum GameState<'a> {
+    Sim(sim::State),
+    Real(real::State<'a>),
+}
 
 fn main_loop() -> Result<(), Box<Error>> {
     use std::env;
@@ -20,7 +27,6 @@ fn main_loop() -> Result<(), Box<Error>> {
     use std::time::Duration;
     use std::process::Command;
     use roboime_next::prelude::*;
-    use roboime_next::{sim, ai};
     use clap::{Arg, App, AppSettings};
     use glium::{glutin, DisplayBuild};
     use log::LogLevelFilter;
@@ -47,6 +53,10 @@ fn main_loop() -> Result<(), Box<Error>> {
              .short("k")
              .long("kickoff-yellow")
              .help("Initial kickoff for yellow (default is blue)."))
+        .arg(Arg::with_name("real")
+             .short("r")
+             .long("real")
+             .help("Use real tx/rx instead of a simulator."))
         .arg(Arg::with_name("pause")
              .short("p")
              .long("pause")
@@ -149,11 +159,21 @@ fn main_loop() -> Result<(), Box<Error>> {
 
     // States
 
-    let mut sim_state = sim::Builder::new()
-        .initial_formation(true)
-        .team_side(team_side)
-        .kickoff_color(kickoff_color)
-        .build();
+    let mut real_builder = if matches.is_present("real") {
+        Some(real::Builder::new())
+    } else {
+        None
+    };
+
+    let mut game_state = if let Some(ref mut builder) = real_builder {
+        Real(try!(builder.build()))
+    } else {
+        Sim(sim::Builder::new()
+            .initial_formation(true)
+            .team_side(team_side)
+            .kickoff_color(kickoff_color)
+            .build())
+    };
     let mut draw_game = try!(Game::new(&display)); draw_game.team_side(&display, team_side);
 
     let mut ai_blue = match ai_blue_cfg {
@@ -196,11 +216,17 @@ fn main_loop() -> Result<(), Box<Error>> {
     // init the AI
     debug!("Wait for AI to start...");
     let mut ai_blue_state = match ai_blue {
-        Some(ref mut ai) => Some(try!(ai.init(&sim_state))),
+        Some(ref mut ai) => Some(try!(match game_state {
+            Sim(ref sim_state) => ai.init(sim_state),
+            Real(ref real_state) => ai.init(real_state),
+        })),
         None => None,
     };
     let mut ai_yellow_state = match ai_yellow {
-        Some(ref mut ai) => Some(try!(ai.init(&sim_state))),
+        Some(ref mut ai) => Some(try!(match game_state {
+            Sim(ref sim_state) => ai.init(sim_state),
+            Real(ref real_state) => ai.init(real_state),
+        })),
         None => None,
     };
 
@@ -212,7 +238,10 @@ fn main_loop() -> Result<(), Box<Error>> {
         #[derive(Copy, Clone, PartialEq, Eq)] enum Shot { No, Fwd, Bkw, }
         let mut single_shot = Shot::No;
 
-        draw_game.update(&display, &sim_state);
+        match game_state {
+            Sim(ref sim_state) => draw_game.update(&display, sim_state),
+            Real(ref real_state) => draw_game.update(&display, real_state),
+        }
 
         // render the game state
         let view = view_matrix(&[0.0, 0.0, 10.0], &[0.0, 0.0, -1.0], &[0.0, 1.0, 0.0]);
@@ -227,7 +256,10 @@ fn main_loop() -> Result<(), Box<Error>> {
         //let view = view_matrix(&[0.0, 0.0, 0.6], &[0.0, 0.0, -1.0], &[0.0, 1.0, 0.0]);
         let mut target = display.draw();
         let view_port = display.get_window().unwrap().get_inner_size_points().unwrap();
-        try!(draw_game.draw_to(&mut target, &sim_state, view_port, view));
+        match game_state {
+            Sim(ref sim_state) => try!(draw_game.draw_to(&mut target, sim_state, view_port, view)),
+            Real(ref real_state) => try!(draw_game.draw_to(&mut target, real_state, view_port, view)),
+        }
         try!(target.finish());
 
         // polling and handling the events received by the window
@@ -263,9 +295,11 @@ fn main_loop() -> Result<(), Box<Error>> {
                     single_shot = Shot::Bkw;
                 }
                 KeyboardInput(Pressed, _, Some(R)) => {
-                    // reset ball position and speed
-                    sim_state.ball.pos = Vec2d(0.0, 0.0);
-                    sim_state.ball.vel = Vec2d(0.0, 0.0);
+                    if let Sim(ref mut sim_state) = game_state {
+                        // reset ball position and speed
+                        sim_state.ball.pos = Vec2d(0.0, 0.0);
+                        sim_state.ball.vel = Vec2d(0.0, 0.0);
+                    }
                 }
                 KeyboardInput(..) => {
                     debug!("{:?}", event);
@@ -279,52 +313,86 @@ fn main_loop() -> Result<(), Box<Error>> {
 
         let now = clock_ticks::precise_time_ns();
         if !is_paused {
-            accumulator += (now - previous_clock) as f32 * multiplier;
+            match game_state {
+                Sim(ref mut sim_state) => {
+                    accumulator += (now - previous_clock) as f32 * multiplier;
 
-            while accumulator >= FIXED_TIME_STEP {
-                accumulator -= FIXED_TIME_STEP;
-                let now = clock_ticks::precise_time_ns();
-                let delta = now - step_clock;
-                if delta >= 1_000_000_000 {
-                    // expect ~60 steps per second
-                    info!("{:2} steps in {:.03} seconds", step_counter, delta as f32 * 1.0e-9);
-                    step_counter = 0;
-                    step_clock = now;
+                    while accumulator >= FIXED_TIME_STEP {
+                        accumulator -= FIXED_TIME_STEP;
+                        let now = clock_ticks::precise_time_ns();
+                        let delta = now - step_clock;
+                        if delta >= 1_000_000_000 {
+                            // expect ~60 steps per second
+                            info!("{:2} steps in {:.03} seconds", step_counter, delta as f32 * 1.0e-9);
+                            step_counter = 0;
+                            step_clock = now;
+                        }
+
+                        // game step
+                        let mut cmds = vec![];
+
+                        if let Some(ref mut ai_state) = ai_blue_state {
+                            cmds.push(try!(ai_state.update(sim_state)));
+                        }
+
+                        if let Some(ref mut ai_state) = ai_yellow_state {
+                            cmds.push(try!(ai_state.update(sim_state)));
+                        }
+
+                        sim_state.step(&cmds, FIXED_TIME_STEP * 1.0e-9);
+                        step_counter += 1;
+                    }
                 }
-
-                // game step
-                let mut cmds = vec![];
-
-                if let Some(ref mut ai_state) = ai_blue_state {
-                    cmds.push(try!(ai_state.update(&sim_state)));
+                Real(ref mut real_state) => {
+                    // FIXME: think of a way to decouple this blocking call from the drawing loop
+                    try!(real_state.recv_state());
+                    let ai_blue_pull = if let Some(ai) = ai_blue_state {
+                        Some(try!(ai.push(real_state)))
+                    } else {
+                        None
+                    };
+                    let ai_yellow_pull = if let Some(ai) = ai_yellow_state {
+                        Some(try!(ai.push(real_state)))
+                    } else {
+                        None
+                    };
+                    ai_blue_state = if let Some(ai) = ai_blue_pull {
+                        let (state, cmd) = try!(ai.pull());
+                        try!(real_state.send_command(cmd));
+                        Some(state)
+                    } else {
+                        None
+                    };
+                    ai_yellow_state = if let Some(ai) = ai_yellow_pull {
+                        let (state, cmd) = try!(ai.pull());
+                        try!(real_state.send_command(cmd));
+                        Some(state)
+                    } else {
+                        None
+                    };
                 }
-
-                if let Some(ref mut ai_state) = ai_yellow_state {
-                    cmds.push(try!(ai_state.update(&sim_state)));
-                }
-
-                sim_state.step(&cmds, FIXED_TIME_STEP * 1.0e-9);
-                step_counter += 1;
             }
         }
         previous_clock = now;
 
         if single_shot != Shot::No {
-            // XXX: is there a simple way to no duplicade this?
-            // game step
-            let mut cmds = vec![];
+            if let Sim(ref mut sim_state) = game_state {
+                // XXX: is there a simple way to no duplicade this?
+                // game step
+                let mut cmds = vec![];
 
-            if let Some(ref mut ai_state) = ai_blue_state {
-                cmds.push(try!(ai_state.update(&sim_state)));
+                if let Some(ref mut ai_state) = ai_blue_state {
+                    cmds.push(try!(ai_state.update(sim_state)));
+                }
+
+                if let Some(ref mut ai_state) = ai_yellow_state {
+                    cmds.push(try!(ai_state.update(sim_state)));
+                }
+
+                let mut timestep = FIXED_TIME_STEP * 1.0e-9;
+                if single_shot == Shot::Bkw { timestep = -timestep; }
+                sim_state.step(&cmds, timestep);
             }
-
-            if let Some(ref mut ai_state) = ai_yellow_state {
-                cmds.push(try!(ai_state.update(&sim_state)));
-            }
-
-            let mut timestep = FIXED_TIME_STEP * 1.0e-9;
-            if single_shot == Shot::Bkw { timestep = -timestep; }
-            sim_state.step(&cmds, timestep);
         }
 
         thread::sleep(Duration::from_millis(((FIXED_TIME_STEP - accumulator) / 1_000_000.0) as u64));

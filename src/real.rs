@@ -64,7 +64,7 @@ impl Builder {
     /// Instantiate with default values.
     pub fn new() -> Builder {
         Builder {
-            vision_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 5, 23, 2)), 10002),
+            vision_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 5, 23, 2)), 10005),
             // XXX: what may cause libusb to panic? this method should return a Result
             libusb_context: Context::new().unwrap(),
         }
@@ -116,12 +116,8 @@ impl Builder {
             detection: SSL_DetectionFrame::new(),
             counter: 0,
             handle: handle,
-            _data: PersistentData {},
         })
     }
-}
-
-struct PersistentData {
 }
 
 pub struct State<'a> {
@@ -132,7 +128,6 @@ pub struct State<'a> {
     detection: SSL_DetectionFrame,
     counter: u64,
     handle: DeviceHandle<'a>,
-    _data: PersistentData,
 }
 
 impl<'a> State<'a> {
@@ -239,7 +234,7 @@ impl<'a> game::State<'a> for State<'a> {
     }
 
     fn ball(&'a self) -> Self::Ball {
-        self.detection.get_balls().get(0).unwrap()
+        self.detection.get_balls().get(0).unwrap_or(SSL_DetectionBall::default_instance())
     }
 
     fn robot(&'a self, id: Id) -> Option<Self::Robot> {
