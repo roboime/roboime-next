@@ -53,6 +53,10 @@ fn main_loop() -> Result<(), Box<Error>> {
              .short("k")
              .long("kickoff-yellow")
              .help("Initial kickoff for yellow (default is blue)."))
+        .arg(Arg::with_name("left")
+             .short("l")
+             .long("left")
+             .help("Blue attacks the left side. (default is right)"))
         .arg(Arg::with_name("real")
              .short("r")
              .long("real")
@@ -113,8 +117,12 @@ fn main_loop() -> Result<(), Box<Error>> {
         .build_glium());
 
     let team_side = {
-        let team_side = Default::default();
-        team_side
+        use roboime_next::base::TeamSide::*;
+        if matches.is_present("left") {
+            YellowIsLeft
+        } else {
+            BlueIsLeft
+        }
     };
 
     let kickoff_color = if matches.is_present("kickoff-yellow") {

@@ -169,21 +169,31 @@ impl<'a> State<'a> {
             use std::f32::consts::FRAC_1_SQRT_2;
             use game::RobotAction::*;
 
+            // FIXME the protocol doesn't yet support specifying the id, it will only control the
+            // robot with id 0
+            if robot_id != 5 {
+                continue;
+            }
+
             let mut data = [0u8; 6];
 
             fn convert_speed(s: f32) -> u8 {
                 (if s < 0.0 {
-                    -s * 100.0 + 100.0
+                    let x = -s * 100.0 + 100.0;
+                    if x > 199.0 { 199.0 } else { x }
                 } else {
-                    s * 100.0
+                    let x = s * 100.0;
+                    if x > 99.0 { 99.0 } else { x }
                 }) as u8
             }
 
             // use robot_id
+            debug!("v_norm: {}, v_tang: {}, v_ang: {}",
+                   robot_command.v_normal, robot_command.v_tangent, robot_command.v_angular);
             data[0] = 0x61; // magic number?
-            data[1] = convert_speed(0.25 * robot_command.v_normal);
+            data[1] = convert_speed(-0.25 * robot_command.v_normal);
             data[2] = convert_speed(0.25 * robot_command.v_tangent);
-            data[3] = convert_speed(0.02 * robot_command.v_angular);
+            data[3] = convert_speed(1.00 * robot_command.v_angular);
             match robot_command.action {
                 Normal => {}
                 Dribble => {
@@ -206,12 +216,8 @@ impl<'a> State<'a> {
                 }
             }
             debug!("{:?}", &data);
-            // FIXME the protocol doesn't yet support specifying the id, it will only control the
-            // robot with id 0
-            if robot_id == 0 {
-                try!(handle.write_bulk(0x01, &data, Duration::from_millis(100)));
-                try!(handle.read_bulk(0x81, buf, Duration::from_millis(100)));
-            }
+            try!(handle.write_bulk(0x01, &data, Duration::from_millis(100)));
+            try!(handle.read_bulk(0x81, buf, Duration::from_millis(100)));
         }
 
         Ok(())
