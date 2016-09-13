@@ -3,6 +3,9 @@ environment:
   - channel: stable
   - channel: beta
   - channel: nightly
+matrix:
+  allow_failures:
+  - channel: nightly
 platform:
 - x86
 - x64
