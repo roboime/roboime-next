@@ -3,6 +3,9 @@ environment:
   - channel: stable
   - channel: beta
   - channel: nightly
+matrix:
+  allow_failures:
+  - channel: nightly
 platform:
 - x86
 - x64
@@ -21,4 +24,4 @@ test_script:
 - cargo test --verbose
 - cargo bench --verbose
 - cargo doc --verbose
-- cargo run -q --release --manifest-path cli/Cargo.toml -- --help
+- cargo run -q --release --bin roboime-next-cli -- --help

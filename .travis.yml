@@ -3,6 +3,9 @@ rust:
 - nightly
 - beta
 - stable
+matrix:
+  allow_failures:
+  - rust: nightly
 sudo: false
 addons:
   apt:
@@ -18,7 +21,7 @@ script:
 - travis-cargo test
 - travis-cargo bench
 - travis-cargo --only stable doc
-- cargo run -q --release --manifest-path cli/Cargo.toml -- --help
+- cargo run -q --release --bin roboime-next-cli -- --help
 after_success:
 - travis-cargo --only stable doc-upload
 - travis-cargo coveralls --no-sudo --verify --exclude-pattern="protocol/"

@@ -1,6 +1,12 @@
 // This file is generated. Do not edit
 // @generated
 
+// https://github.com/Manishearth/rust-clippy/issues/702
+#![allow(unknown_lints)]
+#![allow(clippy)]
+
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
@@ -72,7 +78,7 @@ impl SSL_Referee {
         self.packet_timestamp = ::std::option::Option::Some(v);
     }
 
-    pub fn get_packet_timestamp<'a>(&self) -> u64 {
+    pub fn get_packet_timestamp(&self) -> u64 {
         self.packet_timestamp.unwrap_or(0)
     }
 
@@ -91,7 +97,7 @@ impl SSL_Referee {
         self.stage = ::std::option::Option::Some(v);
     }
 
-    pub fn get_stage<'a>(&self) -> SSL_Referee_Stage {
+    pub fn get_stage(&self) -> SSL_Referee_Stage {
         self.stage.unwrap_or(SSL_Referee_Stage::NORMAL_FIRST_HALF_PRE)
     }
 
@@ -110,7 +116,7 @@ impl SSL_Referee {
         self.stage_time_left = ::std::option::Option::Some(v);
     }
 
-    pub fn get_stage_time_left<'a>(&self) -> i32 {
+    pub fn get_stage_time_left(&self) -> i32 {
         self.stage_time_left.unwrap_or(0)
     }
 
@@ -129,7 +135,7 @@ impl SSL_Referee {
         self.command = ::std::option::Option::Some(v);
     }
 
-    pub fn get_command<'a>(&self) -> SSL_Referee_Command {
+    pub fn get_command(&self) -> SSL_Referee_Command {
         self.command.unwrap_or(SSL_Referee_Command::HALT)
     }
 
@@ -148,7 +154,7 @@ impl SSL_Referee {
         self.command_counter = ::std::option::Option::Some(v);
     }
 
-    pub fn get_command_counter<'a>(&self) -> u32 {
+    pub fn get_command_counter(&self) -> u32 {
         self.command_counter.unwrap_or(0)
     }
 
@@ -167,7 +173,7 @@ impl SSL_Referee {
         self.command_timestamp = ::std::option::Option::Some(v);
     }
 
-    pub fn get_command_timestamp<'a>(&self) -> u64 {
+    pub fn get_command_timestamp(&self) -> u64 {
         self.command_timestamp.unwrap_or(0)
     }
 
@@ -188,7 +194,7 @@ impl SSL_Referee {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_yellow<'a>(&'a mut self) -> &'a mut SSL_Referee_TeamInfo {
+    pub fn mut_yellow(&mut self) -> &mut SSL_Referee_TeamInfo {
         if self.yellow.is_none() {
             self.yellow.set_default();
         };
@@ -200,7 +206,7 @@ impl SSL_Referee {
         self.yellow.take().unwrap_or_else(|| SSL_Referee_TeamInfo::new())
     }
 
-    pub fn get_yellow<'a>(&'a self) -> &'a SSL_Referee_TeamInfo {
+    pub fn get_yellow(&self) -> &SSL_Referee_TeamInfo {
         self.yellow.as_ref().unwrap_or_else(|| SSL_Referee_TeamInfo::default_instance())
     }
 
@@ -221,7 +227,7 @@ impl SSL_Referee {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_blue<'a>(&'a mut self) -> &'a mut SSL_Referee_TeamInfo {
+    pub fn mut_blue(&mut self) -> &mut SSL_Referee_TeamInfo {
         if self.blue.is_none() {
             self.blue.set_default();
         };
@@ -233,7 +239,7 @@ impl SSL_Referee {
         self.blue.take().unwrap_or_else(|| SSL_Referee_TeamInfo::new())
     }
 
-    pub fn get_blue<'a>(&'a self) -> &'a SSL_Referee_TeamInfo {
+    pub fn get_blue(&self) -> &SSL_Referee_TeamInfo {
         self.blue.as_ref().unwrap_or_else(|| SSL_Referee_TeamInfo::default_instance())
     }
 }
@@ -396,11 +402,11 @@ impl ::protobuf::Message for SSL_Referee {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
@@ -578,7 +584,7 @@ impl SSL_Referee_TeamInfo {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_name<'a>(&'a mut self) -> &'a mut ::std::string::String {
+    pub fn mut_name(&mut self) -> &mut ::std::string::String {
         if self.name.is_none() {
             self.name.set_default();
         };
@@ -590,7 +596,7 @@ impl SSL_Referee_TeamInfo {
         self.name.take().unwrap_or_else(|| ::std::string::String::new())
     }
 
-    pub fn get_name<'a>(&'a self) -> &'a str {
+    pub fn get_name(&self) -> &str {
         match self.name.as_ref() {
             Some(v) => &v,
             None => "",
@@ -612,7 +618,7 @@ impl SSL_Referee_TeamInfo {
         self.score = ::std::option::Option::Some(v);
     }
 
-    pub fn get_score<'a>(&self) -> u32 {
+    pub fn get_score(&self) -> u32 {
         self.score.unwrap_or(0)
     }
 
@@ -631,7 +637,7 @@ impl SSL_Referee_TeamInfo {
         self.red_cards = ::std::option::Option::Some(v);
     }
 
-    pub fn get_red_cards<'a>(&self) -> u32 {
+    pub fn get_red_cards(&self) -> u32 {
         self.red_cards.unwrap_or(0)
     }
 
@@ -647,7 +653,7 @@ impl SSL_Referee_TeamInfo {
     }
 
     // Mutable pointer to the field.
-    pub fn mut_yellow_card_times<'a>(&'a mut self) -> &'a mut ::std::vec::Vec<u32> {
+    pub fn mut_yellow_card_times(&mut self) -> &mut ::std::vec::Vec<u32> {
         &mut self.yellow_card_times
     }
 
@@ -656,7 +662,7 @@ impl SSL_Referee_TeamInfo {
         ::std::mem::replace(&mut self.yellow_card_times, ::std::vec::Vec::new())
     }
 
-    pub fn get_yellow_card_times<'a>(&'a self) -> &'a [u32] {
+    pub fn get_yellow_card_times(&self) -> &[u32] {
         &self.yellow_card_times
     }
 
@@ -675,7 +681,7 @@ impl SSL_Referee_TeamInfo {
         self.yellow_cards = ::std::option::Option::Some(v);
     }
 
-    pub fn get_yellow_cards<'a>(&self) -> u32 {
+    pub fn get_yellow_cards(&self) -> u32 {
         self.yellow_cards.unwrap_or(0)
     }
 
@@ -694,7 +700,7 @@ impl SSL_Referee_TeamInfo {
         self.timeouts = ::std::option::Option::Some(v);
     }
 
-    pub fn get_timeouts<'a>(&self) -> u32 {
+    pub fn get_timeouts(&self) -> u32 {
         self.timeouts.unwrap_or(0)
     }
 
@@ -713,7 +719,7 @@ impl SSL_Referee_TeamInfo {
         self.timeout_time = ::std::option::Option::Some(v);
     }
 
-    pub fn get_timeout_time<'a>(&self) -> u32 {
+    pub fn get_timeout_time(&self) -> u32 {
         self.timeout_time.unwrap_or(0)
     }
 
@@ -732,7 +738,7 @@ impl SSL_Referee_TeamInfo {
         self.goalie = ::std::option::Option::Some(v);
     }
 
-    pub fn get_goalie<'a>(&self) -> u32 {
+    pub fn get_goalie(&self) -> u32 {
         self.goalie.unwrap_or(0)
     }
 }
@@ -894,11 +900,11 @@ impl ::protobuf::Message for SSL_Referee_TeamInfo {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
