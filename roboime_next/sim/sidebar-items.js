@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["PlaceState",""],["Referee",""]],"struct":[["Ball",""],["Builder",""],["Geometry",""],["Iter",""],["Robot",""],["State",""],["TeamInfo",""]]});

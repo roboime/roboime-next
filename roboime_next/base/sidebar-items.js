@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Color",""],["Side",""],["TeamSide",""]],"struct":[["Id",""],["Vec2d",""]]});

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `SSL_Referee_Stage` enum in crate `roboime_next_protocol`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, SSL_Referee_Stage">
+
+    <title>roboime_next_protocol::referee::SSL_Referee_Stage - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>roboime_next_protocol</a>::<wbr><a href='index.html'>referee</a></p><script>window.sidebarCurrent = {name: 'SSL_Referee_Stage', ty: 'enum', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content enum">
+<h1 class='fqn'><span class='in-band'>Enum <a href='../index.html'>roboime_next_protocol</a>::<wbr><a href='index.html'>referee</a>::<wbr><a class='enum' href=''>SSL_Referee_Stage</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-4087' class='srclink' href='../../src/roboime_next_protocol/protocol/src/referee.rs.html#1021-1036' title='goto source code'>[src]</a></span></h1>
+<pre class='rust enum'>pub enum SSL_Referee_Stage {
+    NORMAL_FIRST_HALF_PRE,
+    NORMAL_FIRST_HALF,
+    NORMAL_HALF_TIME,
+    NORMAL_SECOND_HALF_PRE,
+    NORMAL_SECOND_HALF,
+    EXTRA_TIME_BREAK,
+    EXTRA_FIRST_HALF_PRE,
+    EXTRA_FIRST_HALF,
+    EXTRA_HALF_TIME,
+    EXTRA_SECOND_HALF_PRE,
+    EXTRA_SECOND_HALF,
+    PENALTY_SHOOTOUT_BREAK,
+    PENALTY_SHOOTOUT,
+    POST_GAME,
+}</pre><h2 class='variants'>Variants</h2>
+<span id='variant.NORMAL_FIRST_HALF_PRE' class='variant'><code>NORMAL_FIRST_HALF_PRE</code></span><span id='variant.NORMAL_FIRST_HALF' class='variant'><code>NORMAL_FIRST_HALF</code></span><span id='variant.NORMAL_HALF_TIME' class='variant'><code>NORMAL_HALF_TIME</code></span><span id='variant.NORMAL_SECOND_HALF_PRE' class='variant'><code>NORMAL_SECOND_HALF_PRE</code></span><span id='variant.NORMAL_SECOND_HALF' class='variant'><code>NORMAL_SECOND_HALF</code></span><span id='variant.EXTRA_TIME_BREAK' class='variant'><code>EXTRA_TIME_BREAK</code></span><span id='variant.EXTRA_FIRST_HALF_PRE' class='variant'><code>EXTRA_FIRST_HALF_PRE</code></span><span id='variant.EXTRA_FIRST_HALF' class='variant'><code>EXTRA_FIRST_HALF</code></span><span id='variant.EXTRA_HALF_TIME' class='variant'><code>EXTRA_HALF_TIME</code></span><span id='variant.EXTRA_SECOND_HALF_PRE' class='variant'><code>EXTRA_SECOND_HALF_PRE</code></span><span id='variant.EXTRA_SECOND_HALF' class='variant'><code>EXTRA_SECOND_HALF</code></span><span id='variant.PENALTY_SHOOTOUT_BREAK' class='variant'><code>PENALTY_SHOOTOUT_BREAK</code></span><span id='variant.PENALTY_SHOOTOUT' class='variant'><code>PENALTY_SHOOTOUT</code></span><span id='variant.POST_GAME' class='variant'><code>POST_GAME</code></span><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html' title='core::hash::Hash'>Hash</a> for <a class='enum' href='../../roboime_next_protocol/referee/enum.SSL_Referee_Stage.html' title='roboime_next_protocol::referee::SSL_Referee_Stage'>SSL_Referee_Stage</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-4052' class='srclink' href='../../src/roboime_next_protocol/protocol/src/referee.rs.html#1020' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.hash' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#tymethod.hash' class='fnname'>hash</a>&lt;__H:&nbsp;<a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hasher.html' title='core::hash::Hasher'>Hasher</a>&gt;(&amp;self, __arg_0: &amp;mut __H)</code></h4>
+<div class='docblock'><p>Feeds this value into the state given, updating the hasher as necessary.</p>
+</div><h4 id='method.hash_slice' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#method.hash_slice' class='fnname'>hash_slice</a>&lt;H&gt;(data: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[Self]</a>, state: &amp;mut H) <span class='where'>where H: <a class='trait' href='https://doc.rust-lang.org/nightly/core/hash/trait.Hasher.html' title='core::hash::Hasher'>Hasher</a></span></code><div class='since' title='Stable since Rust version 1.3.0'>1.3.0</div></h4>
+<div class='docblock'><p>Feeds a slice of this type into the state provided.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='core::fmt::Debug'>Debug</a> for <a class='enum' href='../../roboime_next_protocol/referee/enum.SSL_Referee_Stage.html' title='roboime_next_protocol::referee::SSL_Referee_Stage'>SSL_Referee_Stage</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-4057' class='srclink' href='../../src/roboime_next_protocol/protocol/src/referee.rs.html#1020' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, __arg_0: &amp;mut <a class='struct' href='https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='https://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='core::fmt::Result'>Result</a></code></h4>
+<div class='docblock'><p>Formats the value using the given formatter.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> for <a class='enum' href='../../roboime_next_protocol/referee/enum.SSL_Referee_Stage.html' title='roboime_next_protocol::referee::SSL_Referee_Stage'>SSL_Referee_Stage</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-4075' class='srclink' href='../../src/roboime_next_protocol/protocol/src/referee.rs.html#1020' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a> for <a class='enum' href='../../roboime_next_protocol/referee/enum.SSL_Referee_Stage.html' title='roboime_next_protocol::referee::SSL_Referee_Stage'>SSL_Referee_Stage</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-4078' class='srclink' href='../../src/roboime_next_protocol/protocol/src/referee.rs.html#1020' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.eq' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq' class='fnname'>eq</a>(&amp;self, __arg_0: &amp;<a class='enum' href='../../roboime_next_protocol/referee/enum.SSL_Referee_Stage.html' title='roboime_next_protocol::referee::SSL_Referee_Stage'>SSL_Referee_Stage</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>This method tests for <code>self</code> and <code>other</code> values to be equal, and is used by <code>==</code>. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq">Read more</a></p>
+</div><h4 id='method.ne' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, other: &amp;Rhs) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div></h4>
+<div class='docblock'><p>This method tests for <code>!=</code>.</p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> for <a class='enum' href='../../roboime_next_protocol/referee/enum.SSL_Referee_Stage.html' title='roboime_next_protocol::referee::SSL_Referee_Stage'>SSL_Referee_Stage</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-4084' class='srclink' href='../../src/roboime_next_protocol/protocol/src/referee.rs.html#1020' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.clone' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class='enum' href='../../roboime_next_protocol/referee/enum.SSL_Referee_Stage.html' title='roboime_next_protocol::referee::SSL_Referee_Stage'>SSL_Referee_Stage</a></code></h4>
+<div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
+</div><h4 id='method.clone_from' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: &amp;Self)</code><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div></h4>
+<div class='docblock'><p>Performs copy-assignment from <code>source</code>. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from">Read more</a></p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='../../protobuf/core/trait.ProtobufEnum.html' title='protobuf::core::ProtobufEnum'>ProtobufEnum</a> for <a class='enum' href='../../roboime_next_protocol/referee/enum.SSL_Referee_Stage.html' title='roboime_next_protocol::referee::SSL_Referee_Stage'>SSL_Referee_Stage</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-4116' class='srclink' href='../../src/roboime_next_protocol/protocol/src/referee.rs.html#1038-1094' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.value' class='method'><code>fn <a href='../../protobuf/core/trait.ProtobufEnum.html#tymethod.value' class='fnname'>value</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a></code></h4>
+<h4 id='method.from_i32' class='method'><code>fn <a href='../../protobuf/core/trait.ProtobufEnum.html#tymethod.from_i32' class='fnname'>from_i32</a>(value: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='enum' href='../../roboime_next_protocol/referee/enum.SSL_Referee_Stage.html' title='roboime_next_protocol::referee::SSL_Referee_Stage'>SSL_Referee_Stage</a>&gt;</code></h4>
+<h4 id='method.values' class='method'><code>fn <a href='../../protobuf/core/trait.ProtobufEnum.html#method.values' class='fnname'>values</a>() -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;'static [Self]</a></code></h4>
+<h4 id='method.enum_descriptor_static' class='method'><code>fn <a href='../../protobuf/core/trait.ProtobufEnum.html#method.enum_descriptor_static' class='fnname'>enum_descriptor_static</a>(_: <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='enum' href='../../roboime_next_protocol/referee/enum.SSL_Referee_Stage.html' title='roboime_next_protocol::referee::SSL_Referee_Stage'>SSL_Referee_Stage</a>&gt;) -&gt; &amp;'static <a class='struct' href='../../protobuf/reflect/struct.EnumDescriptor.html' title='protobuf::reflect::EnumDescriptor'>EnumDescriptor</a></code></h4>
+<h4 id='method.descriptor' class='method'><code>fn <a href='../../protobuf/core/trait.ProtobufEnum.html#method.descriptor' class='fnname'>descriptor</a>(&amp;self) -&gt; &amp;'static <a class='struct' href='../../protobuf/reflect/struct.EnumValueDescriptor.html' title='protobuf::reflect::EnumValueDescriptor'>EnumValueDescriptor</a></code></h4>
+<h4 id='method.enum_descriptor' class='method'><code>fn <a href='../../protobuf/core/trait.ProtobufEnum.html#method.enum_descriptor' class='fnname'>enum_descriptor</a>(&amp;self) -&gt; &amp;'static <a class='struct' href='../../protobuf/reflect/struct.EnumDescriptor.html' title='protobuf::reflect::EnumDescriptor'>EnumDescriptor</a></code></h4>
+</div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html' title='core::marker::Copy'>Copy</a> for <a class='enum' href='../../roboime_next_protocol/referee/enum.SSL_Referee_Stage.html' title='roboime_next_protocol::referee::SSL_Referee_Stage'>SSL_Referee_Stage</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-4126' class='srclink' href='../../src/roboime_next_protocol/protocol/src/referee.rs.html#1096-1097' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "roboime_next_protocol";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

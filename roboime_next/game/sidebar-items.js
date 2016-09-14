@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Referee",""],["RobotAction",""]],"struct":[["Command",""],["RobotCommand",""]],"trait":[["Ball",""],["Geometry","Specifications of the field geometry"],["Robot",""],["State","What is needed for a game step."],["TeamInfo",""]]});

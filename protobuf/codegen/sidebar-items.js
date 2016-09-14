@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["RustType",""]],"fn":[["gen",""],["protoc_gen_rust_main",""]]});

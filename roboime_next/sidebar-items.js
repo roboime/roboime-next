@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ErrorKind","General category of errors."]],"mod":[["ai",""],["base",""],["game",""],["grsim",""],["prelude",""],["sim","A built-in simulator, with referee support."]],"struct":[["Error","The error type for this crate."]],"type":[["Result","A specialized `Result` type for this crate."]]});

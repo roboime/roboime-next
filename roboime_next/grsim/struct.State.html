@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `State` struct in crate `roboime_next`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, State">
+
+    <title>roboime_next::grsim::State - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='../index.html'>roboime_next</a>::<wbr><a href='index.html'>grsim</a></p><script>window.sidebarCurrent = {name: 'State', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>roboime_next</a>::<wbr><a href='index.html'>grsim</a>::<wbr><a class='struct' href=''>State</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-1137' class='srclink' href='../../src/roboime_next/src/grsim.rs.html#124-134' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct State {
+    // some fields omitted
+}</pre><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../../roboime_next/grsim/struct.State.html' title='roboime_next::grsim::State'>State</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-1147' class='srclink' href='../../src/roboime_next/src/grsim.rs.html#136-210' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.recv_state' class='method'><code>fn <a href='#method.recv_state' class='fnname'>recv_state</a>(&amp;mut self) -&gt; <a class='type' href='../../roboime_next/type.Result.html' title='roboime_next::Result'>Result</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<div class='docblock'><p>Returns Ok(true) if there was a geometry update.</p>
+</div><h4 id='method.wait_for_geom' class='method'><code>fn <a href='#method.wait_for_geom' class='fnname'>wait_for_geom</a>(&amp;mut self) -&gt; <a class='type' href='../../roboime_next/type.Result.html' title='roboime_next::Result'>Result</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+<h4 id='method.send_command' class='method'><code>fn <a href='#method.send_command' class='fnname'>send_command</a>(&amp;mut self, command: <a class='struct' href='../../roboime_next/game/struct.Command.html' title='roboime_next::game::Command'>Command</a>) -&gt; <a class='type' href='../../roboime_next/type.Result.html' title='roboime_next::Result'>Result</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a>&gt;</code></h4>
+</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl&lt;'a&gt; <a class='trait' href='../../roboime_next/game/trait.State.html' title='roboime_next::game::State'>State</a>&lt;'a&gt; for <a class='struct' href='../../roboime_next/grsim/struct.State.html' title='roboime_next::grsim::State'>State</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-1188' class='srclink' href='../../src/roboime_next/src/grsim.rs.html#212-269' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='associatedtype.Ball' class='type'><code>type <a href='../../roboime_next/game/trait.State.html#associatedtype.Ball' class='type'>Ball</a> = &amp;'a <a class='struct' href='../../roboime_next_protocol/messages_robocup_ssl_detection/struct.SSL_DetectionBall.html' title='roboime_next_protocol::messages_robocup_ssl_detection::SSL_DetectionBall'>SSL_DetectionBall</a></code></h4>
+<h4 id='associatedtype.Robot' class='type'><code>type <a href='../../roboime_next/game/trait.State.html#associatedtype.Robot' class='type'>Robot</a> = <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(</a><a class='enum' href='../../roboime_next/base/enum.Color.html' title='roboime_next::base::Color'>Color</a>, &amp;'a <a class='struct' href='../../roboime_next_protocol/messages_robocup_ssl_detection/struct.SSL_DetectionRobot.html' title='roboime_next_protocol::messages_robocup_ssl_detection::SSL_DetectionRobot'>SSL_DetectionRobot</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>)</a></code></h4>
+<h4 id='associatedtype.Robots' class='type'><code>type <a href='../../roboime_next/game/trait.State.html#associatedtype.Robots' class='type'>Robots</a> = <a class='struct' href='../../roboime_next/grsim/struct.Iter.html' title='roboime_next::grsim::Iter'>Iter</a>&lt;'a&gt;</code></h4>
+<h4 id='associatedtype.Geometry' class='type'><code>type <a href='../../roboime_next/game/trait.State.html#associatedtype.Geometry' class='type'>Geometry</a> = &amp;'a <a class='struct' href='../../roboime_next_protocol/messages_robocup_ssl_geometry_legacy/struct.SSL_GeometryFieldSize.html' title='roboime_next_protocol::messages_robocup_ssl_geometry_legacy::SSL_GeometryFieldSize'>SSL_GeometryFieldSize</a></code></h4>
+<h4 id='associatedtype.TeamInfo' class='type'><code>type <a href='../../roboime_next/game/trait.State.html#associatedtype.TeamInfo' class='type'>TeamInfo</a> = <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>()</a></code></h4>
+<h4 id='method.counter' class='method'><code>fn <a href='../../roboime_next/game/trait.State.html#tymethod.counter' class='fnname'>counter</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u64.html'>u64</a></code></h4>
+<h4 id='method.timestamp' class='method'><code>fn <a href='../../roboime_next/game/trait.State.html#tymethod.timestamp' class='fnname'>timestamp</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.f64.html'>f64</a></code></h4>
+<h4 id='method.ball' class='method'><code>fn <a href='../../roboime_next/game/trait.State.html#tymethod.ball' class='fnname'>ball</a>(&amp;'a self) -&gt; Self::<a class='trait' href='../../roboime_next/game/trait.State.html' title='roboime_next::game::State'>Ball</a></code></h4>
+<h4 id='method.robot' class='method'><code>fn <a href='../../roboime_next/game/trait.State.html#tymethod.robot' class='fnname'>robot</a>(&amp;'a self, id: <a class='struct' href='../../roboime_next/base/struct.Id.html' title='roboime_next::base::Id'>Id</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;Self::<a class='trait' href='../../roboime_next/game/trait.State.html' title='roboime_next::game::State'>Robot</a>&gt;</code></h4>
+<h4 id='method.robots' class='method'><code>fn <a href='../../roboime_next/game/trait.State.html#tymethod.robots' class='fnname'>robots</a>(&amp;'a self) -&gt; Self::<a class='trait' href='../../roboime_next/game/trait.State.html' title='roboime_next::game::State'>Robots</a></code></h4>
+<h4 id='method.robots_team' class='method'><code>fn <a href='../../roboime_next/game/trait.State.html#tymethod.robots_team' class='fnname'>robots_team</a>(&amp;'a self, color: <a class='enum' href='../../roboime_next/base/enum.Color.html' title='roboime_next::base::Color'>Color</a>) -&gt; Self::<a class='trait' href='../../roboime_next/game/trait.State.html' title='roboime_next::game::State'>Robots</a></code></h4>
+<h4 id='method.geometry' class='method'><code>fn <a href='../../roboime_next/game/trait.State.html#tymethod.geometry' class='fnname'>geometry</a>(&amp;'a self) -&gt; Self::<a class='trait' href='../../roboime_next/game/trait.State.html' title='roboime_next::game::State'>Geometry</a></code></h4>
+<h4 id='method.team_info' class='method'><code>fn <a href='../../roboime_next/game/trait.State.html#tymethod.team_info' class='fnname'>team_info</a>(&amp;'a self, _color: <a class='enum' href='../../roboime_next/base/enum.Color.html' title='roboime_next::base::Color'>Color</a>) -&gt; Self::<a class='trait' href='../../roboime_next/game/trait.State.html' title='roboime_next::game::State'>TeamInfo</a></code></h4>
+<h4 id='method.team_side' class='method'><code>fn <a href='../../roboime_next/game/trait.State.html#tymethod.team_side' class='fnname'>team_side</a>(&amp;self) -&gt; <a class='enum' href='../../roboime_next/base/enum.TeamSide.html' title='roboime_next::base::TeamSide'>TeamSide</a></code></h4>
+<h4 id='method.referee' class='method'><code>fn <a href='../../roboime_next/game/trait.State.html#method.referee' class='fnname'>referee</a>(&amp;self) -&gt; <a class='enum' href='../../roboime_next/game/enum.Referee.html' title='roboime_next::game::Referee'>Referee</a></code></h4>
+<h4 id='method.ball_positioning' class='method'><code>fn <a href='../../roboime_next/game/trait.State.html#method.ball_positioning' class='fnname'>ball_positioning</a>(&amp;self) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(</a><a class='struct' href='../../roboime_next/base/struct.Vec2d.html' title='roboime_next::base::Vec2d'>Vec2d</a>, <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='enum' href='../../roboime_next/base/enum.Color.html' title='roboime_next::base::Color'>Color</a>&gt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.tuple.html'>)</a>&gt;</code></h4>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "roboime_next";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

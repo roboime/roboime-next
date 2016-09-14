@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["SSL_Referee_Command",""],["SSL_Referee_Stage",""]],"fn":[["file_descriptor_proto",""]],"struct":[["SSL_Referee",""],["SSL_Referee_TeamInfo",""]]});
