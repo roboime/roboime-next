@@ -314,7 +314,13 @@ int main() {
                 default:
                     break;
             }
-            printf("%f %f %f %f %f %i\n", v_tangent, v_normal, v_angular, kick_force, chip_force, dribble);
+            if (isnan(v_tangent) || isnan(v_normal) || isnan(v_angular) || isnan(kick_force) || isnan(chip_force)) {
+                //fprintf(stderr, "f: %i\ts: %i\n", first_to_ball, second_to_ball);
+                fprintf(stderr, "nan found: %f %f %f %f %f %i\n", v_tangent, v_normal, v_angular, kick_force, chip_force, dribble);
+                printf("0 0 0 0 0 0\n");
+            } else {
+                printf("%f %f %f %f %f %i\n", v_tangent, v_normal, v_angular, kick_force, chip_force, dribble);
+            }
         }
 
         fflush(stdout);
