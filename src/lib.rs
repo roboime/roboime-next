@@ -41,6 +41,7 @@
 extern crate roboime_next_protocol as protocol;
 extern crate net2;
 #[macro_use] extern crate log;
+extern crate rand;
 
 pub use error::{Result, Error, ErrorKind};
 

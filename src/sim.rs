@@ -23,6 +23,7 @@
 //! ```
 use std::collections::BTreeMap;
 use std::collections::btree_map;
+use rand::{random, Open01};
 use ::prelude::*;
 use ::game;
 use self::Referee::*;
@@ -382,7 +383,7 @@ impl State {
         ball.vel *= 1.0 - BALL_FRICT_LOSS * timestep;
 
         let ball_pos = ball.pos;
-        let mut normal_step = |state, forbid_goal: Option<Color>| {
+        let mut normal_step = |state, _forbid_goal: Option<Color>| {
             match ball_in_play(initial_ball_pos, ball_pos) {
                 MaybeGoal(place_out, side) => {
                     let scoring_team = !team_side.color(side);
@@ -392,47 +393,21 @@ impl State {
                     }
                     let score_blue = info_blue.score;
                     let score_yellow = info_yellow.score;
-                    if let Some(kicker_team) = forbid_goal {
-                        let team = !kicker_team;
-                        let place = if kicker_team == scoring_team {
-                            debug!("Out! Goal kick {:?}", team);
-                            Vec2d(place_out.x().signum() * (FIELD_LENGTH / 2.0 - 0.500), place_out.y().signum() * (FIELD_WIDTH / 2.0 - 0.100))
-                        } else {
-                            debug!("Out! Corner kick {:?}", team);
-                            Vec2d(place_out.x().signum() * (FIELD_LENGTH / 2.0 - 0.100), place_out.y().signum() * (FIELD_WIDTH / 2.0 - 0.100))
-                        };
-                        PreDirectKick(team, WillPlace(REACTION_TIME, place))
-                    } else {
-                        debug!("Goal! {:?} team scores!! (B: {}, Y: {})", scoring_team, score_blue, score_yellow);
-                        PreKickoff(!scoring_team, WillPlace(REACTION_TIME, Vec2d(0.0, 0.0)))
-                    }
+                    debug!("Goal! [special] {:?} team scores!! (B: {}, Y: {})", scoring_team, score_blue, score_yellow);
+                    let (Open01(var_x), Open01(var_y)) = random::<(Open01<f32>, Open01<f32>)>();
+                    let place = Vec2d(-place_out.x().signum() * (FIELD_LENGTH / 2.0 * var_x), FIELD_WIDTH * (var_y - 0.5));
+                    PreDirectKick(scoring_team, WillPlace(REACTION_TIME, place))
                 }
                 GoalLine(place_out, side) => {
-                    // NOTE: last_ball_touch may be None!!
-                    let maybe_team = last_ball_touch.map(|id| !id.color());
-                    if let Some(team) = maybe_team {
-                        let place = if team == team_side.color(side) {
-                            debug!("Out! Goal kick {:?}", team);
-                            Vec2d(place_out.x().signum() * (FIELD_LENGTH / 2.0 - 0.500), place_out.y().signum() * (FIELD_WIDTH / 2.0 - 0.100))
-                        } else {
-                            debug!("Out! Corner kick {:?}", team);
-                            Vec2d(place_out.x().signum() * (FIELD_LENGTH / 2.0 - 0.100), place_out.y().signum() * (FIELD_WIDTH / 2.0 - 0.100))
-                        };
-                        PreDirectKick(team, WillPlace(REACTION_TIME, place))
-                    } else {
-                        debug!("Out! Force kick");
-                        PreForceKick(WillPlace(REACTION_TIME, Vec2d(0.0, 0.0)))
-                    }
+                    let team = !team_side.color(side);
+                    debug!("Out! [special] Direct kick {:?}", team);
+                    let (Open01(var_x), Open01(var_y)) = random::<(Open01<f32>, Open01<f32>)>();
+                    let place = Vec2d(-place_out.x().signum() * (FIELD_LENGTH / 2.0 * var_x), FIELD_WIDTH * (var_y - 0.5));
+                    PreDirectKick(team, WillPlace(REACTION_TIME, place))
                 }
                 TouchLine(place) => {
-                    let maybe_team = last_ball_touch.map(|id| !id.color());
-                    if let Some(team) = maybe_team {
-                        debug!("Out! Throw in {:?}", team);
-                        PreIndirectKick(team, WillPlace(REACTION_TIME, place))
-                    } else {
-                        debug!("Out! Force kick");
-                        PreForceKick(WillPlace(REACTION_TIME, place))
-                    }
+                    debug!("Out! [special] Force kick");
+                    PreForceKick(WillPlace(REACTION_TIME, place))
                 }
                 InPlay => state,
             }
