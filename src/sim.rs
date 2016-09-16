@@ -395,14 +395,14 @@ impl State {
                     let score_yellow = info_yellow.score;
                     debug!("Goal! [special] {:?} team scores!! (B: {}, Y: {})", scoring_team, score_blue, score_yellow);
                     let (Open01(var_x), Open01(var_y)) = random::<(Open01<f32>, Open01<f32>)>();
-                    let place = Vec2d(-place_out.x().signum() * (FIELD_LENGTH / 2.0 * var_x), FIELD_WIDTH * (var_y - 0.5));
+                    let place = Vec2d(place_out.x().signum() * (FIELD_LENGTH / 2.0 * var_x), FIELD_WIDTH * (var_y - 0.5));
                     PreDirectKick(scoring_team, WillPlace(REACTION_TIME, place))
                 }
                 GoalLine(place_out, side) => {
                     let team = !team_side.color(side);
                     debug!("Out! [special] Direct kick {:?}", team);
                     let (Open01(var_x), Open01(var_y)) = random::<(Open01<f32>, Open01<f32>)>();
-                    let place = Vec2d(-place_out.x().signum() * (FIELD_LENGTH / 2.0 * var_x), FIELD_WIDTH * (var_y - 0.5));
+                    let place = Vec2d(place_out.x().signum() * (FIELD_LENGTH / 2.0 * var_x), FIELD_WIDTH * (var_y - 0.5));
                     PreDirectKick(team, WillPlace(REACTION_TIME, place))
                 }
                 TouchLine(place) => {
