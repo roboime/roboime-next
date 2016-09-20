@@ -21,16 +21,18 @@
 //!     .grsim_addr("127.0.0.1:20011").unwrap()
 //!     .build().unwrap();
 //!
-//! let mut ai = ai::Builder::new(Command::new("./demo-ai"))
-//!     .color(Yellow)
-//!     .build().unwrap();
+//! // NOTE: the API is being worked on, the following will get beter
+//! let mut ai_builder = ai::Builder::new(move || Command::new("./demo-ai"));
+//! ai_builder.debugger(|line| println!("ai> {}", line));
+//! ai_builder.color(Yellow);
+//! let mut ai = ai_builder.build().unwrap();
 //!
 //! grsim.wait_for_geom().unwrap();
 //! let mut ai = ai.init(&grsim).unwrap();
 //!
 //! loop {
 //!     grsim.recv_state().unwrap();
-//!     let cmd = ai.update(&grsim).unwrap();
+//!     let cmd = ai.update(&grsim).unwrap().unwrap();
 //!     grsim.send_command(cmd).unwrap();
 //! }
 //! ```

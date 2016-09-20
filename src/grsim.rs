@@ -50,7 +50,7 @@ impl Builder {
     /// Instantiate with default values.
     pub fn new() -> Builder {
         Builder {
-            vision_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 5, 23, 2)), 10002),
+            vision_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 5, 23, 2)), 10020),
             grsim_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 20011),
         }
     }
@@ -225,7 +225,7 @@ impl<'a> game::State<'a> for State {
     }
 
     fn ball(&'a self) -> Self::Ball {
-        self.detection.get_balls().get(0).unwrap()
+        self.detection.get_balls().get(0).unwrap_or(SSL_DetectionBall::default_instance())
     }
 
     fn robot(&'a self, id: Id) -> Option<Self::Robot> {

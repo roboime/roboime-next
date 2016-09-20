@@ -1,9 +1,21 @@
+// XXX: temporarily allow dead code
+#![allow(dead_code)]
 use std::io::prelude::*;
 use std::io::{Lines, BufReader, BufWriter};
 use std::process::{Stdio, Command, Child, ChildStdin, ChildStdout, ChildStderr};
 use std::ffi::OsStr;
 use ::prelude::*;
 use ::{game, Result, Error, ErrorKind};
+
+const MAX_REBOOTS: u8 = 10;
+
+macro_rules! err {
+    ($( $tt:tt )*) => { Error::new(ErrorKind::AiProtocol, format!($($tt)*)) }
+}
+
+macro_rules! throw_err {
+    ($( $tt:tt )*) => {{ return Err(err!($($tt)*)); }}
+}
 
 pub trait CommandAiExt {
     fn from_args<S: AsRef<OsStr>>(args: &[S]) -> Command;
@@ -20,101 +32,131 @@ impl CommandAiExt for Command {
 }
 
 /// Builder for a subprocess (child) AI
-pub struct Builder {
-    command: Command,
+pub struct Builder<S: Fn() -> Command, D: Fn(&str)> {
     color: Color,
+    spawner: S,
+    debugger: Option<D>,
 }
 
-impl Builder {
-    pub fn new(command: Command) -> Builder {
+impl<S: Fn() -> Command, D: Fn(&str)> Builder<S, D> {
+    pub fn new(spawner: S) -> Builder<S, D> {
         Builder {
-            command: command,
             color: Default::default(),
+            spawner: spawner,
+            debugger: None,
         }
     }
 
     /// Whether the AI will play with the yellow team, blue otherwise.
-    pub fn color(&mut self, color: Color) -> &mut Builder {
+    pub fn color(&mut self, color: Color) -> &mut Builder<S, D> {
         self.color = color;
         self
     }
 
-    pub fn build(&mut self) -> Result<InitialState> {
-        debug!("AI is playing as {:?} with: {:?}", self.color, self.command);
+    /// What to do with each line of the AI's stderr
+    pub fn debugger(&mut self, debugger: D) -> &mut Builder<S, D> {
+        self.debugger = Some(debugger);
+        self
+    }
 
-        let mut child = try!(self.command.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn());
+    /// Consume the builder to spawn an AI
+    pub fn build(self) -> Result<InitialState<S, D>> {
+        let command = (self.spawner)();
+        debug!("{:?} AI is playing with: {:?}", self.color, command);
 
-        info!("AI subprocess spawned");
+        let mut ai_state = State {
+            color: self.color,
+            spawner: self.spawner,
+            debugger: self.debugger.unwrap(), // TODO
+            child: None,
+            reboots: 0,
+        };
 
-        // XXX: should these be unwrapped? the spawn above kinda implies it's safe to unwrap
-        let child_in  = try!(child.stdin .take().ok_or_else(|| Error::new(ErrorKind::Io, "missing stdin from child")));
-        let child_out = try!(child.stdout.take().ok_or_else(|| Error::new(ErrorKind::Io, "missing stdout from child")));
-        let child_err = try!(child.stderr.take().ok_or_else(|| Error::new(ErrorKind::Io, "missing stderr from child")));
+        // this is not technically required, but it's best to error soon
+        try!(ai_state.boot(false));
 
         Ok(InitialState {
-            inner: State {
-                child: child,
-                color: self.color,
-                input: BufWriter::new(child_in),
-                output: BufReader::new(child_out).lines(),
-            },
-            debug: Some(BufReader::new(child_err).lines()),
+            inner: ai_state,
+            //debug: Some(BufReader::new(child_err).lines()),
         })
     }
 }
 
-// TODO: be generic over the used interfaces instead of using BufWriter, Lines, BufReader...
-struct State {
-    child: Child,
-    color: Color,
+struct ChildFields {
+    subproc: Child,
     input: BufWriter<ChildStdin>,
     output: Lines<BufReader<ChildStdout>>,
+    error: Lines<BufReader<ChildStderr>>,
 }
 
-impl Drop for State {
+impl Drop for ChildFields {
     fn drop(&mut self) {
-        if let Err(err) = self.child.kill() {
-            warn!("error killing child: {}", err);
+        if let Err(err) = self.subproc.kill() {
+            warn!("error killing AI subproc: {}", err);
         }
     }
 }
 
-pub struct InitialState {
-    inner: State,
-    pub debug: Option<Lines<BufReader<ChildStderr>>>,
+struct State<S: Fn() -> Command, D: Fn(&str)> {
+    color: Color,
+    spawner: S,
+    debugger: D,
+    child: Option<ChildFields>,
+    reboots: u8,
 }
 
-pub struct PushState<'a> {
-    inner: &'a mut State,
-}
+impl<S: Fn() -> Command, D: Fn(&str)> State<S, D> {
+    fn boot(&mut self, reboot: bool) -> Result<()> {
+        let mut command = (self.spawner)();
 
-pub struct PullState<'a> {
-    inner: &'a mut State,
-    counter: u64,
-    ids: Vec<u8>,
-}
+        let mut child = try!(command.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn());
+        if reboot {
+            info!("{:?} AI rebooted", self.color);
+        } else {
+            info!("{:?} AI booted", self.color);
+        }
 
-macro_rules! throw_err {
-    ( $( $tt:tt )* ) => {{
-        return Err(Error::new(ErrorKind::AiProtocol, format!($($tt)*)));
-    }}
-}
+        // XXX: should these be unwrapped? the spawn above kinda implies it's safe to unwrap
+        let child_in  = try!(child.stdin .take().ok_or(Error::new(ErrorKind::Io, "missing stdin from child")));
+        let child_out = try!(child.stdout.take().ok_or(Error::new(ErrorKind::Io, "missing stdout from child")));
+        let child_err = try!(child.stderr.take().ok_or(Error::new(ErrorKind::Io, "missing stderr from child")));
 
-impl InitialState {
-    pub fn init<'a, 'g, S: game::State<'g>>(&'a mut self, state: &'g S) -> Result<PushState<'a>> {
-        let &mut InitialState { ref mut inner, .. } = self;
+        self.child = Some(ChildFields {
+            subproc: child,
+            input: BufWriter::new(child_in),
+            output: BufReader::new(child_out).lines(),
+            error: BufReader::new(child_err).lines(),
+        });
+
+        Ok(())
+    }
+
+    fn reboot(&mut self) -> Result<()> {
+        if let Some(ref mut child) = self.child {
+            try!(child.subproc.kill());
+            let _status = try!(child.subproc.wait());
+        }
+        try!(self.boot(true));
+        self.reboots += 1;
+        Ok(())
+    }
+
+    fn init<'g, G: game::State<'g>>(&mut self, state: &'g G) -> Result<()> {
+        if self.child.is_none() { try!(self.boot(false)); }
+        let &mut ChildFields { ref mut input, ref mut output, .. } = try!(self.child.as_mut().ok_or(err!("child not booted")));
 
         let version = 1;
-        try!(writeln!(inner.input, "ROBOIME_AI_PROTOCOL {}", version));
+        try!(writeln!(input, "ROBOIME_AI_PROTOCOL {}", version));
 
         // flush to child stdin
-        try!(inner.input.flush());
+        try!(input.flush());
 
         {
-            let line = try!(match inner.output.next() {
+            let line = try!(match output.next() {
                 Some(thing) => thing,
                 None => throw_err!("expected a line"),
             });
+            //debug!("{}", line);
             match line.as_ref() {
                 "COMPATIBLE 1" => {}
                 s if s.starts_with("COMPATIBLE") => throw_err!("AI not protocol compatible (implicit)"),
@@ -131,7 +173,7 @@ impl InitialState {
         // CENTER_CIRCLE_RADIUS
         // DEFENSE_RADIUS
         // DEFENSE_STRETCH
-        try!(writeln!(inner.input, "{:.03} {:.03} {:.03} {:.03} {:.03} {:.03}",
+        try!(writeln!(input, "{:.03} {:.03} {:.03} {:.03} {:.03} {:.03}",
             geom.field_length(),
             geom.field_width(),
             geom.goal_width(),
@@ -141,8 +183,235 @@ impl InitialState {
         ));
 
         // flush to child stdin
-        try!(inner.input.flush());
+        try!(input.flush());
 
+        Ok(())
+    }
+
+    fn push<'g, G: game::State<'g>>(&mut self, state: &'g G) -> Result<(u64, Vec<u8>)> {
+        if self.child.is_none() { try!(self.init(state)); }
+        let &mut ChildFields { ref mut input, .. } = try!(self.child.as_mut().ok_or(err!("child not booted")));
+
+        let timestamp = state.timestamp();
+        let counter = state.counter();
+        let referee = state.referee();
+
+        let color = self.color;
+        let side = state.team_side().side(color);
+
+        let (score_player, goalie_player) = {
+            let team_info = state.team_info(color);
+            (team_info.score(), team_info.goalie())
+        };
+        let (score_opponent, goalie_opponent) = {
+            let team_info = state.team_info(!color);
+            (team_info.score(), team_info.goalie())
+        };
+
+        // COUNTER
+        // TIMESTAMP
+        // REFEREE_STATE
+        // REFEREE_MORE_INFO
+        // SCORE_PLAYER
+        // SCORE_OPPONENT
+        // GOALIE_ID_PLAYER
+        // GOALIE_ID_OPPONENT
+        try!(writeln!(input, "{} {} {} {} {} {} {} {}",
+            counter,
+            timestamp,
+            referee.to_char(color),
+            referee.more_info(color),
+            score_player,
+            score_opponent,
+            goalie_player,
+            goalie_opponent,
+        ));
+
+        {
+            let ball = state.ball();
+            let pos = side.rel_vec(ball.pos());
+            let vel = side.rel_vec(ball.vel());
+
+            // BALL_X
+            // BALL_Y
+            // BALL_VX
+            // BALL_VY
+            try!(writeln!(input, "{:.04} {:.04} {:.04} {:.04}",
+                pos.x(),
+                pos.y(),
+                vel.x(),
+                vel.y(),
+            ));
+        }
+
+        let mut ids;
+        {
+            let robots_player = state.robots_team(color);
+
+            // ROBOT_COUNT_PLAYER
+            let len = robots_player.len();
+            try!(writeln!(input, "{}", len));
+            ids = Vec::with_capacity(len);
+
+            // ROBOT_COUNT_PLAYER x
+            for robot in robots_player {
+                let robot_id = robot.id();
+                let pos = side.rel_vec(robot.pos());
+                let vel = side.rel_vec(robot.vel());
+                let w = side.rel_w(robot.w());
+                let vw = robot.vw();
+                // ROBOT_ID
+                // ROBOT_X
+                // ROBOT_Y
+                // ROBOT_W
+                // ROBOT_VX
+                // ROBOT_VY
+                // ROBOT_VW
+                //try!(writeln!(input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
+                try!(writeln!(input, "{} {:.04} {:.04} {} {:.04} {:.04} {}",
+                    robot_id.id(),
+                    pos.x(),
+                    pos.y(),
+                    w,
+                    vel.x(),
+                    vel.y(),
+                    vw,
+                ));
+                ids.push(robot_id.id());
+            }
+        }
+
+        {
+            let robots_opponent = state.robots_team(!color);
+
+            // ROBOT_COUNT_OPPONENT
+            try!(writeln!(input, "{}", robots_opponent.len()));
+
+            // ROBOT_COUNT_OPPONENT x
+            for robot in robots_opponent {
+                let robot_id = robot.id();
+                let pos = side.rel_vec(robot.pos());
+                let vel = side.rel_vec(robot.vel());
+                let w = side.rel_w(robot.w());
+                let vw = robot.vw();
+                // ROBOT_ID
+                // ROBOT_X
+                // ROBOT_Y
+                // ROBOT_W
+                // ROBOT_VX
+                // ROBOT_VY
+                // ROBOT_VW
+                //try!(writeln!(input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
+                try!(writeln!(input, "{} {:.04} {:.04} {} {:.04} {:.04} {}",
+                    robot_id.id(),
+                    pos.x(),
+                    pos.y(),
+                    w,
+                    vel.x(),
+                    vel.y(),
+                    vw,
+                ));
+            }
+        }
+
+        // flush to child stdin
+        try!(input.flush());
+
+        Ok((counter, ids))
+    }
+
+    fn pull(&mut self, counter: u64, ids: Vec<u8>) -> Result<game::Command> {
+        let &mut ChildFields { ref mut output, .. } = try!(self.child.as_mut().ok_or(err!("child not booted")));
+
+        {
+            let line = try!(match output.next() {
+                Some(thing) => thing,
+                None => throw_err!("expected a line"),
+            });
+            //debug!("{}", line);
+
+            // COUNTER
+            let ai_counter: u64 = try!(line.parse());
+            if ai_counter != counter {
+                throw_err!("wrong command counter, expected {} got {}", counter, ai_counter);
+            }
+        }
+
+        let mut command = game::Command::new(self.color);
+        command.robots.clear();
+        {
+            let mut robot_commands = &mut command.robots;
+
+            // ROBOT_COUNT_PLAYER x
+            for robot_id in ids {
+                let line = try!(match output.next() {
+                    Some(thing) => thing,
+                    None => throw_err!("expected a line"),
+                });
+                //debug!("{}", line);
+
+                let vars: Vec<_> = line.split(' ').collect();
+                let vars_len = vars.len();
+                if vars_len != 6 {
+                    throw_err!("expected 6 values for robot command, got {}", vars_len);
+                }
+
+                // V_TANGENT
+                // V_NORMAL
+                // V_ANGULAR
+                // KICK_FORCE
+                // CHIP_FORCE
+                // DRIBBLE
+                let v_tangent:  f32 = try!(vars[0].parse());
+                let v_normal:   f32 = try!(vars[1].parse());
+                let v_angular:  f32 = try!(vars[2].parse());
+                let kick_force: f32 = try!(vars[3].parse());
+                let chip_force: f32 = try!(vars[4].parse());
+                let dribble:   bool = try!(vars[5].parse::<i32>()) == 1;
+
+                robot_commands.insert(robot_id, game::RobotCommand {
+                    v_tangent: v_tangent,
+                    v_normal: v_normal,
+                    v_angular: v_angular,
+                    action: if kick_force > 0.0 {
+                        if chip_force > 0.0 { warn!("CHIP_FORCE shadowed by KICK_FORCE, please specify only one action"); }
+                        if dribble { warn!("DRIBBLE shadowed by KICK_FORCE, please specify only one action"); }
+                        game::RobotAction::Kick(kick_force)
+                    } else if chip_force > 0.0 {
+                        if dribble { warn!("DRIBBLE shadowed by CHIP_FORCE, please specify only one action"); }
+                        game::RobotAction::ChipKick(chip_force)
+                    } else if dribble {
+                        game::RobotAction::Dribble
+                    } else {
+                        game::RobotAction::Normal
+                    }
+                });
+            }
+        }
+
+        Ok(command)
+    }
+}
+
+pub struct InitialState<S: Fn() -> Command, D: Fn(&str)> {
+    inner: State<S, D>,
+    //pub debug: Option<Lines<BufReader<ChildStderr>>>,
+}
+
+pub struct PushState<'a, S: 'a + Fn() -> Command, D: 'a + Fn(&str)> {
+    inner: &'a mut State<S, D>,
+}
+
+pub struct PullState<'a, S: 'a + Fn() -> Command, D: 'a + Fn(&str)> {
+    inner: &'a mut State<S, D>,
+    counter: u64,
+    ids: Vec<u8>,
+}
+
+impl<S: Fn() -> Command, D: Fn(&str)> InitialState<S, D> {
+    pub fn init<'a, 'g, G: game::State<'g>>(&'a mut self, state: &'g G) -> Result<PushState<'a, S, D>> {
+        let &mut InitialState { ref mut inner, .. } = self;
+        try!(inner.init(state));
         Ok(PushState { inner: inner })
     }
 }
@@ -188,8 +457,8 @@ impl Side {
     }
 }
 
-impl<'a> PushState<'a> {
-    pub fn update<'g, S: game::State<'g>>(&mut self, state: &'g S) -> Result<game::Command> {
+impl<'a, S: 'a + Fn() -> Command, D: 'a + Fn(&str)> PushState<'a, S, D> {
+    pub fn update<'g, G: game::State<'g>>(&mut self, state: &'g G) -> Result<Option<game::Command>> {
         let &mut PushState { ref mut inner } = self;
         let s = PushState { inner: inner };
         let s = try!(s.push(state));
@@ -197,134 +466,9 @@ impl<'a> PushState<'a> {
         Ok(cmd)
     }
 
-    pub fn push<'g, G: game::State<'g>>(self, state: &'g G) -> Result<PullState<'a>> {
+    pub fn push<'g, G: game::State<'g>>(self, state: &'g G) -> Result<PullState<'a, S, D>> {
         let PushState { mut inner } = self;
-
-        let timestamp = state.timestamp();
-        let counter = state.counter();
-        let referee = state.referee();
-
-        let color = inner.color;
-        let side = state.team_side().side(color);
-
-        let (score_player, goalie_player) = {
-            let team_info = state.team_info(color);
-            (team_info.score(), team_info.goalie())
-        };
-        let (score_opponent, goalie_opponent) = {
-            let team_info = state.team_info(!color);
-            (team_info.score(), team_info.goalie())
-        };
-
-        // COUNTER
-        // TIMESTAMP
-        // REFEREE_STATE
-        // REFEREE_MORE_INFO
-        // SCORE_PLAYER
-        // SCORE_OPPONENT
-        // GOALIE_ID_PLAYER
-        // GOALIE_ID_OPPONENT
-        try!(writeln!(inner.input, "{} {} {} {} {} {} {} {}",
-            counter,
-            timestamp,
-            referee.to_char(color),
-            referee.more_info(color),
-            score_player,
-            score_opponent,
-            goalie_player,
-            goalie_opponent,
-        ));
-
-        {
-            let ball = state.ball();
-            let pos = side.rel_vec(ball.pos());
-            let vel = side.rel_vec(ball.vel());
-
-            // BALL_X
-            // BALL_Y
-            // BALL_VX
-            // BALL_VY
-            try!(writeln!(inner.input, "{:.04} {:.04} {:.04} {:.04}",
-                pos.x(),
-                pos.y(),
-                vel.x(),
-                vel.y(),
-            ));
-        }
-
-        let mut ids;
-        {
-            let robots_player = state.robots_team(color);
-
-            // ROBOT_COUNT_PLAYER
-            let len = robots_player.len();
-            try!(writeln!(inner.input, "{}", len));
-            ids = Vec::with_capacity(len);
-
-            // ROBOT_COUNT_PLAYER x
-            for robot in robots_player {
-                let robot_id = robot.id();
-                let pos = side.rel_vec(robot.pos());
-                let vel = side.rel_vec(robot.vel());
-                let w = side.rel_w(robot.w());
-                let vw = robot.vw();
-                // ROBOT_ID
-                // ROBOT_X
-                // ROBOT_Y
-                // ROBOT_W
-                // ROBOT_VX
-                // ROBOT_VY
-                // ROBOT_VW
-                //try!(writeln!(inner.input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
-                try!(writeln!(inner.input, "{} {:.04} {:.04} {} {:.04} {:.04} {}",
-                    robot_id.id(),
-                    pos.x(),
-                    pos.y(),
-                    w,
-                    vel.x(),
-                    vel.y(),
-                    vw,
-                ));
-                ids.push(robot_id.id());
-            }
-        }
-
-        {
-            let robots_opponent = state.robots_team(!color);
-
-            // ROBOT_COUNT_OPPONENT
-            try!(writeln!(inner.input, "{}", robots_opponent.len()));
-
-            // ROBOT_COUNT_OPPONENT x
-            for robot in robots_opponent {
-                let robot_id = robot.id();
-                let pos = side.rel_vec(robot.pos());
-                let vel = side.rel_vec(robot.vel());
-                let w = side.rel_w(robot.w());
-                let vw = robot.vw();
-                // ROBOT_ID
-                // ROBOT_X
-                // ROBOT_Y
-                // ROBOT_W
-                // ROBOT_VX
-                // ROBOT_VY
-                // ROBOT_VW
-                //try!(writeln!(inner.input, "{} {:.04} {:.04} {:.04} {:.04} {:.04} {:.04}",
-                try!(writeln!(inner.input, "{} {:.04} {:.04} {} {:.04} {:.04} {}",
-                    robot_id.id(),
-                    pos.x(),
-                    pos.y(),
-                    w,
-                    vel.x(),
-                    vel.y(),
-                    vw,
-                ));
-            }
-        }
-
-        // flush to child stdin
-        try!(inner.input.flush());
-
+        let (counter, ids) = try!(inner.push(state));
         Ok(PullState {
             inner: inner,
             counter: counter,
@@ -333,73 +477,10 @@ impl<'a> PushState<'a> {
     }
 }
 
-impl<'a> PullState<'a> {
-    pub fn pull(self) -> Result<(PushState<'a>, game::Command)> {
+impl<'a, S: 'a + Fn() -> Command, D: 'a + Fn(&str)> PullState<'a, S, D> {
+    pub fn pull(self) -> Result<(PushState<'a, S, D>, Option<game::Command>)> {
         let PullState { mut inner, counter, ids } = self;
-
-        {
-            let line = try!(match inner.output.next() {
-                Some(thing) => thing,
-                None => throw_err!("expected a line"),
-            });
-            // COUNTER
-            let ai_counter: u64 = try!(line.parse());
-            if ai_counter != counter {
-                throw_err!("wrong command counter, expected {} got {}", counter, ai_counter);
-            }
-        }
-
-        let mut command = game::Command::new(inner.color);
-        command.robots.clear();
-        {
-            let mut robot_commands = &mut command.robots;
-
-            // ROBOT_COUNT_PLAYER x
-            for robot_id in ids {
-                let line = try!(match inner.output.next() {
-                    Some(thing) => thing,
-                    None => throw_err!("expected a line"),
-                });
-
-                let vars: Vec<_> = line.split(' ').collect();
-                let vars_len = vars.len();
-                if vars_len != 6 {
-                    throw_err!("expected 6 values for robot command, got {}", vars_len);
-                }
-
-                // V_TANGENT
-                // V_NORMAL
-                // V_ANGULAR
-                // KICK_FORCE
-                // CHIP_FORCE
-                // DRIBBLE
-                let v_tangent:  f32 = try!(vars[0].parse());
-                let v_normal:   f32 = try!(vars[1].parse());
-                let v_angular:  f32 = try!(vars[2].parse());
-                let kick_force: f32 = try!(vars[3].parse());
-                let chip_force: f32 = try!(vars[4].parse());
-                let dribble:   bool = try!(vars[5].parse::<i32>()) == 1;
-
-                robot_commands.insert(robot_id, game::RobotCommand {
-                    v_tangent: v_tangent,
-                    v_normal: v_normal,
-                    v_angular: v_angular,
-                    action: if kick_force > 0.0 {
-                        if chip_force > 0.0 { warn!("CHIP_FORCE shadowed by KICK_FORCE, please specify only one action"); }
-                        if dribble { warn!("DRIBBLE shadowed by KICK_FORCE, please specify only one action"); }
-                        game::RobotAction::Kick(kick_force)
-                    } else if chip_force > 0.0 {
-                        if dribble { warn!("DRIBBLE shadowed by CHIP_FORCE, please specify only one action"); }
-                        game::RobotAction::ChipKick(chip_force)
-                    } else if dribble {
-                        game::RobotAction::Dribble
-                    } else {
-                        game::RobotAction::Normal
-                    }
-                });
-            }
-        }
-
-        Ok((PushState { inner: inner }, command))
+        let command = try!(inner.pull(counter, ids));
+        Ok((PushState { inner: inner }, Some(command)))
     }
 }
