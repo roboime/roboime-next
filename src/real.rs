@@ -175,35 +175,52 @@ impl<'a> State<'a> {
                 continue;
             }
 
-            let mut data = [0u8; 6];
-
-            fn convert_speed(s: f32) -> u8 {
-                (if s < 0.0 {
-                    let x = -s * 100.0 + 100.0;
-                    if x > 199.0 { 199.0 } else { x }
-                } else {
-                    let x = s * 100.0;
-                    if x > 99.0 { 99.0 } else { x }
-                }) as u8
+            fn write_speed(d: &mut [u8], s: f32) {
+                assert!(d.len() >= 2);
+                let v = if s > 32000.0 { 32000 } else if s < -32000.0 { -32000 } else { s as i16 };
+                d[0] = v as u8;
+                d[1] = (v << 8) as u8;
             }
 
             // use robot_id
             debug!("v_norm: {}, v_tang: {}, v_ang: {}",
                    robot_command.v_normal, robot_command.v_tangent, robot_command.v_angular);
+
+            // Protocol (29 bytes):
+            //
+            //  0                   1                   2
+            //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8
+            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            // |M|I|~~~~~~~~~~~~~~~~~|K|D|~| Vn| Vt| Va|~~~~~~~~~~~~~~~~~|
+            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            //
+            // ~: reserved
+            // M: magic number: 'a' in ascii = 0x61 = 97
+            // I: robot id: 0-11
+            // K: kick boolean: none=0b00000000, normal=0b00000001, chip=0b00000010
+            // D: dribble velocity: u8
+            // Vn: normal velocity: little-endian i16 (unit not yet specified)
+            // Vt: normal velocity: little-endian i16 (unit not yet specified)
+            // Va: normal velocity: little-endian i16 (unit not yet specified)
+            //
+            let mut data = [0u8; 29];
+
             data[0] = 0x61; // magic number?
-            data[1] = convert_speed(-0.25 * robot_command.v_normal);
-            data[2] = convert_speed(0.25 * robot_command.v_tangent);
-            data[3] = convert_speed(1.00 * robot_command.v_angular);
+
+            write_speed(&mut data[14..], -0.25 * robot_command.v_normal);
+            write_speed(&mut data[16..], 0.25 * robot_command.v_tangent);
+            write_speed(&mut data[18..], 1.00 * robot_command.v_angular);
+
             match robot_command.action {
                 Normal => {}
                 Dribble => {
                     let dribble_speed = 0xfe; // could be dynamic...
-                    data[5] = dribble_speed;
+                    data[12] = dribble_speed;
                 }
                 Kick(force) => {
                     // should be dynamic...
                     if force > 0.0 {
-                        data[4] = 0b_0000_0001;
+                        data[11] = 0b_0000_0001;
                     }
                 }
                 ChipKick(force) => {
@@ -211,11 +228,12 @@ impl<'a> State<'a> {
                     let d_force = force * FRAC_1_SQRT_2;
                     // should be dynamic...
                     if d_force > 0.0 {
-                        data[4] = 0b_0000_0010;
+                        data[11] = 0b_0000_0010;
                     }
                 }
             }
-            debug!("{:?}", &data);
+
+            trace!("{:?}", &data);
             try!(handle.write_bulk(0x01, &data, Duration::from_millis(100)));
             try!(handle.read_bulk(0x81, buf, Duration::from_millis(100)));
         }
