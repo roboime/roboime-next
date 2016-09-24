@@ -12,7 +12,8 @@ RoboIME's core software stack for the RoboCup Small Size League.
 """
 
 [features]
-default = []
+default = ["usb-transceiver"]
+usb-transceiver = ["libusb", "lazy_static"]
 unstable = []
 
 [dependencies]
@@ -26,4 +27,5 @@ glium = "~0.14.0"
 #image = "~0.10.0"
 rusttype = "0.2"
 unicode-normalization = "~0.1.2"
-libusb = "0.2"
+libusb = { version = "0.3", optional = true }
+lazy_static = { version = "0.1", optional = true }

@@ -99,6 +99,7 @@ mod froms {
     use std::sync::PoisonError;
     use std::sync::mpsc::{RecvError, SendError};
     use log::SetLoggerError;
+    #[cfg(feature="usb-transceiver")]
     use libusb::Error as LibusbError;
     use protocol::ProtobufError;
     use ::error::{Error, ErrorKind};
@@ -183,6 +184,7 @@ mod froms {
         }
     }
 
+    #[cfg(feature="usb-transceiver")]
     impl From<LibusbError> for Error {
         fn from(err: LibusbError) -> Self {
             Error::new(ErrorKind::System, err)

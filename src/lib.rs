@@ -43,7 +43,10 @@
 extern crate roboime_next_protocol as protocol;
 extern crate net2;
 #[macro_use] extern crate log;
+#[cfg(feature="usb-transceiver")]
 extern crate libusb;
+#[cfg(feature="usb-transceiver")]
+#[macro_use] extern crate lazy_static;
 
 pub use error::{Result, Error, ErrorKind};
 

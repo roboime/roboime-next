@@ -1,28 +1,145 @@
 use std::slice;
 use std::net::{IpAddr, SocketAddr, UdpSocket, Ipv4Addr, SocketAddrV4, ToSocketAddrs};
-use std::time::Duration;
-use std::result::Result as StdResult;
 use net2::UdpBuilder;
-use libusb::{Context, DeviceHandle, Error as LibusbError};
 use protocol::parse_from_bytes;
 use protocol::messages_robocup_ssl_wrapper_legacy::SSL_WrapperPacket;
 use protocol::messages_robocup_ssl_detection::{SSL_DetectionFrame, SSL_DetectionRobot, SSL_DetectionBall};
 use protocol::messages_robocup_ssl_geometry_legacy::SSL_GeometryFieldSize;
 use ::prelude::*;
 use ::{game, Result, Error, ErrorKind};
+use self::transceiver::Transceiver;
 
-fn open_device_handle<'a>(context: &'a mut Context, vid: u16, pid: u16) -> StdResult<DeviceHandle<'a>, LibusbError> {
-    let devices = try!(context.devices());
+#[cfg(feature="usb-transceiver")]
+mod transceiver {
+    use std::time::Duration;
+    use libusb::{Context, DeviceHandle};
+    use ::{game, Result, Error, ErrorKind};
 
-    for mut device in devices.iter() {
-        let device_desc = try!(device.device_descriptor());
-        if device_desc.vendor_id() == vid && device_desc.product_id() == pid {
-            let handle = try!(device.open());
-            return Ok(handle);
-        }
+    lazy_static! {
+        static ref CTX: Context = Context::new().unwrap();
     }
 
-    Err(LibusbError::NotFound)
+    pub struct Transceiver<'a> {
+        handle: DeviceHandle<'a>,
+    }
+
+    impl<'a> Transceiver<'a> {
+        pub fn new() -> Result<Transceiver<'a>> {
+            #[inline(always)]
+            fn not_found() -> Error {
+                Error::new(ErrorKind::Io, "RoboIME transceiver not found")
+            }
+            let mut handle = try!(CTX.open_device_with_vid_pid(0x0483, 0x5740).ok_or_else(not_found));
+            if try!(handle.kernel_driver_active(0)) {
+                try!(handle.detach_kernel_driver(0));
+            }
+            try!(handle.claim_interface(0));
+            info!("usb transceiver claimed");
+
+            Ok(Transceiver {
+                handle: handle,
+            })
+        }
+
+        pub fn send_command(&mut self, command: game::Command, buf: &mut [u8]) -> Result<()> {
+            let &mut Transceiver { ref mut handle } = self;
+
+            for (robot_id, robot_command) in command.robots {
+                use std::f32::consts::FRAC_1_SQRT_2;
+                use game::RobotAction::*;
+
+                // FIXME the protocol doesn't yet support specifying the id, it will only control the
+                // robot with id 0
+                if robot_id != 5 {
+                    continue;
+                }
+
+                fn write_speed(d: &mut [u8], s: f32) {
+                    assert!(d.len() >= 2);
+                    let v = if s > 32000.0 { 32000 } else if s < -32000.0 { -32000 } else { s as i16 };
+                    d[0] = v as u8;
+                    d[1] = (v << 8) as u8;
+                }
+
+                // use robot_id
+                debug!("v_norm: {}, v_tang: {}, v_ang: {}",
+                       robot_command.v_normal, robot_command.v_tangent, robot_command.v_angular);
+
+                // Protocol (29 bytes):
+                //
+                //  0                   1                   2
+                //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8
+                // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                // |M|I|~~~~~~~~~~~~~~~~~|K|D|~| Vn| Vt| Va|~~~~~~~~~~~~~~~~~|
+                // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                //
+                // ~: reserved
+                // M: magic number: 'a' in ascii = 0x61 = 97
+                // I: robot id: 0-11
+                // K: kick boolean: none=0b00000000, normal=0b00000001, chip=0b00000010
+                // D: dribble velocity: u8
+                // Vn: normal velocity: little-endian i16 (unit not yet specified)
+                // Vt: normal velocity: little-endian i16 (unit not yet specified)
+                // Va: normal velocity: little-endian i16 (unit not yet specified)
+                //
+                let mut data = [0u8; 29];
+
+                data[0] = 0x61; // magic number?
+
+                write_speed(&mut data[14..], -0.25 * robot_command.v_normal);
+                write_speed(&mut data[16..], 0.25 * robot_command.v_tangent);
+                write_speed(&mut data[18..], 1.00 * robot_command.v_angular);
+
+                match robot_command.action {
+                    Normal => {}
+                    Dribble => {
+                        let dribble_speed = 0xfe; // could be dynamic...
+                        data[12] = dribble_speed;
+                    }
+                    Kick(force) => {
+                        // should be dynamic...
+                        if force > 0.0 {
+                            data[11] = 0b_0000_0001;
+                        }
+                    }
+                    ChipKick(force) => {
+                        // XXX: hardcoded 45 degrees angled chip kick
+                        let d_force = force * FRAC_1_SQRT_2;
+                        // should be dynamic...
+                        if d_force > 0.0 {
+                            data[11] = 0b_0000_0010;
+                        }
+                    }
+                }
+
+                trace!("{:?}", &data);
+                try!(handle.write_bulk(0x01, &data, Duration::from_millis(100)));
+                try!(handle.read_bulk(0x81, buf, Duration::from_millis(100)));
+            }
+
+            Ok(())
+        }
+    }
+}
+#[cfg(not(feature="usb-transceiver"))]
+mod transceiver {
+    use std::marker::PhantomData;
+    use ::{game, Result};
+
+    pub struct Transceiver<'a> {
+        _phantom: PhantomData<&'a ()>,
+    }
+
+    impl<'a> Transceiver<'a> {
+        pub fn new() -> Result<Transceiver<'a>> {
+            info!("using dummy transceiver");
+            Ok(Transceiver { _phantom: PhantomData })
+        }
+
+        pub fn send_command(&mut self, _command: game::Command, _buf: &mut [u8]) -> Result<()> {
+            Ok(())
+        }
+    }
 }
 
 trait UdpSocketExt2 {
@@ -57,7 +174,6 @@ impl<T: ToSocketAddrs> ToSocketAddrsExt for T {}
 /// interface to bind on.
 pub struct Builder {
     vision_addr: SocketAddr,
-    libusb_context: Context,
 }
 
 impl Builder {
@@ -65,8 +181,6 @@ impl Builder {
     pub fn new() -> Builder {
         Builder {
             vision_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 5, 23, 2)), 10005),
-            // XXX: what may cause libusb to panic? this method should return a Result
-            libusb_context: Context::new().unwrap(),
         }
     }
 
@@ -102,12 +216,7 @@ impl Builder {
         info!("receiving from {}", vision_addr);
 
         //let mut context = try!(Context::new());
-        let mut handle = try!(open_device_handle(&mut self.libusb_context, 0x0483, 0x5740));
-        if try!(handle.kernel_driver_active(0)) {
-            try!(handle.detach_kernel_driver(0));
-        }
-        try!(handle.claim_interface(0));
-        info!("usb transmissor claimed");
+        let transceiver = try!(Transceiver::new());
 
         Ok(State {
             recv_socket: recv_socket,
@@ -115,7 +224,7 @@ impl Builder {
             geometry: SSL_GeometryFieldSize::new(),
             detection: SSL_DetectionFrame::new(),
             counter: 0,
-            handle: handle,
+            transceiver: transceiver,
         })
     }
 }
@@ -127,7 +236,7 @@ pub struct State<'a> {
     geometry: SSL_GeometryFieldSize,
     detection: SSL_DetectionFrame,
     counter: u64,
-    handle: DeviceHandle<'a>,
+    transceiver: Transceiver<'a>,
 }
 
 impl<'a> State<'a> {
@@ -163,82 +272,7 @@ impl<'a> State<'a> {
     }
 
     pub fn send_command(&mut self, command: game::Command) -> Result<()> {
-        let &mut State { ref mut handle, ref mut buf, ..  } = self;
-
-        for (robot_id, robot_command) in command.robots {
-            use std::f32::consts::FRAC_1_SQRT_2;
-            use game::RobotAction::*;
-
-            // FIXME the protocol doesn't yet support specifying the id, it will only control the
-            // robot with id 0
-            if robot_id != 5 {
-                continue;
-            }
-
-            fn write_speed(d: &mut [u8], s: f32) {
-                assert!(d.len() >= 2);
-                let v = if s > 32000.0 { 32000 } else if s < -32000.0 { -32000 } else { s as i16 };
-                d[0] = v as u8;
-                d[1] = (v << 8) as u8;
-            }
-
-            // use robot_id
-            debug!("v_norm: {}, v_tang: {}, v_ang: {}",
-                   robot_command.v_normal, robot_command.v_tangent, robot_command.v_angular);
-
-            // Protocol (29 bytes):
-            //
-            //  0                   1                   2
-            //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8
-            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            // |M|I|~~~~~~~~~~~~~~~~~|K|D|~| Vn| Vt| Va|~~~~~~~~~~~~~~~~~|
-            // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            //
-            // ~: reserved
-            // M: magic number: 'a' in ascii = 0x61 = 97
-            // I: robot id: 0-11
-            // K: kick boolean: none=0b00000000, normal=0b00000001, chip=0b00000010
-            // D: dribble velocity: u8
-            // Vn: normal velocity: little-endian i16 (unit not yet specified)
-            // Vt: normal velocity: little-endian i16 (unit not yet specified)
-            // Va: normal velocity: little-endian i16 (unit not yet specified)
-            //
-            let mut data = [0u8; 29];
-
-            data[0] = 0x61; // magic number?
-
-            write_speed(&mut data[14..], -0.25 * robot_command.v_normal);
-            write_speed(&mut data[16..], 0.25 * robot_command.v_tangent);
-            write_speed(&mut data[18..], 1.00 * robot_command.v_angular);
-
-            match robot_command.action {
-                Normal => {}
-                Dribble => {
-                    let dribble_speed = 0xfe; // could be dynamic...
-                    data[12] = dribble_speed;
-                }
-                Kick(force) => {
-                    // should be dynamic...
-                    if force > 0.0 {
-                        data[11] = 0b_0000_0001;
-                    }
-                }
-                ChipKick(force) => {
-                    // XXX: hardcoded 45 degrees angled chip kick
-                    let d_force = force * FRAC_1_SQRT_2;
-                    // should be dynamic...
-                    if d_force > 0.0 {
-                        data[11] = 0b_0000_0010;
-                    }
-                }
-            }
-
-            trace!("{:?}", &data);
-            try!(handle.write_bulk(0x01, &data, Duration::from_millis(100)));
-            try!(handle.read_bulk(0x81, buf, Duration::from_millis(100)));
-        }
-
-        Ok(())
+        self.transceiver.send_command(command, &mut self.buf)
     }
 }
 
