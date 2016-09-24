@@ -7,7 +7,7 @@ platform:
 - x86
 - x64
 install:
-- nuget install libusb-win32-driver
+#- nuget install libusb-win32-driver
 - ps: |
     $target = If ($env:platform -eq "x64") { "x86_64-pc-windows-msvc" } Else { "i686-pc-windows-msvc" }
     $installer = ((New-Object Net.WebClient).DownloadString("https://static.rust-lang.org/dist/channel-rust-${env:channel}").Split("`n") | findstr /L "${target}.exe" )
@@ -17,9 +17,9 @@ install:
 - rustc -vV
 - cargo -vV
 build_script:
-- cargo build --verbose
+- cargo build --no-default-features --verbose
 test_script:
-- cargo test --verbose
-- cargo bench --verbose
-- cargo doc --verbose
-- cargo run -q --release --bin roboime-next-cli -- --help
+- cargo test --no-default-features --verbose
+- cargo bench --no-default-features --verbose
+- cargo doc --no-default-features --verbose
+- cargo run --no-default-features -q --release --bin roboime-next-cli -- --help
