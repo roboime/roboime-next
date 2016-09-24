@@ -15,9 +15,8 @@ addons:
 before_script:
 - pip install 'travis-cargo<0.2' --user && export PATH=$HOME/.local/bin:$PATH
 script:
-- travis-cargo build --no-default-features
-- travis-cargo test --no-default-features
-- travis-cargo bench --no-default-features
+- cargo build --no-default-features
+- cargo test --no-default-features
 - travis-cargo --only stable doc
 - cargo run --no-default-features -q --release --bin roboime-next-cli -- --help
 after_success:
