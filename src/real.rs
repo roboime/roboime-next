@@ -1,14 +1,146 @@
 use std::slice;
 use std::net::{IpAddr, SocketAddr, UdpSocket, Ipv4Addr, SocketAddrV4, ToSocketAddrs};
 use net2::UdpBuilder;
-use protocol::{Message, parse_from_bytes};
+use protocol::parse_from_bytes;
 use protocol::messages_robocup_ssl_wrapper_legacy::SSL_WrapperPacket;
 use protocol::messages_robocup_ssl_detection::{SSL_DetectionFrame, SSL_DetectionRobot, SSL_DetectionBall};
 use protocol::messages_robocup_ssl_geometry_legacy::SSL_GeometryFieldSize;
-use protocol::grSim_Packet::grSim_Packet;
-use protocol::grSim_Commands::grSim_Robot_Command;
 use ::prelude::*;
 use ::{game, Result, Error, ErrorKind};
+use self::transceiver::Transceiver;
+
+#[cfg(feature="usb-transceiver")]
+mod transceiver {
+    use std::time::Duration;
+    use libusb::{Context, DeviceHandle};
+    use ::{game, Result, Error, ErrorKind};
+
+    lazy_static! {
+        static ref CTX: Context = Context::new().unwrap();
+    }
+
+    pub struct Transceiver<'a> {
+        handle: DeviceHandle<'a>,
+    }
+
+    impl<'a> Transceiver<'a> {
+        pub fn new() -> Result<Transceiver<'a>> {
+            #[inline(always)]
+            fn not_found() -> Error {
+                Error::new(ErrorKind::Io, "RoboIME transceiver not found")
+            }
+            let mut handle = try!(CTX.open_device_with_vid_pid(0x0483, 0x5740).ok_or_else(not_found));
+            if try!(handle.kernel_driver_active(0)) {
+                try!(handle.detach_kernel_driver(0));
+            }
+            try!(handle.claim_interface(0));
+            info!("usb transceiver claimed");
+
+            Ok(Transceiver {
+                handle: handle,
+            })
+        }
+
+        pub fn send_command(&mut self, command: game::Command, buf: &mut [u8]) -> Result<()> {
+            let &mut Transceiver { ref mut handle } = self;
+
+            for (robot_id, robot_command) in command.robots {
+                use std::f32::consts::FRAC_1_SQRT_2;
+                use game::RobotAction::*;
+
+                // FIXME the protocol doesn't yet support specifying the id, it will only control the
+                // robot with id 0
+                if robot_id != 5 {
+                    continue;
+                }
+
+                fn write_speed(d: &mut [u8], s: f32) {
+                    assert!(d.len() >= 2);
+                    let v = if s > 32000.0 { 32000 } else if s < -32000.0 { -32000 } else { s as i16 };
+                    d[0] = v as u8;
+                    d[1] = (v << 8) as u8;
+                }
+
+                // use robot_id
+                debug!("v_norm: {}, v_tang: {}, v_ang: {}",
+                       robot_command.v_normal, robot_command.v_tangent, robot_command.v_angular);
+
+                // Protocol (29 bytes):
+                //
+                //  0                   1                   2
+                //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8
+                // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                // |M|I|~~~~~~~~~~~~~~~~~|K|D|~| Vn| Vt| Va|~~~~~~~~~~~~~~~~~|
+                // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                //
+                // ~: reserved
+                // M: magic number: 'a' in ascii = 0x61 = 97
+                // I: robot id: 0-11
+                // K: kick boolean: none=0b00000000, normal=0b00000001, chip=0b00000010
+                // D: dribble velocity: u8
+                // Vn: normal velocity: little-endian i16 (unit not yet specified)
+                // Vt: normal velocity: little-endian i16 (unit not yet specified)
+                // Va: normal velocity: little-endian i16 (unit not yet specified)
+                //
+                let mut data = [0u8; 29];
+
+                data[0] = 0x61; // magic number?
+
+                write_speed(&mut data[14..], -0.25 * robot_command.v_normal);
+                write_speed(&mut data[16..], 0.25 * robot_command.v_tangent);
+                write_speed(&mut data[18..], 1.00 * robot_command.v_angular);
+
+                match robot_command.action {
+                    Normal => {}
+                    Dribble => {
+                        let dribble_speed = 0xfe; // could be dynamic...
+                        data[12] = dribble_speed;
+                    }
+                    Kick(force) => {
+                        // should be dynamic...
+                        if force > 0.0 {
+                            data[11] = 0b_0000_0001;
+                        }
+                    }
+                    ChipKick(force) => {
+                        // XXX: hardcoded 45 degrees angled chip kick
+                        let d_force = force * FRAC_1_SQRT_2;
+                        // should be dynamic...
+                        if d_force > 0.0 {
+                            data[11] = 0b_0000_0010;
+                        }
+                    }
+                }
+
+                trace!("{:?}", &data);
+                try!(handle.write_bulk(0x01, &data, Duration::from_millis(100)));
+                try!(handle.read_bulk(0x81, buf, Duration::from_millis(100)));
+            }
+
+            Ok(())
+        }
+    }
+}
+#[cfg(not(feature="usb-transceiver"))]
+mod transceiver {
+    use std::marker::PhantomData;
+    use ::{game, Result};
+
+    pub struct Transceiver<'a> {
+        _phantom: PhantomData<&'a ()>,
+    }
+
+    impl<'a> Transceiver<'a> {
+        pub fn new() -> Result<Transceiver<'a>> {
+            info!("using dummy transceiver");
+            Ok(Transceiver { _phantom: PhantomData })
+        }
+
+        pub fn send_command(&mut self, _command: game::Command, _buf: &mut [u8]) -> Result<()> {
+            Ok(())
+        }
+    }
+}
 
 trait UdpSocketExt2 {
     fn recv_ssl_packet(&self, buf: &mut [u8]) -> Result<SSL_WrapperPacket>;
@@ -40,18 +172,15 @@ impl<T: ToSocketAddrs> ToSocketAddrsExt for T {}
 ///
 /// __NOTE:__ currently it will any interface, a future improvement should allow setting which
 /// interface to bind on.
-#[derive(Debug, Clone)]
 pub struct Builder {
     vision_addr: SocketAddr,
-    grsim_addr: SocketAddr,
 }
 
 impl Builder {
     /// Instantiate with default values.
     pub fn new() -> Builder {
         Builder {
-            vision_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 5, 23, 2)), 10020),
-            grsim_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 20011),
+            vision_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 5, 23, 2)), 10005),
         }
     }
 
@@ -69,22 +198,8 @@ impl Builder {
         self
     }
 
-    /// Set the grsim address and port used on the simulator, this is used when sending commands to
-    /// grSim.
-    pub fn grsim_addr<A: ToSocketAddrs>(&mut self, addrs: A) -> Result<&mut Builder> {
-        self.grsim_addr = try!(addrs.to_single_socket_addr());
-        Ok(self)
-    }
-
-    /// Set the grsim address to send commands to.  The port is preserved (default if not set).
-    pub fn grsim_ip(&mut self, ip: IpAddr) -> &mut Builder {
-        // TODO: use self.grsim_addr.set_ip when sockaddr_setters is stable
-        self.grsim_addr = SocketAddr::new(ip, self.grsim_addr.port());
-        self
-    }
-
     /// Spawn the necessary threads and start listening to changes and ppushing commands.
-    pub fn build(&self) -> Result<State> {
+    pub fn build<'a>(&'a mut self) -> Result<State<'a>> {
         let any_addr = Ipv4Addr::new(0, 0, 0, 0);
         let vision_addr = self.vision_addr.clone();
         let vision_bind = SocketAddrV4::new(any_addr, vision_addr.port());
@@ -98,42 +213,33 @@ impl Builder {
         let recv_socket = try!(UdpBuilder::new_v4().unwrap().reuse_address(true).unwrap().bind(vision_bind));
         try!(recv_socket.join_multicast_v4(&vision_mcast, &any_addr));
 
-        let any_addr = Ipv4Addr::new(0, 0, 0, 0);
-        let grsim_bind = SocketAddrV4::new(any_addr, 0);
-        let grsim_addr = self.grsim_addr;
-        let send_socket = try!(UdpSocket::bind(grsim_bind));
+        info!("receiving from {}", vision_addr);
 
-        info!("receiving from {}, sending to {}", vision_addr, grsim_addr);
+        //let mut context = try!(Context::new());
+        let transceiver = try!(Transceiver::new());
 
         Ok(State {
             recv_socket: recv_socket,
-            send_socket: send_socket,
-            grsim_addr: grsim_addr,
             buf: [0; 1024],
             geometry: SSL_GeometryFieldSize::new(),
             detection: SSL_DetectionFrame::new(),
             counter: 0,
-            _data: PersistentData {},
+            transceiver: transceiver,
         })
     }
 }
 
-struct PersistentData {
-}
-
-pub struct State {
+pub struct State<'a> {
     recv_socket: UdpSocket,
-    send_socket: UdpSocket,
-    grsim_addr: SocketAddr,
     // 1KB buffer, packets are usually not greater than ~200 bytes
     buf: [u8; 1024],
     geometry: SSL_GeometryFieldSize,
     detection: SSL_DetectionFrame,
     counter: u64,
-    _data: PersistentData,
+    transceiver: Transceiver<'a>,
 }
 
-impl State {
+impl<'a> State<'a> {
     /// Returns Ok(true) if there was a geometry update.
     pub fn recv_state(&mut self) -> Result<()> {
         let &mut State { ref mut buf, ref recv_socket, ..  } = self;
@@ -166,50 +272,11 @@ impl State {
     }
 
     pub fn send_command(&mut self, command: game::Command) -> Result<()> {
-        let &mut State { ref mut send_socket, ref grsim_addr, ..  } = self;
-
-        let mut packet = grSim_Packet::new();
-        {
-            let commands = packet.mut_commands();
-            commands.set_timestamp(0.0); // TODO/XXX/FIXME
-            commands.set_isteamyellow(command.color.is_yellow());
-            let robot_commands = commands.mut_robot_commands();
-
-            for (robot_id, robot_command) in command.robots {
-                use std::f32::consts::FRAC_1_SQRT_2;
-                use game::RobotAction::*;
-
-                let mut c = grSim_Robot_Command::new();
-                c.set_id(robot_id as u32);
-                c.set_wheelsspeed(false);
-                c.set_veltangent(robot_command.v_tangent);
-                c.set_velnormal(robot_command.v_normal);
-                c.set_velangular(robot_command.v_angular);
-                let (spinner, kickx, kickz) = match robot_command.action {
-                    Normal => (false, 0.0, 0.0),
-                    Dribble => (true, 0.0, 0.0),
-                    Kick(force) => (false, force, 0.0),
-                    ChipKick(force) => {
-                        // XXX: hardcoded 45 degrees angled chip kick
-                        let d_force = force * FRAC_1_SQRT_2;
-                        (false, d_force, d_force)
-                    }
-                };
-                c.set_spinner(spinner);
-                c.set_kickspeedx(kickx);
-                c.set_kickspeedz(kickz);
-
-                robot_commands.push(c);
-            }
-        }
-        let ref bytes = try!(packet.write_to_bytes());
-        try!(send_socket.send_to(bytes, grsim_addr));
-
-        Ok(())
+        self.transceiver.send_command(command, &mut self.buf)
     }
 }
 
-impl<'a> game::State<'a> for State {
+impl<'a> game::State<'a> for State<'a> {
     type Ball = &'a SSL_DetectionBall;
     type Robot = (Color, &'a SSL_DetectionRobot);
     type Robots = Iter<'a>;
@@ -308,25 +375,3 @@ impl<'a> Iterator for Iter<'a> {
 }
 
 impl<'a> ExactSizeIterator for Iter<'a> {}
-
-impl<'a> game::Ball for &'a SSL_DetectionBall {
-    fn pos(&self) -> Vec2d { Vec2d(self.get_x() / 1000.0, self.get_y() / 1000.0) }
-    fn vel(&self) -> Vec2d { Vec2d(0.0, 0.0) } // TODO
-}
-
-impl<'a> game::Robot for (Color, &'a SSL_DetectionRobot) {
-    fn id(&self) -> Id { Id(self.0, self.1.get_robot_id() as u8) }
-    fn pos(&self) -> Vec2d { Vec2d(self.1.get_x() / 1000.0, self.1.get_y() / 1000.0) }
-    fn vel(&self) -> Vec2d { Vec2d(0.0, 0.0) } // TODO
-    fn w(&self) -> f32 { self.1.get_orientation() }
-    fn vw(&self) -> f32 { 0.0 } // TODO
-}
-
-impl<'a> game::Geometry for &'a SSL_GeometryFieldSize {
-    fn field_length(&self) -> f32 { self.get_field_length() as f32 / 1000.0 }
-    fn field_width(&self) -> f32 { self.get_field_width() as f32 / 1000.0 }
-    fn goal_width(&self) -> f32 { self.get_goal_width() as f32 / 1000.0 }
-    fn center_circle_radius(&self) -> f32 { self.get_center_circle_radius() as f32 / 1000.0 }
-    fn defense_radius(&self) -> f32 { self.get_defense_radius() as f32 / 1000.0 }
-    fn defense_stretch(&self) -> f32 { self.get_defense_stretch() as f32 / 1000.0 }
-}

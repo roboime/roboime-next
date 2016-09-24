@@ -138,14 +138,15 @@ int main() {
             float chip_force = 0.0f;
             int dribble = 0;
 
-            if (ids[i] == 0) {
+            if (ids[i] == 5) {
                 const float PL = 0.40f;
                 const float PW = 0.80f;
-                v_tangent  = PL * ((tx - x) * cos(w) + (ty - y) * sin(w));
-                v_normal   = PL * ((ty - y) * cos(w) - (tx - x) * sin(w));
+                //v_tangent  = PL * ((tx - x) * cos(w) + (ty - y) * sin(w));
+                //v_normal   = PL * ((ty - y) * cos(w) - (tx - x) * sin(w));
                 //v_angular  = PW * (tw - w);
-                v_angular  = PW * (fmod(tw - w + 5 * M_PI, 2 * M_PI) - M_PI);
-                kick_force = 4.0f;
+                v_tangent = 2.0f;
+                //v_angular  = PW * (fmod(tw - w + 5 * M_PI, 2 * M_PI) - M_PI);
+                //kick_force = 4.0f;
                 chip_force = 0.0f;
                 dribble = 1;
             }

@@ -30,6 +30,8 @@ pub enum ErrorKind {
     AiProtocol,
     /// An OS Synchronization error, like `std::sync::PoisonError` or `std::sync::mpsc::RecvError`
     Sync,
+    /// A system error, like USB errors from libusb
+    System,
     /// Any other error category.
     Other,
     /// Reserved for future kinds.
@@ -97,6 +99,8 @@ mod froms {
     use std::sync::PoisonError;
     use std::sync::mpsc::{RecvError, SendError};
     use log::SetLoggerError;
+    #[cfg(feature="usb-transceiver")]
+    use libusb::Error as LibusbError;
     use protocol::ProtobufError;
     use ::error::{Error, ErrorKind};
 
@@ -177,6 +181,13 @@ mod froms {
             //    None => Error::new(ErrorKind::Other, "unknown"),
             //}
             Error::new(ErrorKind::Other, "unknown")
+        }
+    }
+
+    #[cfg(feature="usb-transceiver")]
+    impl From<LibusbError> for Error {
+        fn from(err: LibusbError) -> Self {
+            Error::new(ErrorKind::System, err)
         }
     }
 }

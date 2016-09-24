@@ -14,14 +14,14 @@ addons:
     - libelf-dev
     - libdw-dev
     - binutils-dev
+    #- libusb-1.0.0-dev
 before_script:
 - pip install 'travis-cargo<0.2' --user && export PATH=$HOME/.local/bin:$PATH
 script:
-- travis-cargo build
-- travis-cargo test
-- travis-cargo bench
-- travis-cargo --only stable doc
-- cargo run -q --release --bin roboime-next-cli -- --help
+- cargo build --no-default-features
+- cargo test --no-default-features
+- cargo doc --no-default-features
+- cargo run --no-default-features -q --release --bin roboime-next-cli -- --help
 after_success:
 - travis-cargo --only stable doc-upload
 - travis-cargo coveralls --no-sudo --verify --exclude-pattern="protocol/"
