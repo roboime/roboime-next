@@ -2,8 +2,10 @@
 #![allow(dead_code)]
 use std::io::prelude::*;
 use std::io::{Lines, BufReader, BufWriter};
-use std::process::{Stdio, Command, Child, ChildStdin, ChildStdout, ChildStderr};
+use std::process::{Stdio, Command, Child, ChildStdin, ChildStdout};
 use std::ffi::OsStr;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use ::prelude::*;
 use ::{game, Result, Error, ErrorKind};
 
@@ -32,13 +34,13 @@ impl CommandAiExt for Command {
 }
 
 /// Builder for a subprocess (child) AI
-pub struct Builder<S: Fn() -> Command, D: Fn(&str)> {
+pub struct Builder<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> {
     color: Color,
     spawner: S,
     debugger: Option<D>,
 }
 
-impl<S: Fn() -> Command, D: Fn(&str)> Builder<S, D> {
+impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> Builder<S, D> {
     pub fn new(spawner: S) -> Builder<S, D> {
         Builder {
             color: Default::default(),
@@ -67,7 +69,8 @@ impl<S: Fn() -> Command, D: Fn(&str)> Builder<S, D> {
         let mut ai_state = State {
             color: self.color,
             spawner: self.spawner,
-            debugger: self.debugger.unwrap(), // TODO
+            // unwrap is OK because of the type system
+            debugger: Arc::new(Mutex::new(self.debugger.unwrap())),
             child: None,
             reboots: 0,
         };
@@ -86,26 +89,31 @@ struct ChildFields {
     subproc: Child,
     input: BufWriter<ChildStdin>,
     output: Lines<BufReader<ChildStdout>>,
-    error: Lines<BufReader<ChildStderr>>,
+    //error: Lines<BufReader<ChildStderr>>,
+    debug: Option<thread::JoinHandle<Result<()>>>,
 }
 
 impl Drop for ChildFields {
     fn drop(&mut self) {
-        if let Err(err) = self.subproc.kill() {
+        let &mut ChildFields { ref mut subproc, ref mut debug, .. } = self;
+        if let Err(err) = subproc.kill() {
             warn!("error killing AI subproc: {}", err);
+        }
+        if let Some(thread) = debug.take() {
+            let _ = thread.join();
         }
     }
 }
 
-struct State<S: Fn() -> Command, D: Fn(&str)> {
+struct State<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> {
     color: Color,
     spawner: S,
-    debugger: D,
+    debugger: Arc<Mutex<D>>,
     child: Option<ChildFields>,
     reboots: u8,
 }
 
-impl<S: Fn() -> Command, D: Fn(&str)> State<S, D> {
+impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
     fn boot(&mut self, reboot: bool) -> Result<()> {
         let mut command = (self.spawner)();
 
@@ -121,11 +129,27 @@ impl<S: Fn() -> Command, D: Fn(&str)> State<S, D> {
         let child_out = try!(child.stdout.take().ok_or(Error::new(ErrorKind::Io, "missing stdout from child")));
         let child_err = try!(child.stderr.take().ok_or(Error::new(ErrorKind::Io, "missing stderr from child")));
 
+        let error = BufReader::new(child_err).lines();
+        let debugger = self.debugger.clone();
+        let color = self.color;
+
+        let debug_thread = thread::spawn(move || {
+            let debugger = try!(debugger.lock());
+            for line_res in error {
+                match line_res {
+                    Ok(line) => (debugger)(&line),
+                    Err(err) => warn!("{:?} AI I/O error: {}", color, err),
+                }
+            }
+            Ok(())
+        });
+
         self.child = Some(ChildFields {
             subproc: child,
             input: BufWriter::new(child_in),
             output: BufReader::new(child_out).lines(),
-            error: BufReader::new(child_err).lines(),
+            //error: error,
+            debug: Some(debug_thread),
         });
 
         Ok(())
@@ -393,22 +417,22 @@ impl<S: Fn() -> Command, D: Fn(&str)> State<S, D> {
     }
 }
 
-pub struct InitialState<S: Fn() -> Command, D: Fn(&str)> {
+pub struct InitialState<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> {
     inner: State<S, D>,
     //pub debug: Option<Lines<BufReader<ChildStderr>>>,
 }
 
-pub struct PushState<'a, S: 'a + Fn() -> Command, D: 'a + Fn(&str)> {
+pub struct PushState<'a, S: 'a + Fn() -> Command, D: 'a + 'static + Fn(&str) + Send + Sync> {
     inner: &'a mut State<S, D>,
 }
 
-pub struct PullState<'a, S: 'a + Fn() -> Command, D: 'a + Fn(&str)> {
+pub struct PullState<'a, S: 'a + Fn() -> Command, D: 'a + 'static + Fn(&str) + Send + Sync> {
     inner: &'a mut State<S, D>,
     counter: u64,
     ids: Vec<u8>,
 }
 
-impl<S: Fn() -> Command, D: Fn(&str)> InitialState<S, D> {
+impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> InitialState<S, D> {
     pub fn init<'a, 'g, G: game::State<'g>>(&'a mut self, state: &'g G) -> Result<PushState<'a, S, D>> {
         let &mut InitialState { ref mut inner, .. } = self;
         try!(inner.init(state));
@@ -457,7 +481,7 @@ impl Side {
     }
 }
 
-impl<'a, S: 'a + Fn() -> Command, D: 'a + Fn(&str)> PushState<'a, S, D> {
+impl<'a, S: 'a + Fn() -> Command, D: 'a + 'static + Fn(&str) + Send + Sync> PushState<'a, S, D> {
     pub fn update<'g, G: game::State<'g>>(&mut self, state: &'g G) -> Result<Option<game::Command>> {
         let &mut PushState { ref mut inner } = self;
         let s = PushState { inner: inner };
@@ -477,7 +501,7 @@ impl<'a, S: 'a + Fn() -> Command, D: 'a + Fn(&str)> PushState<'a, S, D> {
     }
 }
 
-impl<'a, S: 'a + Fn() -> Command, D: 'a + Fn(&str)> PullState<'a, S, D> {
+impl<'a, S: 'a + Fn() -> Command, D: 'a + 'static + Fn(&str) + Send + Sync> PullState<'a, S, D> {
     pub fn pull(self) -> Result<(PushState<'a, S, D>, Option<game::Command>)> {
         let PullState { mut inner, counter, ids } = self;
         let command = try!(inner.pull(counter, ids));
