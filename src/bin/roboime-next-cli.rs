@@ -111,6 +111,12 @@ fn main_loop() -> Result<(), Box<Error>> {
                  .long("fast")
                  .multiple(true)
                  .help("Each f doubles the speed."))
+            .arg(Arg::with_name("slow")
+                 .conflicts_with_all(&["fast", "real", "grsim"])
+                 .short("s")
+                 .long("slow")
+                 .multiple(true)
+                 .help("Each s halves the speed."))
             .arg(Arg::with_name("v")
                  .short("v")
                  .multiple(true)
@@ -171,7 +177,13 @@ fn main_loop() -> Result<(), Box<Error>> {
         Blue
     };
 
-    let multiplier = 2.0f32.powi(matches.occurrences_of("fast") as i32);
+    let multiplier = if matches.is_present("fast") {
+        2.0f32.powi(matches.occurrences_of("fast") as i32)
+    } else if matches.is_present("slow") {
+        0.5f32.powi(matches.occurrences_of("slow") as i32)
+    } else {
+        1.0
+    };
 
     // AI Builders
 
