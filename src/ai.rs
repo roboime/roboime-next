@@ -180,7 +180,7 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
                 Some(thing) => thing,
                 None => throw_err!("expected a line"),
             });
-            //debug!("{}", line);
+            trace!("{}", line);
             match line.as_ref() {
                 "COMPATIBLE 1" => {}
                 s if s.starts_with("COMPATIBLE") => throw_err!("AI not protocol compatible (implicit)"),
@@ -352,7 +352,7 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
                 Some(thing) => thing,
                 None => throw_err!("expected a line"),
             });
-            //debug!("{}", line);
+            trace!("{}", line);
 
             // COUNTER
             let ai_counter: u64 = try!(line.parse());
@@ -372,7 +372,7 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
                     Some(thing) => thing,
                     None => throw_err!("expected a line"),
                 });
-                //debug!("{}", line);
+                trace!("{}", line);
 
                 let vars: Vec<_> = line.split(' ').collect();
                 let vars_len = vars.len();
