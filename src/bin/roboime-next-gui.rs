@@ -13,10 +13,10 @@ use roboime_next::{sim, grsim, real, ai};
 
 mod draw;
 
-enum GameState<'a> {
+enum GameState {
     Sim(sim::State),
     GrSim(grsim::State),
-    Real(real::State<'a>),
+    Real(real::State),
 }
 
 macro_rules! with_state {
@@ -248,14 +248,10 @@ fn main_loop() -> Result<(), Box<Error>> {
 
     // Game/AI/Draw states
 
-    let mut real_builder = if matches.is_present("real") {
-        Some(real::Builder::new())
-    } else {
-        None
-    };
-
-    let mut game_state = if let Some(ref mut builder) = real_builder {
-        Real(try!(builder.build()))
+    let mut game_state = if matches.is_present("real") {
+        let mut real_cfg = real::Builder::new();
+        real_cfg.team_side(team_side);
+        Real(try!(real_cfg.build()))
     } else if matches.is_present("grsim") {
         let mut grsim_cfg = grsim::Builder::new();
         if let Some(v) = matches.value_of("grsim_addr")  { try!(grsim_cfg.grsim_addr(v)); }

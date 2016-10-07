@@ -8,10 +8,10 @@ use std::error::Error;
 use self::GameState::*;
 use roboime_next::{sim, grsim, real, ai};
 
-enum GameState<'a> {
+enum GameState {
     Sim(sim::State),
     GrSim(grsim::State),
-    Real(real::State<'a>),
+    Real(real::State),
 }
 
 macro_rules! with_state {

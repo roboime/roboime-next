@@ -7,24 +7,25 @@ use protocol::messages_robocup_ssl_detection::{SSL_DetectionFrame, SSL_Detection
 use protocol::messages_robocup_ssl_geometry_legacy::SSL_GeometryFieldSize;
 use ::prelude::*;
 use ::{game, Result, Error, ErrorKind};
-use self::transceiver::Transceiver;
 
 #[cfg(feature="usb-transceiver")]
 mod transceiver {
     use std::time::Duration;
+    use std::sync::Mutex;
     use libusb::{Context, DeviceHandle};
     use ::{game, Result, Error, ErrorKind};
 
     lazy_static! {
         static ref CTX: Context = Context::new().unwrap();
+        pub static ref HANDLE: Mutex<Transceiver> = Mutex::new(Transceiver::new().unwrap());
     }
 
-    pub struct Transceiver<'a> {
-        handle: DeviceHandle<'a>,
+    pub struct Transceiver {
+        handle: DeviceHandle<'static>,
     }
 
-    impl<'a> Transceiver<'a> {
-        pub fn new() -> Result<Transceiver<'a>> {
+    impl Transceiver {
+        pub fn new() -> Result<Transceiver> {
             #[inline(always)]
             fn not_found() -> Error {
                 Error::new(ErrorKind::Io, "RoboIME transceiver not found")
@@ -41,28 +42,24 @@ mod transceiver {
             })
         }
 
-        pub fn send_command(&mut self, command: game::Command, buf: &mut [u8]) -> Result<()> {
+        pub fn send_command(&mut self, command: game::Command, _buf: &mut [u8]) -> Result<()> {
             let &mut Transceiver { ref mut handle } = self;
 
             for (robot_id, robot_command) in command.robots {
                 use std::f32::consts::FRAC_1_SQRT_2;
                 use game::RobotAction::*;
 
-                // FIXME the protocol doesn't yet support specifying the id, it will only control the
-                // robot with id 0
-                if robot_id != 5 {
-                    continue;
-                }
-
                 fn write_speed(d: &mut [u8], s: f32) {
                     assert!(d.len() >= 2);
-                    let v = if s > 32000.0 { 32000 } else if s < -32000.0 { -32000 } else { s as i16 };
+                    let limf = 1000.0;
+                    let limi = limf as i16;
+                    let v = if s > limf { limi } else if s < -limf { -limi } else { s as i16 };
                     d[0] = v as u8;
-                    d[1] = (v << 8) as u8;
+                    d[1] = (v >> 8) as u8;
                 }
 
                 // use robot_id
-                debug!("v_norm: {}, v_tang: {}, v_ang: {}",
+                debug!("robot_id: {}, v_norm: {}, v_tang: {}, v_ang: {}", robot_id,
                        robot_command.v_normal, robot_command.v_tangent, robot_command.v_angular);
 
                 // Protocol (29 bytes):
@@ -78,17 +75,18 @@ mod transceiver {
                 // I: robot id: 0-11
                 // K: kick boolean: none=0b00000000, normal=0b00000001, chip=0b00000010
                 // D: dribble velocity: u8
-                // Vn: normal velocity: little-endian i16 (unit not yet specified)
-                // Vt: normal velocity: little-endian i16 (unit not yet specified)
+                // Vn: normal velocity: little-endian i16 (1000 = 4m/s [max abs])
+                // Vt: normal velocity: little-endian i16 (1000 = 4m/s [max abs])
                 // Va: normal velocity: little-endian i16 (unit not yet specified)
                 //
                 let mut data = [0u8; 29];
 
                 data[0] = 0x61; // magic number?
+                data[1] = robot_id;
 
-                write_speed(&mut data[14..], -0.25 * robot_command.v_normal);
-                write_speed(&mut data[16..], 0.25 * robot_command.v_tangent);
-                write_speed(&mut data[18..], 1.00 * robot_command.v_angular);
+                write_speed(&mut data[14..], -250.0 * robot_command.v_normal);
+                write_speed(&mut data[16..],  250.0 * robot_command.v_tangent);
+                write_speed(&mut data[18..],  100.0 * robot_command.v_angular);
 
                 match robot_command.action {
                     Normal => {}
@@ -113,8 +111,14 @@ mod transceiver {
                 }
 
                 trace!("{:?}", &data);
-                try!(handle.write_bulk(0x01, &data, Duration::from_millis(100)));
-                try!(handle.read_bulk(0x81, buf, Duration::from_millis(100)));
+                let write_res = handle.write_bulk(0x01, &data, Duration::from_millis(100));
+                if let Err(err) = write_res {
+                    warn!("Error on bulk write: {:?}", err);
+                }
+                //let read_res = handle.read_bulk(0x81, buf, Duration::from_millis(100));
+                //if let Err(err) = read_res {
+                //    warn!("Error on bulk read: {:?}", err);
+                //}
             }
 
             Ok(())
@@ -126,17 +130,16 @@ mod transceiver {
     use std::marker::PhantomData;
     use ::{game, Result};
 
-    pub struct Transceiver<'a> {
-        _phantom: PhantomData<&'a ()>,
-    }
+    pub struct Transceiver;
 
-    impl<'a> Transceiver<'a> {
-        pub fn new() -> Result<Transceiver<'a>> {
+    impl Transceiver {
+        pub fn new() -> Result<Transceiver> {
             info!("using dummy transceiver");
-            Ok(Transceiver { _phantom: PhantomData })
+            Ok(Transceiver)
         }
 
         pub fn send_command(&mut self, _command: game::Command, _buf: &mut [u8]) -> Result<()> {
+            debug!("dummy send_command");
             Ok(())
         }
     }
@@ -174,6 +177,7 @@ impl<T: ToSocketAddrs> ToSocketAddrsExt for T {}
 /// interface to bind on.
 pub struct Builder {
     vision_addr: SocketAddr,
+    team_side: TeamSide,
 }
 
 impl Builder {
@@ -181,7 +185,13 @@ impl Builder {
     pub fn new() -> Builder {
         Builder {
             vision_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 5, 23, 2)), 10005),
+            team_side: Default::default(),
         }
+    }
+
+    pub fn team_side(&mut self, team_side: TeamSide) -> &mut Builder {
+        self.team_side = team_side;
+        self
     }
 
     /// Set the vision address and port used on the simulator, the address is used for
@@ -199,7 +209,7 @@ impl Builder {
     }
 
     /// Spawn the necessary threads and start listening to changes and ppushing commands.
-    pub fn build<'a>(&'a mut self) -> Result<State<'a>> {
+    pub fn build(&mut self) -> Result<State> {
         let any_addr = Ipv4Addr::new(0, 0, 0, 0);
         let vision_addr = self.vision_addr.clone();
         let vision_bind = SocketAddrV4::new(any_addr, vision_addr.port());
@@ -216,7 +226,7 @@ impl Builder {
         info!("receiving from {}", vision_addr);
 
         //let mut context = try!(Context::new());
-        let transceiver = try!(Transceiver::new());
+        //let transceiver = try!(Transceiver::new());
 
         Ok(State {
             recv_socket: recv_socket,
@@ -224,22 +234,29 @@ impl Builder {
             geometry: SSL_GeometryFieldSize::new(),
             detection: SSL_DetectionFrame::new(),
             counter: 0,
-            transceiver: transceiver,
+            //transceiver: transceiver,
+            team_side: self.team_side,
+            // XXX: hardcoded team info!!!!
+            blue_team_info: TeamInfo { score: 0, goalie: 5 },
+            yellow_team_info: TeamInfo { score: 0, goalie: 2 },
         })
     }
 }
 
-pub struct State<'a> {
+pub struct State {
     recv_socket: UdpSocket,
     // 1KB buffer, packets are usually not greater than ~200 bytes
     buf: [u8; 1024],
     geometry: SSL_GeometryFieldSize,
     detection: SSL_DetectionFrame,
     counter: u64,
-    transceiver: Transceiver<'a>,
+    //transceiver: Transceiver,
+    team_side: TeamSide,
+    blue_team_info: TeamInfo,
+    yellow_team_info: TeamInfo,
 }
 
-impl<'a> State<'a> {
+impl State {
     /// Returns Ok(true) if there was a geometry update.
     pub fn recv_state(&mut self) -> Result<()> {
         let &mut State { ref mut buf, ref recv_socket, ..  } = self;
@@ -272,16 +289,29 @@ impl<'a> State<'a> {
     }
 
     pub fn send_command(&mut self, command: game::Command) -> Result<()> {
-        self.transceiver.send_command(command, &mut self.buf)
+        //self.transceiver.send_command(command, &mut self.buf)
+        let mut transceiver = try!(transceiver::HANDLE.lock());
+        transceiver.send_command(command, &mut self.buf)
     }
 }
 
-impl<'a> game::State<'a> for State<'a> {
+#[derive(Copy, Clone, Debug)]
+pub struct TeamInfo {
+    goalie: u8,
+    score: u8,
+}
+
+impl<'a> game::TeamInfo for TeamInfo {
+    fn score(&self) -> u8 { self.score }
+    fn goalie(&self) -> u8 { self.goalie }
+}
+
+impl<'a> game::State<'a> for State {
     type Ball = &'a SSL_DetectionBall;
     type Robot = (Color, &'a SSL_DetectionRobot);
     type Robots = Iter<'a>;
     type Geometry = &'a SSL_GeometryFieldSize;
-    type TeamInfo = ();
+    type TeamInfo = TeamInfo;
 
     fn counter(&self) -> u64 {
         self.counter
@@ -329,10 +359,15 @@ impl<'a> game::State<'a> for State<'a> {
         &self.geometry
     }
 
-    fn team_info(&'a self, _color: Color) -> Self::TeamInfo { () }
+    fn team_info(&'a self, color: Color) -> Self::TeamInfo {
+        match color {
+            Blue => self.blue_team_info,
+            Yellow => self.yellow_team_info,
+        }
+    }
 
     // in grSim, blue is always left
-    fn team_side(&self) -> TeamSide { BlueIsLeft }
+    fn team_side(&self) -> TeamSide { self.team_side }
 }
 
 enum IterState {
