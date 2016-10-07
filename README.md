@@ -195,6 +195,10 @@ Main objectives include:
 
 ![](screenshot-1.png)
 
+### Advanced logging
+
+    RUST_LOG=roboime_next::ai=trace roboime-next-gui ...
+
 License
 -------
 
