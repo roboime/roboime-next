@@ -171,6 +171,7 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
 
         let version = 1;
         try!(writeln!(input, "ROBOIME_AI_PROTOCOL {}", version));
+        trace!("-> ROBOIME_AI_PROTOCOL {}", version);
 
         // flush to child stdin
         try!(input.flush());
@@ -180,7 +181,7 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
                 Some(thing) => thing,
                 None => throw_err!("expected a line"),
             });
-            trace!("{}", line);
+            trace!("<- {}", line);
             match line.as_ref() {
                 "COMPATIBLE 1" => {}
                 s if s.starts_with("COMPATIBLE") => throw_err!("AI not protocol compatible (implicit)"),
@@ -205,6 +206,14 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
             geom.defense_radius(),
             geom.defense_stretch(),
         ));
+        trace!("-> {:.03} {:.03} {:.03} {:.03} {:.03} {:.03}",
+            geom.field_length(),
+            geom.field_width(),
+            geom.goal_width(),
+            geom.center_circle_radius(),
+            geom.defense_radius(),
+            geom.defense_stretch(),
+        );
 
         // flush to child stdin
         try!(input.flush());
@@ -250,6 +259,16 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
             goalie_player,
             goalie_opponent,
         ));
+        trace!("-> {} {} {} {} {} {} {} {}",
+            counter,
+            timestamp,
+            referee.to_char(color),
+            referee.more_info(color),
+            score_player,
+            score_opponent,
+            goalie_player,
+            goalie_opponent,
+        );
 
         {
             let ball = state.ball();
@@ -266,6 +285,12 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
                 vel.x(),
                 vel.y(),
             ));
+            trace!("-> {:.04} {:.04} {:.04} {:.04}",
+                pos.x(),
+                pos.y(),
+                vel.x(),
+                vel.y(),
+            );
         }
 
         let mut ids;
@@ -275,6 +300,7 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
             // ROBOT_COUNT_PLAYER
             let len = robots_player.len();
             try!(writeln!(input, "{}", len));
+            trace!("-> {}", len);
             ids = Vec::with_capacity(len);
 
             // ROBOT_COUNT_PLAYER x
@@ -301,6 +327,15 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
                     vel.y(),
                     vw,
                 ));
+                trace!("-> {} {:.04} {:.04} {} {:.04} {:.04} {}",
+                    robot_id.id(),
+                    pos.x(),
+                    pos.y(),
+                    w,
+                    vel.x(),
+                    vel.y(),
+                    vw,
+                );
                 ids.push(robot_id.id());
             }
         }
@@ -310,6 +345,7 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
 
             // ROBOT_COUNT_OPPONENT
             try!(writeln!(input, "{}", robots_opponent.len()));
+            trace!("-> {}", robots_opponent.len());
 
             // ROBOT_COUNT_OPPONENT x
             for robot in robots_opponent {
@@ -335,6 +371,15 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
                     vel.y(),
                     vw,
                 ));
+                trace!("-> {} {:.04} {:.04} {} {:.04} {:.04} {}",
+                    robot_id.id(),
+                    pos.x(),
+                    pos.y(),
+                    w,
+                    vel.x(),
+                    vel.y(),
+                    vw,
+                );
             }
         }
 
@@ -352,7 +397,7 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
                 Some(thing) => thing,
                 None => throw_err!("expected a line"),
             });
-            trace!("{}", line);
+            trace!("<- {}", line);
 
             // COUNTER
             let ai_counter: u64 = try!(line.parse());
@@ -372,7 +417,7 @@ impl<S: Fn() -> Command, D: 'static + Fn(&str) + Send + Sync> State<S, D> {
                     Some(thing) => thing,
                     None => throw_err!("expected a line"),
                 });
-                trace!("{}", line);
+                trace!("<- {}", line);
 
                 let vars: Vec<_> = line.split(' ').collect();
                 let vars_len = vars.len();
