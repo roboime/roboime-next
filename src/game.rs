@@ -60,7 +60,7 @@ pub trait Geometry {
 }
 
 pub trait TeamInfo {
-    fn name<'a>(&'a self) -> &'a str { "" }
+    fn name<'a>(&'a self) -> &'a str { "Unnamed" }
     fn score(&self) -> u8 { 0 }
     fn goalie(&self) -> u8 { 0 }
 }
