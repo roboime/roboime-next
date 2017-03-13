@@ -1,7 +1,9 @@
-use ::{Result};
+use ::Result;
 
 pub trait InterfaceHandle {
+    // TODO: rename to wait
     fn join(self) -> Result<()>;
+    fn quit(&mut self) -> Result<()> { Ok(()) }
 }
 
 macro_rules! peel {

@@ -2,11 +2,18 @@
 name = "roboime-next-protocol"
 version = "0.1.0"
 authors = ["Jan Segre <jan@segre.in>"]
+license = "MPL-2.0"
+repository = "https://github.com/roboime/roboime-next/"
+documentation = "http://www.roboime.com/roboime-next/"
+description = """
+Internal dependency for roboime-next.
+"""
 # the build script is not being used right now
+build = false
 #build = "build.rs"
 
 [dependencies]
-protobuf = "~1.0.18"
+protobuf = "~1.0.21"
 
 #[build-dependencies.protobuf_build]
 #git = "https://github.com/plietar/rust-protobuf-build.git"

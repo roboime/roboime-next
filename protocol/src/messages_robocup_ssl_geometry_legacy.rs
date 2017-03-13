@@ -1,6 +1,12 @@
 // This file is generated. Do not edit
 // @generated
 
+// https://github.com/Manishearth/rust-clippy/issues/702
+#![allow(unknown_lints)]
+#![allow(clippy)]
+
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
@@ -84,7 +90,7 @@ impl SSL_GeometryFieldSize {
         self.line_width = ::std::option::Option::Some(v);
     }
 
-    pub fn get_line_width<'a>(&self) -> i32 {
+    pub fn get_line_width(&self) -> i32 {
         self.line_width.unwrap_or(0)
     }
 
@@ -103,7 +109,7 @@ impl SSL_GeometryFieldSize {
         self.field_length = ::std::option::Option::Some(v);
     }
 
-    pub fn get_field_length<'a>(&self) -> i32 {
+    pub fn get_field_length(&self) -> i32 {
         self.field_length.unwrap_or(0)
     }
 
@@ -122,7 +128,7 @@ impl SSL_GeometryFieldSize {
         self.field_width = ::std::option::Option::Some(v);
     }
 
-    pub fn get_field_width<'a>(&self) -> i32 {
+    pub fn get_field_width(&self) -> i32 {
         self.field_width.unwrap_or(0)
     }
 
@@ -141,7 +147,7 @@ impl SSL_GeometryFieldSize {
         self.boundary_width = ::std::option::Option::Some(v);
     }
 
-    pub fn get_boundary_width<'a>(&self) -> i32 {
+    pub fn get_boundary_width(&self) -> i32 {
         self.boundary_width.unwrap_or(0)
     }
 
@@ -160,7 +166,7 @@ impl SSL_GeometryFieldSize {
         self.referee_width = ::std::option::Option::Some(v);
     }
 
-    pub fn get_referee_width<'a>(&self) -> i32 {
+    pub fn get_referee_width(&self) -> i32 {
         self.referee_width.unwrap_or(0)
     }
 
@@ -179,7 +185,7 @@ impl SSL_GeometryFieldSize {
         self.goal_width = ::std::option::Option::Some(v);
     }
 
-    pub fn get_goal_width<'a>(&self) -> i32 {
+    pub fn get_goal_width(&self) -> i32 {
         self.goal_width.unwrap_or(0)
     }
 
@@ -198,7 +204,7 @@ impl SSL_GeometryFieldSize {
         self.goal_depth = ::std::option::Option::Some(v);
     }
 
-    pub fn get_goal_depth<'a>(&self) -> i32 {
+    pub fn get_goal_depth(&self) -> i32 {
         self.goal_depth.unwrap_or(0)
     }
 
@@ -217,7 +223,7 @@ impl SSL_GeometryFieldSize {
         self.goal_wall_width = ::std::option::Option::Some(v);
     }
 
-    pub fn get_goal_wall_width<'a>(&self) -> i32 {
+    pub fn get_goal_wall_width(&self) -> i32 {
         self.goal_wall_width.unwrap_or(0)
     }
 
@@ -236,7 +242,7 @@ impl SSL_GeometryFieldSize {
         self.center_circle_radius = ::std::option::Option::Some(v);
     }
 
-    pub fn get_center_circle_radius<'a>(&self) -> i32 {
+    pub fn get_center_circle_radius(&self) -> i32 {
         self.center_circle_radius.unwrap_or(0)
     }
 
@@ -255,7 +261,7 @@ impl SSL_GeometryFieldSize {
         self.defense_radius = ::std::option::Option::Some(v);
     }
 
-    pub fn get_defense_radius<'a>(&self) -> i32 {
+    pub fn get_defense_radius(&self) -> i32 {
         self.defense_radius.unwrap_or(0)
     }
 
@@ -274,7 +280,7 @@ impl SSL_GeometryFieldSize {
         self.defense_stretch = ::std::option::Option::Some(v);
     }
 
-    pub fn get_defense_stretch<'a>(&self) -> i32 {
+    pub fn get_defense_stretch(&self) -> i32 {
         self.defense_stretch.unwrap_or(0)
     }
 
@@ -293,7 +299,7 @@ impl SSL_GeometryFieldSize {
         self.free_kick_from_defense_dist = ::std::option::Option::Some(v);
     }
 
-    pub fn get_free_kick_from_defense_dist<'a>(&self) -> i32 {
+    pub fn get_free_kick_from_defense_dist(&self) -> i32 {
         self.free_kick_from_defense_dist.unwrap_or(0)
     }
 
@@ -312,7 +318,7 @@ impl SSL_GeometryFieldSize {
         self.penalty_spot_from_field_line_dist = ::std::option::Option::Some(v);
     }
 
-    pub fn get_penalty_spot_from_field_line_dist<'a>(&self) -> i32 {
+    pub fn get_penalty_spot_from_field_line_dist(&self) -> i32 {
         self.penalty_spot_from_field_line_dist.unwrap_or(0)
     }
 
@@ -331,7 +337,7 @@ impl SSL_GeometryFieldSize {
         self.penalty_line_from_spot_dist = ::std::option::Option::Some(v);
     }
 
-    pub fn get_penalty_line_from_spot_dist<'a>(&self) -> i32 {
+    pub fn get_penalty_line_from_spot_dist(&self) -> i32 {
         self.penalty_line_from_spot_dist.unwrap_or(0)
     }
 }
@@ -595,11 +601,11 @@ impl ::protobuf::Message for SSL_GeometryFieldSize {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
@@ -807,7 +813,7 @@ impl SSL_GeometryData {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_field<'a>(&'a mut self) -> &'a mut SSL_GeometryFieldSize {
+    pub fn mut_field(&mut self) -> &mut SSL_GeometryFieldSize {
         if self.field.is_none() {
             self.field.set_default();
         };
@@ -819,7 +825,7 @@ impl SSL_GeometryData {
         self.field.take().unwrap_or_else(|| SSL_GeometryFieldSize::new())
     }
 
-    pub fn get_field<'a>(&'a self) -> &'a SSL_GeometryFieldSize {
+    pub fn get_field(&self) -> &SSL_GeometryFieldSize {
         self.field.as_ref().unwrap_or_else(|| SSL_GeometryFieldSize::default_instance())
     }
 
@@ -835,7 +841,7 @@ impl SSL_GeometryData {
     }
 
     // Mutable pointer to the field.
-    pub fn mut_calib<'a>(&'a mut self) -> &'a mut ::protobuf::RepeatedField<super::messages_robocup_ssl_geometry::SSL_GeometryCameraCalibration> {
+    pub fn mut_calib(&mut self) -> &mut ::protobuf::RepeatedField<super::messages_robocup_ssl_geometry::SSL_GeometryCameraCalibration> {
         &mut self.calib
     }
 
@@ -844,7 +850,7 @@ impl SSL_GeometryData {
         ::std::mem::replace(&mut self.calib, ::protobuf::RepeatedField::new())
     }
 
-    pub fn get_calib<'a>(&'a self) -> &'a [super::messages_robocup_ssl_geometry::SSL_GeometryCameraCalibration] {
+    pub fn get_calib(&self) -> &[super::messages_robocup_ssl_geometry::SSL_GeometryCameraCalibration] {
         &self.calib
     }
 }
@@ -911,11 +917,11 @@ impl ::protobuf::Message for SSL_GeometryData {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 

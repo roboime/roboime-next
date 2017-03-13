@@ -1,6 +1,12 @@
 // This file is generated. Do not edit
 // @generated
 
+// https://github.com/Manishearth/rust-clippy/issues/702
+#![allow(unknown_lints)]
+#![allow(clippy)]
+
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
@@ -60,7 +66,7 @@ impl Vector2f {
         self.x = ::std::option::Option::Some(v);
     }
 
-    pub fn get_x<'a>(&self) -> f32 {
+    pub fn get_x(&self) -> f32 {
         self.x.unwrap_or(0.)
     }
 
@@ -79,7 +85,7 @@ impl Vector2f {
         self.y = ::std::option::Option::Some(v);
     }
 
-    pub fn get_y<'a>(&self) -> f32 {
+    pub fn get_y(&self) -> f32 {
         self.y.unwrap_or(0.)
     }
 }
@@ -151,11 +157,11 @@ impl ::protobuf::Message for Vector2f {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
@@ -283,7 +289,7 @@ impl SSL_FieldLineSegment {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_name<'a>(&'a mut self) -> &'a mut ::std::string::String {
+    pub fn mut_name(&mut self) -> &mut ::std::string::String {
         if self.name.is_none() {
             self.name.set_default();
         };
@@ -295,7 +301,7 @@ impl SSL_FieldLineSegment {
         self.name.take().unwrap_or_else(|| ::std::string::String::new())
     }
 
-    pub fn get_name<'a>(&'a self) -> &'a str {
+    pub fn get_name(&self) -> &str {
         match self.name.as_ref() {
             Some(v) => &v,
             None => "",
@@ -319,7 +325,7 @@ impl SSL_FieldLineSegment {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_p1<'a>(&'a mut self) -> &'a mut Vector2f {
+    pub fn mut_p1(&mut self) -> &mut Vector2f {
         if self.p1.is_none() {
             self.p1.set_default();
         };
@@ -331,7 +337,7 @@ impl SSL_FieldLineSegment {
         self.p1.take().unwrap_or_else(|| Vector2f::new())
     }
 
-    pub fn get_p1<'a>(&'a self) -> &'a Vector2f {
+    pub fn get_p1(&self) -> &Vector2f {
         self.p1.as_ref().unwrap_or_else(|| Vector2f::default_instance())
     }
 
@@ -352,7 +358,7 @@ impl SSL_FieldLineSegment {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_p2<'a>(&'a mut self) -> &'a mut Vector2f {
+    pub fn mut_p2(&mut self) -> &mut Vector2f {
         if self.p2.is_none() {
             self.p2.set_default();
         };
@@ -364,7 +370,7 @@ impl SSL_FieldLineSegment {
         self.p2.take().unwrap_or_else(|| Vector2f::new())
     }
 
-    pub fn get_p2<'a>(&'a self) -> &'a Vector2f {
+    pub fn get_p2(&self) -> &Vector2f {
         self.p2.as_ref().unwrap_or_else(|| Vector2f::default_instance())
     }
 
@@ -383,7 +389,7 @@ impl SSL_FieldLineSegment {
         self.thickness = ::std::option::Option::Some(v);
     }
 
-    pub fn get_thickness<'a>(&self) -> f32 {
+    pub fn get_thickness(&self) -> f32 {
         self.thickness.unwrap_or(0.)
     }
 }
@@ -481,11 +487,11 @@ impl ::protobuf::Message for SSL_FieldLineSegment {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
@@ -631,7 +637,7 @@ impl SSL_FieldCicularArc {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_name<'a>(&'a mut self) -> &'a mut ::std::string::String {
+    pub fn mut_name(&mut self) -> &mut ::std::string::String {
         if self.name.is_none() {
             self.name.set_default();
         };
@@ -643,7 +649,7 @@ impl SSL_FieldCicularArc {
         self.name.take().unwrap_or_else(|| ::std::string::String::new())
     }
 
-    pub fn get_name<'a>(&'a self) -> &'a str {
+    pub fn get_name(&self) -> &str {
         match self.name.as_ref() {
             Some(v) => &v,
             None => "",
@@ -667,7 +673,7 @@ impl SSL_FieldCicularArc {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_center<'a>(&'a mut self) -> &'a mut Vector2f {
+    pub fn mut_center(&mut self) -> &mut Vector2f {
         if self.center.is_none() {
             self.center.set_default();
         };
@@ -679,7 +685,7 @@ impl SSL_FieldCicularArc {
         self.center.take().unwrap_or_else(|| Vector2f::new())
     }
 
-    pub fn get_center<'a>(&'a self) -> &'a Vector2f {
+    pub fn get_center(&self) -> &Vector2f {
         self.center.as_ref().unwrap_or_else(|| Vector2f::default_instance())
     }
 
@@ -698,7 +704,7 @@ impl SSL_FieldCicularArc {
         self.radius = ::std::option::Option::Some(v);
     }
 
-    pub fn get_radius<'a>(&self) -> f32 {
+    pub fn get_radius(&self) -> f32 {
         self.radius.unwrap_or(0.)
     }
 
@@ -717,7 +723,7 @@ impl SSL_FieldCicularArc {
         self.a1 = ::std::option::Option::Some(v);
     }
 
-    pub fn get_a1<'a>(&self) -> f32 {
+    pub fn get_a1(&self) -> f32 {
         self.a1.unwrap_or(0.)
     }
 
@@ -736,7 +742,7 @@ impl SSL_FieldCicularArc {
         self.a2 = ::std::option::Option::Some(v);
     }
 
-    pub fn get_a2<'a>(&self) -> f32 {
+    pub fn get_a2(&self) -> f32 {
         self.a2.unwrap_or(0.)
     }
 
@@ -755,7 +761,7 @@ impl SSL_FieldCicularArc {
         self.thickness = ::std::option::Option::Some(v);
     }
 
-    pub fn get_thickness<'a>(&self) -> f32 {
+    pub fn get_thickness(&self) -> f32 {
         self.thickness.unwrap_or(0.)
     }
 }
@@ -886,11 +892,11 @@ impl ::protobuf::Message for SSL_FieldCicularArc {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
@@ -1050,7 +1056,7 @@ impl SSL_GeometryFieldSize {
         self.field_length = ::std::option::Option::Some(v);
     }
 
-    pub fn get_field_length<'a>(&self) -> i32 {
+    pub fn get_field_length(&self) -> i32 {
         self.field_length.unwrap_or(0)
     }
 
@@ -1069,7 +1075,7 @@ impl SSL_GeometryFieldSize {
         self.field_width = ::std::option::Option::Some(v);
     }
 
-    pub fn get_field_width<'a>(&self) -> i32 {
+    pub fn get_field_width(&self) -> i32 {
         self.field_width.unwrap_or(0)
     }
 
@@ -1088,7 +1094,7 @@ impl SSL_GeometryFieldSize {
         self.goal_width = ::std::option::Option::Some(v);
     }
 
-    pub fn get_goal_width<'a>(&self) -> i32 {
+    pub fn get_goal_width(&self) -> i32 {
         self.goal_width.unwrap_or(0)
     }
 
@@ -1107,7 +1113,7 @@ impl SSL_GeometryFieldSize {
         self.goal_depth = ::std::option::Option::Some(v);
     }
 
-    pub fn get_goal_depth<'a>(&self) -> i32 {
+    pub fn get_goal_depth(&self) -> i32 {
         self.goal_depth.unwrap_or(0)
     }
 
@@ -1126,7 +1132,7 @@ impl SSL_GeometryFieldSize {
         self.boundary_width = ::std::option::Option::Some(v);
     }
 
-    pub fn get_boundary_width<'a>(&self) -> i32 {
+    pub fn get_boundary_width(&self) -> i32 {
         self.boundary_width.unwrap_or(0)
     }
 
@@ -1142,7 +1148,7 @@ impl SSL_GeometryFieldSize {
     }
 
     // Mutable pointer to the field.
-    pub fn mut_field_lines<'a>(&'a mut self) -> &'a mut ::protobuf::RepeatedField<SSL_FieldLineSegment> {
+    pub fn mut_field_lines(&mut self) -> &mut ::protobuf::RepeatedField<SSL_FieldLineSegment> {
         &mut self.field_lines
     }
 
@@ -1151,7 +1157,7 @@ impl SSL_GeometryFieldSize {
         ::std::mem::replace(&mut self.field_lines, ::protobuf::RepeatedField::new())
     }
 
-    pub fn get_field_lines<'a>(&'a self) -> &'a [SSL_FieldLineSegment] {
+    pub fn get_field_lines(&self) -> &[SSL_FieldLineSegment] {
         &self.field_lines
     }
 
@@ -1167,7 +1173,7 @@ impl SSL_GeometryFieldSize {
     }
 
     // Mutable pointer to the field.
-    pub fn mut_field_arcs<'a>(&'a mut self) -> &'a mut ::protobuf::RepeatedField<SSL_FieldCicularArc> {
+    pub fn mut_field_arcs(&mut self) -> &mut ::protobuf::RepeatedField<SSL_FieldCicularArc> {
         &mut self.field_arcs
     }
 
@@ -1176,7 +1182,7 @@ impl SSL_GeometryFieldSize {
         ::std::mem::replace(&mut self.field_arcs, ::protobuf::RepeatedField::new())
     }
 
-    pub fn get_field_arcs<'a>(&'a self) -> &'a [SSL_FieldCicularArc] {
+    pub fn get_field_arcs(&self) -> &[SSL_FieldCicularArc] {
         &self.field_arcs
     }
 }
@@ -1320,11 +1326,11 @@ impl ::protobuf::Message for SSL_GeometryFieldSize {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
@@ -1505,7 +1511,7 @@ impl SSL_GeometryCameraCalibration {
         self.camera_id = ::std::option::Option::Some(v);
     }
 
-    pub fn get_camera_id<'a>(&self) -> u32 {
+    pub fn get_camera_id(&self) -> u32 {
         self.camera_id.unwrap_or(0)
     }
 
@@ -1524,7 +1530,7 @@ impl SSL_GeometryCameraCalibration {
         self.focal_length = ::std::option::Option::Some(v);
     }
 
-    pub fn get_focal_length<'a>(&self) -> f32 {
+    pub fn get_focal_length(&self) -> f32 {
         self.focal_length.unwrap_or(0.)
     }
 
@@ -1543,7 +1549,7 @@ impl SSL_GeometryCameraCalibration {
         self.principal_point_x = ::std::option::Option::Some(v);
     }
 
-    pub fn get_principal_point_x<'a>(&self) -> f32 {
+    pub fn get_principal_point_x(&self) -> f32 {
         self.principal_point_x.unwrap_or(0.)
     }
 
@@ -1562,7 +1568,7 @@ impl SSL_GeometryCameraCalibration {
         self.principal_point_y = ::std::option::Option::Some(v);
     }
 
-    pub fn get_principal_point_y<'a>(&self) -> f32 {
+    pub fn get_principal_point_y(&self) -> f32 {
         self.principal_point_y.unwrap_or(0.)
     }
 
@@ -1581,7 +1587,7 @@ impl SSL_GeometryCameraCalibration {
         self.distortion = ::std::option::Option::Some(v);
     }
 
-    pub fn get_distortion<'a>(&self) -> f32 {
+    pub fn get_distortion(&self) -> f32 {
         self.distortion.unwrap_or(0.)
     }
 
@@ -1600,7 +1606,7 @@ impl SSL_GeometryCameraCalibration {
         self.q0 = ::std::option::Option::Some(v);
     }
 
-    pub fn get_q0<'a>(&self) -> f32 {
+    pub fn get_q0(&self) -> f32 {
         self.q0.unwrap_or(0.)
     }
 
@@ -1619,7 +1625,7 @@ impl SSL_GeometryCameraCalibration {
         self.q1 = ::std::option::Option::Some(v);
     }
 
-    pub fn get_q1<'a>(&self) -> f32 {
+    pub fn get_q1(&self) -> f32 {
         self.q1.unwrap_or(0.)
     }
 
@@ -1638,7 +1644,7 @@ impl SSL_GeometryCameraCalibration {
         self.q2 = ::std::option::Option::Some(v);
     }
 
-    pub fn get_q2<'a>(&self) -> f32 {
+    pub fn get_q2(&self) -> f32 {
         self.q2.unwrap_or(0.)
     }
 
@@ -1657,7 +1663,7 @@ impl SSL_GeometryCameraCalibration {
         self.q3 = ::std::option::Option::Some(v);
     }
 
-    pub fn get_q3<'a>(&self) -> f32 {
+    pub fn get_q3(&self) -> f32 {
         self.q3.unwrap_or(0.)
     }
 
@@ -1676,7 +1682,7 @@ impl SSL_GeometryCameraCalibration {
         self.tx = ::std::option::Option::Some(v);
     }
 
-    pub fn get_tx<'a>(&self) -> f32 {
+    pub fn get_tx(&self) -> f32 {
         self.tx.unwrap_or(0.)
     }
 
@@ -1695,7 +1701,7 @@ impl SSL_GeometryCameraCalibration {
         self.ty = ::std::option::Option::Some(v);
     }
 
-    pub fn get_ty<'a>(&self) -> f32 {
+    pub fn get_ty(&self) -> f32 {
         self.ty.unwrap_or(0.)
     }
 
@@ -1714,7 +1720,7 @@ impl SSL_GeometryCameraCalibration {
         self.tz = ::std::option::Option::Some(v);
     }
 
-    pub fn get_tz<'a>(&self) -> f32 {
+    pub fn get_tz(&self) -> f32 {
         self.tz.unwrap_or(0.)
     }
 
@@ -1733,7 +1739,7 @@ impl SSL_GeometryCameraCalibration {
         self.derived_camera_world_tx = ::std::option::Option::Some(v);
     }
 
-    pub fn get_derived_camera_world_tx<'a>(&self) -> f32 {
+    pub fn get_derived_camera_world_tx(&self) -> f32 {
         self.derived_camera_world_tx.unwrap_or(0.)
     }
 
@@ -1752,7 +1758,7 @@ impl SSL_GeometryCameraCalibration {
         self.derived_camera_world_ty = ::std::option::Option::Some(v);
     }
 
-    pub fn get_derived_camera_world_ty<'a>(&self) -> f32 {
+    pub fn get_derived_camera_world_ty(&self) -> f32 {
         self.derived_camera_world_ty.unwrap_or(0.)
     }
 
@@ -1771,7 +1777,7 @@ impl SSL_GeometryCameraCalibration {
         self.derived_camera_world_tz = ::std::option::Option::Some(v);
     }
 
-    pub fn get_derived_camera_world_tz<'a>(&self) -> f32 {
+    pub fn get_derived_camera_world_tz(&self) -> f32 {
         self.derived_camera_world_tz.unwrap_or(0.)
     }
 }
@@ -2042,11 +2048,11 @@ impl ::protobuf::Message for SSL_GeometryCameraCalibration {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
@@ -2261,7 +2267,7 @@ impl SSL_GeometryData {
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_field<'a>(&'a mut self) -> &'a mut SSL_GeometryFieldSize {
+    pub fn mut_field(&mut self) -> &mut SSL_GeometryFieldSize {
         if self.field.is_none() {
             self.field.set_default();
         };
@@ -2273,7 +2279,7 @@ impl SSL_GeometryData {
         self.field.take().unwrap_or_else(|| SSL_GeometryFieldSize::new())
     }
 
-    pub fn get_field<'a>(&'a self) -> &'a SSL_GeometryFieldSize {
+    pub fn get_field(&self) -> &SSL_GeometryFieldSize {
         self.field.as_ref().unwrap_or_else(|| SSL_GeometryFieldSize::default_instance())
     }
 
@@ -2289,7 +2295,7 @@ impl SSL_GeometryData {
     }
 
     // Mutable pointer to the field.
-    pub fn mut_calib<'a>(&'a mut self) -> &'a mut ::protobuf::RepeatedField<SSL_GeometryCameraCalibration> {
+    pub fn mut_calib(&mut self) -> &mut ::protobuf::RepeatedField<SSL_GeometryCameraCalibration> {
         &mut self.calib
     }
 
@@ -2298,7 +2304,7 @@ impl SSL_GeometryData {
         ::std::mem::replace(&mut self.calib, ::protobuf::RepeatedField::new())
     }
 
-    pub fn get_calib<'a>(&'a self) -> &'a [SSL_GeometryCameraCalibration] {
+    pub fn get_calib(&self) -> &[SSL_GeometryCameraCalibration] {
         &self.calib
     }
 }
@@ -2365,11 +2371,11 @@ impl ::protobuf::Message for SSL_GeometryData {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 

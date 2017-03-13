@@ -1,6 +1,12 @@
 // This file is generated. Do not edit
 // @generated
 
+// https://github.com/Manishearth/rust-clippy/issues/702
+#![allow(unknown_lints)]
+#![allow(clippy)]
+
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
@@ -80,7 +86,7 @@ impl grSim_Robot_Command {
         self.id = ::std::option::Option::Some(v);
     }
 
-    pub fn get_id<'a>(&self) -> u32 {
+    pub fn get_id(&self) -> u32 {
         self.id.unwrap_or(0)
     }
 
@@ -99,7 +105,7 @@ impl grSim_Robot_Command {
         self.kickspeedx = ::std::option::Option::Some(v);
     }
 
-    pub fn get_kickspeedx<'a>(&self) -> f32 {
+    pub fn get_kickspeedx(&self) -> f32 {
         self.kickspeedx.unwrap_or(0.)
     }
 
@@ -118,7 +124,7 @@ impl grSim_Robot_Command {
         self.kickspeedz = ::std::option::Option::Some(v);
     }
 
-    pub fn get_kickspeedz<'a>(&self) -> f32 {
+    pub fn get_kickspeedz(&self) -> f32 {
         self.kickspeedz.unwrap_or(0.)
     }
 
@@ -137,7 +143,7 @@ impl grSim_Robot_Command {
         self.veltangent = ::std::option::Option::Some(v);
     }
 
-    pub fn get_veltangent<'a>(&self) -> f32 {
+    pub fn get_veltangent(&self) -> f32 {
         self.veltangent.unwrap_or(0.)
     }
 
@@ -156,7 +162,7 @@ impl grSim_Robot_Command {
         self.velnormal = ::std::option::Option::Some(v);
     }
 
-    pub fn get_velnormal<'a>(&self) -> f32 {
+    pub fn get_velnormal(&self) -> f32 {
         self.velnormal.unwrap_or(0.)
     }
 
@@ -175,7 +181,7 @@ impl grSim_Robot_Command {
         self.velangular = ::std::option::Option::Some(v);
     }
 
-    pub fn get_velangular<'a>(&self) -> f32 {
+    pub fn get_velangular(&self) -> f32 {
         self.velangular.unwrap_or(0.)
     }
 
@@ -194,7 +200,7 @@ impl grSim_Robot_Command {
         self.spinner = ::std::option::Option::Some(v);
     }
 
-    pub fn get_spinner<'a>(&self) -> bool {
+    pub fn get_spinner(&self) -> bool {
         self.spinner.unwrap_or(false)
     }
 
@@ -213,7 +219,7 @@ impl grSim_Robot_Command {
         self.wheelsspeed = ::std::option::Option::Some(v);
     }
 
-    pub fn get_wheelsspeed<'a>(&self) -> bool {
+    pub fn get_wheelsspeed(&self) -> bool {
         self.wheelsspeed.unwrap_or(false)
     }
 
@@ -232,7 +238,7 @@ impl grSim_Robot_Command {
         self.wheel1 = ::std::option::Option::Some(v);
     }
 
-    pub fn get_wheel1<'a>(&self) -> f32 {
+    pub fn get_wheel1(&self) -> f32 {
         self.wheel1.unwrap_or(0.)
     }
 
@@ -251,7 +257,7 @@ impl grSim_Robot_Command {
         self.wheel2 = ::std::option::Option::Some(v);
     }
 
-    pub fn get_wheel2<'a>(&self) -> f32 {
+    pub fn get_wheel2(&self) -> f32 {
         self.wheel2.unwrap_or(0.)
     }
 
@@ -270,7 +276,7 @@ impl grSim_Robot_Command {
         self.wheel3 = ::std::option::Option::Some(v);
     }
 
-    pub fn get_wheel3<'a>(&self) -> f32 {
+    pub fn get_wheel3(&self) -> f32 {
         self.wheel3.unwrap_or(0.)
     }
 
@@ -289,7 +295,7 @@ impl grSim_Robot_Command {
         self.wheel4 = ::std::option::Option::Some(v);
     }
 
-    pub fn get_wheel4<'a>(&self) -> f32 {
+    pub fn get_wheel4(&self) -> f32 {
         self.wheel4.unwrap_or(0.)
     }
 }
@@ -509,11 +515,11 @@ impl ::protobuf::Message for grSim_Robot_Command {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
@@ -707,7 +713,7 @@ impl grSim_Commands {
         self.timestamp = ::std::option::Option::Some(v);
     }
 
-    pub fn get_timestamp<'a>(&self) -> f64 {
+    pub fn get_timestamp(&self) -> f64 {
         self.timestamp.unwrap_or(0.)
     }
 
@@ -726,7 +732,7 @@ impl grSim_Commands {
         self.isteamyellow = ::std::option::Option::Some(v);
     }
 
-    pub fn get_isteamyellow<'a>(&self) -> bool {
+    pub fn get_isteamyellow(&self) -> bool {
         self.isteamyellow.unwrap_or(false)
     }
 
@@ -742,7 +748,7 @@ impl grSim_Commands {
     }
 
     // Mutable pointer to the field.
-    pub fn mut_robot_commands<'a>(&'a mut self) -> &'a mut ::protobuf::RepeatedField<grSim_Robot_Command> {
+    pub fn mut_robot_commands(&mut self) -> &mut ::protobuf::RepeatedField<grSim_Robot_Command> {
         &mut self.robot_commands
     }
 
@@ -751,7 +757,7 @@ impl grSim_Commands {
         ::std::mem::replace(&mut self.robot_commands, ::protobuf::RepeatedField::new())
     }
 
-    pub fn get_robot_commands<'a>(&'a self) -> &'a [grSim_Robot_Command] {
+    pub fn get_robot_commands(&self) -> &[grSim_Robot_Command] {
         &self.robot_commands
     }
 }
@@ -835,11 +841,11 @@ impl ::protobuf::Message for grSim_Commands {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 

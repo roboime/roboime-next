@@ -1,6 +1,12 @@
 // This file is generated. Do not edit
 // @generated
 
+// https://github.com/Manishearth/rust-clippy/issues/702
+#![allow(unknown_lints)]
+#![allow(clippy)]
+
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
@@ -70,7 +76,7 @@ impl SSL_DetectionBall {
         self.confidence = ::std::option::Option::Some(v);
     }
 
-    pub fn get_confidence<'a>(&self) -> f32 {
+    pub fn get_confidence(&self) -> f32 {
         self.confidence.unwrap_or(0.)
     }
 
@@ -89,7 +95,7 @@ impl SSL_DetectionBall {
         self.area = ::std::option::Option::Some(v);
     }
 
-    pub fn get_area<'a>(&self) -> u32 {
+    pub fn get_area(&self) -> u32 {
         self.area.unwrap_or(0)
     }
 
@@ -108,7 +114,7 @@ impl SSL_DetectionBall {
         self.x = ::std::option::Option::Some(v);
     }
 
-    pub fn get_x<'a>(&self) -> f32 {
+    pub fn get_x(&self) -> f32 {
         self.x.unwrap_or(0.)
     }
 
@@ -127,7 +133,7 @@ impl SSL_DetectionBall {
         self.y = ::std::option::Option::Some(v);
     }
 
-    pub fn get_y<'a>(&self) -> f32 {
+    pub fn get_y(&self) -> f32 {
         self.y.unwrap_or(0.)
     }
 
@@ -146,7 +152,7 @@ impl SSL_DetectionBall {
         self.z = ::std::option::Option::Some(v);
     }
 
-    pub fn get_z<'a>(&self) -> f32 {
+    pub fn get_z(&self) -> f32 {
         self.z.unwrap_or(0.)
     }
 
@@ -165,7 +171,7 @@ impl SSL_DetectionBall {
         self.pixel_x = ::std::option::Option::Some(v);
     }
 
-    pub fn get_pixel_x<'a>(&self) -> f32 {
+    pub fn get_pixel_x(&self) -> f32 {
         self.pixel_x.unwrap_or(0.)
     }
 
@@ -184,7 +190,7 @@ impl SSL_DetectionBall {
         self.pixel_y = ::std::option::Option::Some(v);
     }
 
-    pub fn get_pixel_y<'a>(&self) -> f32 {
+    pub fn get_pixel_y(&self) -> f32 {
         self.pixel_y.unwrap_or(0.)
     }
 }
@@ -330,11 +336,11 @@ impl ::protobuf::Message for SSL_DetectionBall {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
@@ -503,7 +509,7 @@ impl SSL_DetectionRobot {
         self.confidence = ::std::option::Option::Some(v);
     }
 
-    pub fn get_confidence<'a>(&self) -> f32 {
+    pub fn get_confidence(&self) -> f32 {
         self.confidence.unwrap_or(0.)
     }
 
@@ -522,7 +528,7 @@ impl SSL_DetectionRobot {
         self.robot_id = ::std::option::Option::Some(v);
     }
 
-    pub fn get_robot_id<'a>(&self) -> u32 {
+    pub fn get_robot_id(&self) -> u32 {
         self.robot_id.unwrap_or(0)
     }
 
@@ -541,7 +547,7 @@ impl SSL_DetectionRobot {
         self.x = ::std::option::Option::Some(v);
     }
 
-    pub fn get_x<'a>(&self) -> f32 {
+    pub fn get_x(&self) -> f32 {
         self.x.unwrap_or(0.)
     }
 
@@ -560,7 +566,7 @@ impl SSL_DetectionRobot {
         self.y = ::std::option::Option::Some(v);
     }
 
-    pub fn get_y<'a>(&self) -> f32 {
+    pub fn get_y(&self) -> f32 {
         self.y.unwrap_or(0.)
     }
 
@@ -579,7 +585,7 @@ impl SSL_DetectionRobot {
         self.orientation = ::std::option::Option::Some(v);
     }
 
-    pub fn get_orientation<'a>(&self) -> f32 {
+    pub fn get_orientation(&self) -> f32 {
         self.orientation.unwrap_or(0.)
     }
 
@@ -598,7 +604,7 @@ impl SSL_DetectionRobot {
         self.pixel_x = ::std::option::Option::Some(v);
     }
 
-    pub fn get_pixel_x<'a>(&self) -> f32 {
+    pub fn get_pixel_x(&self) -> f32 {
         self.pixel_x.unwrap_or(0.)
     }
 
@@ -617,7 +623,7 @@ impl SSL_DetectionRobot {
         self.pixel_y = ::std::option::Option::Some(v);
     }
 
-    pub fn get_pixel_y<'a>(&self) -> f32 {
+    pub fn get_pixel_y(&self) -> f32 {
         self.pixel_y.unwrap_or(0.)
     }
 
@@ -636,7 +642,7 @@ impl SSL_DetectionRobot {
         self.height = ::std::option::Option::Some(v);
     }
 
-    pub fn get_height<'a>(&self) -> f32 {
+    pub fn get_height(&self) -> f32 {
         self.height.unwrap_or(0.)
     }
 }
@@ -795,11 +801,11 @@ impl ::protobuf::Message for SSL_DetectionRobot {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 
@@ -973,7 +979,7 @@ impl SSL_DetectionFrame {
         self.frame_number = ::std::option::Option::Some(v);
     }
 
-    pub fn get_frame_number<'a>(&self) -> u32 {
+    pub fn get_frame_number(&self) -> u32 {
         self.frame_number.unwrap_or(0)
     }
 
@@ -992,7 +998,7 @@ impl SSL_DetectionFrame {
         self.t_capture = ::std::option::Option::Some(v);
     }
 
-    pub fn get_t_capture<'a>(&self) -> f64 {
+    pub fn get_t_capture(&self) -> f64 {
         self.t_capture.unwrap_or(0.)
     }
 
@@ -1011,7 +1017,7 @@ impl SSL_DetectionFrame {
         self.t_sent = ::std::option::Option::Some(v);
     }
 
-    pub fn get_t_sent<'a>(&self) -> f64 {
+    pub fn get_t_sent(&self) -> f64 {
         self.t_sent.unwrap_or(0.)
     }
 
@@ -1030,7 +1036,7 @@ impl SSL_DetectionFrame {
         self.camera_id = ::std::option::Option::Some(v);
     }
 
-    pub fn get_camera_id<'a>(&self) -> u32 {
+    pub fn get_camera_id(&self) -> u32 {
         self.camera_id.unwrap_or(0)
     }
 
@@ -1046,7 +1052,7 @@ impl SSL_DetectionFrame {
     }
 
     // Mutable pointer to the field.
-    pub fn mut_balls<'a>(&'a mut self) -> &'a mut ::protobuf::RepeatedField<SSL_DetectionBall> {
+    pub fn mut_balls(&mut self) -> &mut ::protobuf::RepeatedField<SSL_DetectionBall> {
         &mut self.balls
     }
 
@@ -1055,7 +1061,7 @@ impl SSL_DetectionFrame {
         ::std::mem::replace(&mut self.balls, ::protobuf::RepeatedField::new())
     }
 
-    pub fn get_balls<'a>(&'a self) -> &'a [SSL_DetectionBall] {
+    pub fn get_balls(&self) -> &[SSL_DetectionBall] {
         &self.balls
     }
 
@@ -1071,7 +1077,7 @@ impl SSL_DetectionFrame {
     }
 
     // Mutable pointer to the field.
-    pub fn mut_robots_yellow<'a>(&'a mut self) -> &'a mut ::protobuf::RepeatedField<SSL_DetectionRobot> {
+    pub fn mut_robots_yellow(&mut self) -> &mut ::protobuf::RepeatedField<SSL_DetectionRobot> {
         &mut self.robots_yellow
     }
 
@@ -1080,7 +1086,7 @@ impl SSL_DetectionFrame {
         ::std::mem::replace(&mut self.robots_yellow, ::protobuf::RepeatedField::new())
     }
 
-    pub fn get_robots_yellow<'a>(&'a self) -> &'a [SSL_DetectionRobot] {
+    pub fn get_robots_yellow(&self) -> &[SSL_DetectionRobot] {
         &self.robots_yellow
     }
 
@@ -1096,7 +1102,7 @@ impl SSL_DetectionFrame {
     }
 
     // Mutable pointer to the field.
-    pub fn mut_robots_blue<'a>(&'a mut self) -> &'a mut ::protobuf::RepeatedField<SSL_DetectionRobot> {
+    pub fn mut_robots_blue(&mut self) -> &mut ::protobuf::RepeatedField<SSL_DetectionRobot> {
         &mut self.robots_blue
     }
 
@@ -1105,7 +1111,7 @@ impl SSL_DetectionFrame {
         ::std::mem::replace(&mut self.robots_blue, ::protobuf::RepeatedField::new())
     }
 
-    pub fn get_robots_blue<'a>(&'a self) -> &'a [SSL_DetectionRobot] {
+    pub fn get_robots_blue(&self) -> &[SSL_DetectionRobot] {
         &self.robots_blue
     }
 }
@@ -1245,11 +1251,11 @@ impl ::protobuf::Message for SSL_DetectionFrame {
         self.cached_size.get()
     }
 
-    fn get_unknown_fields<'s>(&'s self) -> &'s ::protobuf::UnknownFields {
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
         &self.unknown_fields
     }
 
-    fn mut_unknown_fields<'s>(&'s mut self) -> &'s mut ::protobuf::UnknownFields {
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
     }
 

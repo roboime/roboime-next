@@ -16,6 +16,13 @@ default = []
 unstable = []
 
 [dependencies]
+roboime-next-protocol = { path = "protocol", version = "0.1" }
 net2 = "0.2"
-time = "0.1"
-roboime-next-protocol = { path = "protocol" }
+log = "0.3"
+clap = "^2.5.0"
+clock_ticks = "~0.1.0"
+env_logger = "0.3"
+glium = "~0.14.0"
+#image = "~0.10.0"
+rusttype = "0.2"
+unicode-normalization = "~0.1.2"

@@ -14,17 +14,13 @@ Next iteration of [RoboIME][roboime]'s software stack, coded in [Rust][rust].
 Developing
 ----------
 
-Clone the project:
+Install the project:
 
-    git clone https://github.com/roboime/roboime-next.git
-
-Go to the `roboime-next-cli` subproject:
-
-    cd roboime-next/cli
+    cargo install roboime-next
 
 To run the `demo-ai` bot:
 
-    cargo run python demos/python2/demo.py
+    roboime-next-gui --blue="python demos/python2/demo.py"
 
 This will resolve, download and compile dependencies, and compile the project in debug mode and run it. That's it. Really!
 
@@ -33,9 +29,9 @@ See [the CLI read-me](cli/README.md) for more demos.
 > NOTE: in the near future the cli will be installable via cargo, so only `cargo install roboime-next-cli` instead of all of the above.
 
 If you wish to run your own bot you only have to generate an executable that conforms to the protocol described in the Game I/O section,
-and call `roboime-next-cli` with it:
+and call `roboime-next-gui` with it:
 
-    cargo run ./my-awesome-bot
+    roboime-next-gui --blue="python demos/python2/demo.py"
 
 > NOTE: the `my-awesome-bot` file has to be executable, just make sure it runs without `cargo run` first.
 
@@ -78,9 +74,6 @@ __Line 2__ field data:
 - `CENTER_CIRCLE_RADIUS`: a float.
 - `DEFENSE RADIUS`: a float.
 - `DEFENSE STRETCH`: a float.
-- `FREE_KICK_FROM_DEFENSE_DIST`: a float.
-- `PENALTY_SPOT_FROM_FIELD_LINE_DIST`: a float.
-- `PENALTY_LINE_FROM_SPOT_DIST`: a float.
 
 ### Initialization output
 
@@ -98,14 +91,27 @@ __Line 1__ general play data:
 
 - `COUNTER`: an integrer, counter for the number of received packets
 - `TIMESTAMP`: a float, the time elapsed since the play started
-- `REFEREE_STATE`: a char, indicates the referee state in a list of possible states __(not implemented yet currently always `'N'`)__
-- `REFEREE_TIME_LEFT`: a float, time left to finish the round __(not implemented yet always `-1`)__
-- `SCORE_PLAYER`: an integrer, your team score __(not implemented yet currently always `0`)__
-- `SCORE_OPPONENT`: an integrer, the opponent team score __(not implemented yet currently always `0`)__
+- `REFEREE_STATE`: a char, indicates the referee state, one of the following:
+  - `S`: __STOP__, stay at least 0.5m away from the ball
+  - `N`: __NORMAL__, go wild, score goals
+  - `A`: __AVOID__, go wild, score goals, except the indicated robot must not touch the ball
+  - `p`: __PRE\_KICKOFF__, return to your field, you will kickoff shortly
+  - `k`: __KICKOFF__, you're authorized to kickoff now
+  - `i`: __INDIRECT__, kick the ball to resume the game, no double touches or direct goals allowed
+  - `d`: __DIRECT__, kick the ball to resume the game, no double touches allowed
+  - `x`: __PRE\_PENALTY__, get your robots behind the "penalty line", wait for the order to shoot
+  - `y`: __PENALTY__, you may shoot the penalty, and you better score it
+  - `P`: __OPPONENT\_PRE_KICKOFF__, return to your field, the opponent will kickoff shortly
+  - `K`: __OPPONENT\_KICKOFF__, the opponent is authorized to kickoff, you must still stay away from the ball until the state returns to normal
+  - `I`: __OPPONENT\_INDIRECT__, the opponent must kick the ball to resume the play, wait for the normal state to approach the ball
+  - `D`: __OPPONENT\_DIRECT__, the opponent must kick the ball to resume the play, wait for the normal state as per above
+  - `X`: __OPPONENT\_PRE_PENALTY__, get your robots ready, the opponent will shoot a penalty shortly
+  - `Y`: __OPPONENT\_PENALTY__, the opponent may shoot now, save it
+- `REFEREE_MORE_INFO`: an integer, when `REFEREE_STATE` is __AVOID__ this will be the id of the robot, for all other cases it's -1
+- `SCORE_PLAYER`: an integrer, your team score
+- `SCORE_OPPONENT`: an integrer, the opponent team score
 - `GOALIE_ID_PLAYER`: an integrer, the id of your goalkeeper (the robot allowed inside the defense area)
 - `GOALIE_ID_OPPONENT`: an integrer, the id of the opponent team goalkeeper
-- `ROBOT_COUNT_PLAYER`: an integrer, number of robots in your team
-- `ROBOT_COUNT_OPPONENT`: an integrer, number of robots in the opponent team
 
 __Line 2__ ball status data:
 
@@ -113,6 +119,9 @@ __Line 2__ ball status data:
 - `BALL_Y`: a float, ball y position
 - `BALL_VX`: a float, ball x velocity
 - `BALL_VY`: a float, ball y velocity
+
+__Next line__:
+- `ROBOT_COUNT_PLAYER`: an integrer, number of robots in your team
 
 __Next `ROBOT_COUNT_PLAYER` lines__, robots data:
 
@@ -123,6 +132,9 @@ __Next `ROBOT_COUNT_PLAYER` lines__, robots data:
 - `ROBOT_VX`: a float, robot x velocity
 - `ROBOT_VY`: a float, robot y velocity
 - `ROBOT_VW`: a float, robot angular velocity
+
+__Next line__:
+- `ROBOT_COUNT_OPPONENT`: an integrer, number of robots in the opponent team
 
 __Next `ROBOT_COUNT_OPPONENT` lines__, robots data:
 
@@ -142,12 +154,15 @@ __Line 1__, command counter:
 
 __Next `ROBOT_COUNT_PLAYER` lines__, robots commands:
 
-- `V_TAN`: a float, robot tangencial velocity
-- `V_NORM`: a float, robot normal velocity
-- `V_ANG`: a float, robot angular velocity
-- `KICK_X`: a float, robot x kick velocity
-- `KICK_Z`: a float, robot z kick velocity
-- `SPIN`: a bool, true (`1`) if the spin is to be turned or false (`0`) else
+- `V_TANGENT`: a float, robot tangencial velocity
+- `V_NORMAL`: a float, robot normal velocity
+- `V_ANGULAR`: a float, robot angular velocity
+- `KICK_FORCE`: a float, robot kick force (currently this is the shooting velocity)
+- `CHIP_FORCE`: a float, robot chip kick force, similar to `KICK_FORCE` but is shot at a 45 degrees angle
+- `DRIBBLE`: a bool, true (`1`) if the dribbler will be turned on, else (`0`) it will be off
+
+> NOTE: only one of KICK_FORCE, CHIP_FORCE and DRIBBLE will be in effect at any given moment, in the future
+> the protocol may be amended to make this more explicit.
 
 These actions will be applied on the robots in the order they were given.
 
@@ -164,6 +179,21 @@ The robot diameter is always `0.180`, we'll call it `ROBOT_DIAM` here.
 - `||ROBOT_VX, ROBOT_VY||, ||BALL_VX, BALL_VY|| <= 20.0`
 - `|ROBOT_VW| <= 10.0 * π`
 
+GUI
+---
+
+There is a __GUI__: `roboime-next-gui`.
+
+Main objectives include:
+
+- 3D visualization of the game state
+- Configure child process AIs for both teams
+- Simulate the game state, including the referee
+- Provide an stderr based API for the AI to draw on top of the game state
+
+### Screenshots
+
+![](screenshot-1.png)
 
 License
 -------
