@@ -9,6 +9,7 @@ description = """
 Internal dependency for roboime-next.
 """
 # the build script is not being used right now
+build = false
 #build = "build.rs"
 
 [dependencies]
